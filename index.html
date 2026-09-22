@@ -103,6 +103,36 @@ body{background:var(--bg);color:var(--fg);
 #result .btns button.primary{border-color:var(--cyan);color:var(--cyan)}
 
 /* PAUSE / OPTIONS */
+#reward{position:absolute;inset:0;background:rgba(8,12,17,.94);z-index:7;display:none}
+#reward.on{display:block}
+#reward .hd{position:absolute;top:0;left:0;right:0;z-index:2;pointer-events:none;
+  padding:14px 16px 12px;text-align:center;font-size:11.5px;letter-spacing:.26em;color:var(--dim);
+  background:linear-gradient(rgba(8,12,17,.95),rgba(8,12,17,0))}
+#reward .hd b{color:var(--cyan);font-weight:600}
+#reward .own{position:absolute;bottom:0;left:0;right:0;z-index:2;pointer-events:none;
+  padding:10px 16px 12px;text-align:center;font-size:10.5px;color:var(--dim);line-height:1.7;
+  background:linear-gradient(rgba(8,12,17,0),rgba(8,12,17,.95))}
+#reward .own b{color:var(--fg)}
+/* v2.1 — 화면을 세로 3분할. 한 칸 전체가 선택 버튼이다 */
+#reward .row{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr)}
+#reward .bc{position:relative;min-width:0;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:64px 18px;text-align:center;
+  border-right:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.012),rgba(255,255,255,0));
+  transition:background .12s}
+#reward .bc:last-child{border-right:0}
+#reward .bc::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;
+  background:var(--cyan);opacity:0;transition:opacity .12s}
+#reward .bc:hover{background:rgba(47,227,208,.10)}
+#reward .bc:hover::before{opacity:1}
+#reward .bc .num{font-size:11px;letter-spacing:.3em;color:var(--dim);
+  border:1px solid var(--line);border-radius:5px;padding:4px 10px}
+#reward .bc:hover .num{color:var(--cyan);border-color:var(--cyan)}
+#reward .bc .k{font-size:10px;letter-spacing:.2em;color:var(--dim)}
+#reward .bc .n{font-size:clamp(17px,2.6vw,25px);letter-spacing:.06em;color:var(--cyan);font-weight:700}
+#reward .bc .d{font-size:clamp(11px,1.3vw,13px);line-height:1.8;color:var(--fg);max-width:230px}
+#reward .bc .st{font-size:10px;letter-spacing:.1em;color:var(--dim);margin-top:4px}
 #modal{position:absolute;inset:0;background:rgba(8,12,17,.93);z-index:6;
   display:none;align-items:center;justify-content:center;padding:20px}
 #modal.on{display:flex}
@@ -144,7 +174,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v1.6</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.1</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -189,6 +219,11 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     </div>
   </section>
 
+  <div id="reward">
+    <div class="hd" id="rwHd"></div>
+    <div class="row" id="rwRow"></div>
+    <div class="own" id="rwOwn"></div>
+  </div>
   <div id="modal"><div class="box" id="modalBox"></div></div>
 </div>
 
@@ -200,7 +235,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </div>
 
 <details class="dev">
-  <summary>DEBUG — 실시간 튜닝 (HUB에서 1 키로 켜고 끄기)</summary>
+  <summary>DEBUG — 실시간 튜닝 (` 또는 F1 로 켜고 끄기)</summary>
   <div class="grid" id="grid"></div>
   <div class="toggles" id="toggles"></div>
   <div id="debugBtns"><button data-dbg="cur">◆ +10,000</button><button data-dbg="max">강화 전부 최대</button><button data-dbg="zero">강화 초기화</button></div>
@@ -347,14 +382,44 @@ const WORLD={w:1000,h:760};
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
 const BOSS_WAVE=10;
-const range=()=>CFG.rangeM*M, cap=()=>range()/CFG.dwell;
+const range=()=>CFG.rangeM*M;
+/* v1.7 A-1: 상한을 사이클 탄속과 분리. 기본 탄속이 올라가도 패링이 감속이 되지 않게 한다 */
+const cap=()=>Math.max(range()/CFG.dwell, CFG.spd*1.55);
 /* v1.4 근접 재탈취: 적 몸체 + SEIZE_R 안에 들어온 탄환만, 적마다 한 번 시도.
    확률 = 등급 기본값 × (1 − 0.7 × 속도비율). 빠르게 되돌린 탄환일수록 뺏기 어렵다 */
 const SEIZE_R=50;
+/* v1.8 — 적 정의를 테이블로 분리. 적을 추가할 때 이 표에 한 줄만 더하면 된다.
+   hits 처치 타격 수 / r 반경 / pool 패턴 풀 / score 처치 점수 / seize 재탈취 기본 확률
+   shield 방패 정면 각도(도). 이 각도 안으로 들어온 탄환은 튕겨내고 피해를 주지 않는다 */
+const GRADES={
+  mob:     {hits:2,  r:R_ENEMY, pool:'mob',     score:50,   seize:0.42},
+  elite:   {hits:4,  r:R_ELITE, pool:'elite',   score:150,  seize:0.50},
+  bulwark: {hits:2,  r:34,      pool:'bulwark', score:110,  seize:0.46, shield:100},
+  boss:    {hits:12, r:R_BOSS,  pool:'boss',    score:1000, seize:0.60}
+};
+const G=e=>GRADES[e.grade]||GRADES.mob;
+/* v1.8.1 방패 — 플레이어를 따라 돌되 회전 속도에 제한이 있다.
+   제한이 없으면 탄환도 늘 플레이어 쪽에서 오므로 측면이라는 게 성립하지 않는다.
+   SHIELD_TURN(rad/s)보다 빠르게 옆으로 돌면 방패를 벗겨낼 수 있다 */
+const SHIELD_TURN=0.6;   // v1.9.1 우회 난이도 완화
+const ENEMY_IFRAME=0.10; // v1.9.2 적 피격 무적. 다중 패링으로 한 적이 즉사하는 것을 막는다
+/* v2.0.1 체력은 '칸(=패링 탄환 1타)' 단위로 관리한다. 피해량을 바꿔도 칸 수는 유지된다 */
+const HIT_UNIT=BASE_DMG*DMG_MULT;        // 1칸
+const SHARD_UNIT=0.5;                    // 파편은 중첩당 0.5칸 (최대 2중첩 → 1칸)
+function shielded(e,b){
+  const sh=G(e).shield; if(!sh) return false;
+  const toB=Math.atan2(b.y-e.y,b.x-e.x);          // 적에서 탄환을 향하는 방향
+  return angDiff(e.sa!=null?e.sa:toB, toB)<=(sh/2)*Math.PI/180;
+}
+/* v1.7 D-1 — 왕복이 이어질수록 재탈취가 잘 되도록 방향을 뒤집었다.
+   기존: 탄속이 오를수록 확률 하락 -> 왕복이 시작돼도 금방 끊김
+   변경: 왕복 횟수에 따라 확률 상승, 탄속은 완만한 감쇠만 */
 function seizeChance(e,b){
   const ratio=clamp((b.spd-CFG.spd)/Math.max(1,cap()-CFG.spd),0,1);
-  const base=e.grade==='boss'?(e.p2?0.7:0.6):(e.grade==='elite'?0.45:0.25);
-  return clamp(base*(1-0.7*ratio)*CFG.seizeMul,0,0.95);
+  const base=(e.grade==='boss'&&e.p2)?0.70:G(e).seize;
+  const rally=0.12*Math.min(b.returns||0,3);
+  let p=(base+rally)*(1-0.25*ratio)*CFG.seizeMul;
+  return clamp(p,0,0.92);
 }
 
 /* v1.5 고정 장애물 제거. 벽은 Q 스킬(벽 생성)로만 생긴다.
@@ -387,7 +452,7 @@ const PATTERNS=[
  {n:'OVERLOAD',d:'고속',           specs:[{t:0,fast:0.85}]}
 ];
 /* v1.3 — 등급별 패턴 풀. 잡몹은 기본기, 엘리트는 조건 시험 */
-const POOL={mobEarly:[0,1], mob:[0,1,3], elite:[1,2,3,4]};
+const POOL={mobEarly:[0,1], mob:[0,1,3], elite:[1,2,3,4], bulwark:[0,2]};
 /* v1.3 — 알레테이아 전용 패턴 (ang: 발사 각도 오프셋 rad, odir: 우회 방향 고정) */
 const BOSS_PATTERNS=[
  {n:'FAN',     d:'3발 부채꼴 동시',    specs:[{t:0,ang:-0.55},{t:0},{t:0,ang:0.55}]},
@@ -403,9 +468,30 @@ function pickPattern(e){
     return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)]
                               : BOSS_PATTERNS[Math.floor(Math.random()*BOSS_PATTERNS.length)];
   }
-  const pool = e.grade==='elite' ? POOL.elite : (run.wave<=2 ? POOL.mobEarly : POOL.mob);
+  const key = G(e).pool;
+  const pool = (key==='mob' && run.wave<=2) ? POOL.mobEarly : (POOL[key]||POOL.mob);
   return PATTERNS[pool[Math.floor(Math.random()*pool.length)]];
 }
+
+/* ================= v2.0 웨이브 보상 ================= */
+/* 한 판 안에서만 유지되는 성장. HUB 강화(영구)와 구분된다.
+   apply 안에서 CFG를 직접 바꾸거나 run.boons 플래그로 동작을 연다 */
+const BOONS=[
+ {k:'range', n:'관측 확장', d:'패링 사거리 +0.4m',            max:3, tag:'사거리', fn:()=>CFG.rangeM+=0.4},
+ {k:'fov',   n:'광각 처리', d:'패링 시야 +12°',               max:3, tag:'시야',   fn:()=>CFG.fov=Math.min(180,CFG.fov+12)},
+ {k:'calm',  n:'침착',      d:'빗나감 경직 −0.25초',          max:3, tag:'경직',   fn:()=>CFG.whiff=Math.max(0,CFG.whiff-0.25)},
+ {k:'accel', n:'과충전',    d:'왕복당 가속 +0.10',            max:3, tag:'탄환',   fn:()=>CFG.accel+=0.10},
+ {k:'move',  n:'경보',      d:'이동 속도 +25',                max:3, tag:'이동',   fn:()=>CFG.moveSpd+=25},
+ {k:'vital', n:'예비 회로', d:'최대 체력 +25, 즉시 25 회복',   max:3, tag:'생존',   fn:()=>{CFG.hpMax+=25;P.hp=Math.min(CFG.hpMax,P.hp+25);}},
+ {k:'iframe',n:'잔상',      d:'피격 무적 +0.15초',            max:2, tag:'생존',   fn:()=>CFG.iframe+=0.15},
+ {k:'greed', n:'탐욕',      d:'점수 배율 +0.30, 최대 체력 −10',max:2, tag:'점수',   fn:()=>{CFG.scoreMul+=0.30;CFG.hpMax=Math.max(40,CFG.hpMax-10);P.hp=Math.min(P.hp,CFG.hpMax);}},
+ {k:'pierce',n:'관통',      d:'패링한 탄환이 적 1기를 뚫고 지나간다', max:1, tag:'탄환', fn:()=>{}},
+ {k:'shard', n:'파편',      d:'명중 시 주변 적에게 0.5칸 추가 피해',  max:2, tag:'탄환', fn:()=>{}},
+ {k:'grit',  n:'집념',      d:'왕복 3회 이상 탄환의 피해 ×2',  max:1, tag:'탄환',   fn:()=>{}},
+ {k:'flow',  n:'무결',      d:'패링에 성공하면 회복 경직이 없다', max:1, tag:'경직', fn:()=>{}},
+ {k:'multi', n:'분배',      d:'한 번에 빼앗는 탄환 +1',        max:1, tag:'패링',   fn:()=>CFG.multi+=1}
+];
+const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
 
 /* ================= 게임 상태 ================= */
 let P,ens,bullets,queue,msgs,shake,run,paused=false,screen='title';
@@ -423,7 +509,7 @@ function newRun(){
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1};
   ens=[];bullets=[];queue=[];msgs=[];shake=0;parts=[];hitstop=0;
-  run={walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
+  run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
   if(CFG.qSkill==='wall'){ run.phase='build'; run.phaseT=BUILD_T; }   // v1.6 벽 설치 준비 시간
 }
@@ -433,23 +519,31 @@ function waveSpawn(){
   const boss = run.wave>BOSS_WAVE;
   if(boss){ spawnEnemy('boss'); announce('ALETHEIA','red'); sfx('boss'); }
   else{
-    const n=Math.min(5,1+Math.ceil(run.wave/2));
+    const base=Math.min(5,1+Math.ceil(run.wave/2));
     const el=run.wave>=3?Math.floor(run.wave/3):0;
-    for(let i=0;i<n;i++) spawnEnemy(i<el?'elite':'mob');
+    /* v1.8 방패병 — 3웨이브부터 1기, 사이클 2부터 2기.
+       기존 정원에 얹되 총원 6기를 넘지 않게 하고, 잡몹이 0이 되지 않도록 한 자리는 남긴다 */
+    const bw=run.wave>=3?(run.cycle>=2?2:1):0;
+    const n=Math.min(6,base+bw);
+    const elN=Math.min(el,n-bw-1);
+    for(let i=0;i<n;i++)
+      spawnEnemy(i<elN?'elite':(i<elN+bw?'bulwark':'mob'));
     announce('CYCLE '+run.cycle+'  ·  WAVE '+run.wave,'cyan'); sfx('wave');
   }
   run.phase='fight';
 }
 function spawnEnemy(grade){
-  const hits = grade==='boss'?12:(grade==='elite'?4:2);
-  const r = grade==='boss'?R_BOSS:(grade==='elite'?R_ELITE:R_ENEMY);
+  const g=GRADES[grade]||GRADES.mob;
+  const hits=g.hits, r=g.r;
   let x,y,tries=0;
   do{
     x=520+Math.random()*440; y=90+Math.random()*580; tries++;
   }while(tries<60 && (run.walls.some(({col:o})=>rectHit(x,y,r+10,o)) || dist(x,y,P.x,P.y)<340));
   const hp=BASE_DMG*DMG_MULT*hits*run.diff;
-  ens.push({x,y,r,grade,hp,hpMax:hp,hurt:0,
-    fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y});
+  const en={x,y,r,grade,hp,hpMax:hp,hurt:0,
+    fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y};
+  if(g.shield) en.sa=Math.atan2(P.y-y,P.x-x);      // 방패 초기 방향
+  ens.push(en);
 }
 function announce(text,color){ msgs.push({text,color,t:1.3,big:1}); }
 const say=(t,c)=>msgs.push({text:t,color:c||'cyan',t:0.7,big:0});
@@ -468,8 +562,14 @@ addEventListener('keydown',e=>{
     save(); refreshKeyLabels(); sfx('ui'); openModal(); return;
   }
   keys[k]=true;
-  if(screen==='hub'&&k==='1'){ toggleDebug(); return; }
+  /* v2.0.2 디버그 토글 — 보상 선택이 1/2/3을 쓰게 되어 백틱(`)으로 옮겼다.
+     F1도 함께 받는다. 어느 화면에서든 동작한다 */
+  if(k==='`'||k==='~'||e.key==='F1'){ e.preventDefault(); toggleDebug(); return; }
   if(screen!=='game')return;
+  if(run&&run.phase==='reward'){                 // v2.0 보상 선택
+    if('123'.includes(k)){ e.preventDefault(); takeReward(+k-1); }
+    return;
+  }
   if(k==='enter'&&run&&run.phase==='build'){ e.preventDefault(); run.phaseT=0; return; }
   if(k===OPT.keyParry){e.preventDefault();doParry();}
   else if(k===OPT.keySkill){e.preventDefault();doSkill();}
@@ -495,15 +595,20 @@ function doParry(){
   const ts=bullets.filter(b=>b.owner==='enemy'&&b.ready)
     .sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y)).slice(0,Math.max(1,CFG.multi|0));
   if(ts.length){
-    const foes=ens.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
-    const tgt=foes[0];
+    const all=ens.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
+    /* v1.8 방패병은 정면이 막히므로 자동 조준 대상에서 뺀다. 측면은 직접 겨눠야 한다 */
+    const soft=all.filter(e=>!G(e).shield);
+    const foes=soft.length?soft:all;
+    const tgt=soft.length?soft[0]:null;
     const toE=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):P.face;
     const mainDir=(tgt&&angDiff(P.face,toE)<=AIM_ASSIST*Math.PI/180)?toE:P.face;
     let maxRet=0;
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
       t.spd=Math.min(t.spd*CFG.accel,cap());
-      t.dmg=BASE_DMG*DMG_MULT; t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
+      t.dmg=BASE_DMG*DMG_MULT*((boonLv('grit')&&t.returns>=3)?2:1);   // v2.0 집념
+      t.pierced=false;                                                 // 관통은 패링마다 초기화
+      t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       if(i===0) t.dir=mainDir;
       else if(foes[i]) t.dir=Math.atan2(foes[i].y-P.y,foes[i].x-P.x);   // 추가 탄환은 다른 적에게
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
@@ -513,7 +618,10 @@ function doParry(){
     run.bestRet=Math.max(run.bestRet,maxRet);
     say(ts.length>1?'RECLAIMED ×'+ts.length:'RECLAIMED','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
-    hitstop=0.045+0.02*(ts.length-1); P.lock=0.10; P.lockMax=0.10; P.lockKind='ok';
+    hitstop=0.045+0.02*(ts.length-1);
+    /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
+    P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1));
+    P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
   } else { P.lock=CFG.whiff; P.lockMax=Math.max(0.01,CFG.whiff); P.lockKind='miss';
            if(CFG.whiff>0){ say('MISS','red'); shake=4; sfx('miss'); } }
 }
@@ -565,6 +673,46 @@ function doWall(){
   say('WALL '+run.walls.length+' / '+CFG.wallMax,'cyan'); sfx('wall');
   burst(o.x+o.w/2,o.y+o.h/2,'cyan',14,160);
 }
+/* ================= v2.0 보상 선택 UI ================= */
+let rwPicks=[];
+function openReward(afterBoss){
+  const pool=BOONS.filter(b=>boonLv(b.k)<b.max);
+  if(!pool.length){ run.phase='break'; return; }
+  rwPicks=[];
+  const bag=pool.slice();
+  while(rwPicks.length<3 && bag.length)
+    rwPicks.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);
+  run.phase='reward';
+  $('#rwHd').innerHTML=(afterBoss?'ALETHEIA 격파 · <b>사이클 '+run.cycle+'</b>'
+                                 :'WAVE '+run.wave+' 완료')+' &nbsp;—&nbsp; 하나를 고르세요  <b>1 2 3</b>';
+  $('#rwRow').innerHTML=rwPicks.map((b,i)=>
+    '<div class="bc" data-i="'+i+'">'+
+    '<div class="num">'+(i+1)+'</div>'+
+    '<div class="k">'+b.tag+'</div>'+
+    '<div class="n">'+b.n+'</div>'+
+    '<div class="d">'+b.d+'</div>'+
+    '<div class="st">'+(boonLv(b.k)?'보유 '+boonLv(b.k)+' / '+b.max:'신규')+'</div>'+
+    '</div>').join('');
+  const own=Object.keys(run.boons);
+  $('#rwOwn').innerHTML=own.length
+    ? '보유 — '+own.map(k=>{const b=BOONS.find(x=>x.k===k);return '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join(' · ')
+    : '';
+  $('#reward').classList.add('on');
+  sfx('wave');
+}
+function takeReward(i){
+  const b=rwPicks[i]; if(!b) return;
+  run.boons[b.k]=(run.boons[b.k]||0)+1;
+  b.fn();
+  $('#reward').classList.remove('on');
+  run.phase='break'; run.phaseT=0.9;
+  say(b.n,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',14,150);
+}
+$('#rwRow').addEventListener('click',e=>{
+  const c=e.target.closest('.bc'); if(!c) return;
+  takeReward(+c.dataset.i);
+});
+
 function nearestEnemy(){
   let best=null,bd=1e9;
   ens.forEach(e=>{const d=dist(e.x,e.y,P.x,P.y); if(d<bd){bd=d;best=e;}});
@@ -574,8 +722,9 @@ function nearestEnemy(){
 /* ================= 업데이트 ================= */
 function update(dt){
   if(paused)return;
+  if(run&&run.phase==='reward') return;     // v2.0 보상 선택 중에는 전투 정지
   if(hitstop>0){ hitstop-=dt; return; }
-  run.time+=dt;
+  if(!run||run.phase!=='build') run.time+=dt;   // v1.7 B-4
 
   // 플레이어
   let ax=0,ay=0;
@@ -597,7 +746,6 @@ function update(dt){
 
   // 웨이브
   if(run.phase==='build'){
-    run.time-=dt;                                   // 준비 시간은 생존 시간에 넣지 않음
     run.phaseT-=dt;
     if(run.phaseT<=0){ run.phase='break'; run.phaseT=1.0; announce('READY','cyan'); sfx('wave'); }
   } else if(run.phase==='break'){
@@ -610,6 +758,9 @@ function update(dt){
       announce('CYCLE '+run.cycle,'warn'); run.phaseT=2.2; }
     else run.phaseT=1.2;
     run.phase='break';
+    /* v2.0 2웨이브마다 + 보스 격파 직후에 보상 선택.
+       매 웨이브마다 주면 한 사이클에 10개가 쌓여 성장이 너무 빠르다 */
+    if(wasBoss || run.wave%2===0) openReward(wasBoss);
   }
 
   // 적
@@ -618,12 +769,21 @@ function update(dt){
     e.x=e.ax+Math.cos(e.drift*0.8)*36;
     e.y=e.ay+Math.sin(e.drift)*54;
     if(e.hurt>0)e.hurt-=dt; if(e.seizeFx>0)e.seizeFx-=dt;
+    if(e.shieldFx>0)e.shieldFx-=dt; if(e.inv>0)e.inv-=dt;
+    if(e.sa!=null){                                  // v1.8.1 방패 회전
+      if(e.saStun>0) e.saStun-=dt;                   // v1.9.1 반동 중에는 못 돈다
+      else{
+        const want=Math.atan2(P.y-e.y,P.x-e.x);
+        e.sa+=clamp(norm(want-e.sa),-SHIELD_TURN*dt,SHIELD_TURN*dt);
+      }
+    }
     if(run.phase!=='fight')return;
     e.fireT-=dt;
-    if(e.fireT<=0 && bullets.length+queue.length<CFG.maxB){
+    if(e.fireT<=0){
+      const room=CFG.maxB-(bullets.length+queue.length);
+      if(room<=0){ e.fireT=0.25; return; }               // v1.7 A-3: 자리가 없으면 잠깐 뒤 재시도
       const p=pickPattern(e);
-      if(bullets.length+queue.length+p.specs.length<=CFG.maxB+1)
-        p.specs.forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:e.grade==='boss'}));
+      p.specs.slice(0,room).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:e.grade==='boss'}));
       e.fireT=CFG.fire*(e.grade==='boss'?(e.p2?0.7:0.9):1)*(0.8+Math.random()*0.5);
     }
   });
@@ -654,8 +814,9 @@ function update(dt){
       for(const e of ens){
         if(b.tried.includes(e)) continue;
         if(dist(b.x,b.y,e.x,e.y)<e.r+SEIZE_R){
+          if(b.hcd>0) break;                 // v1.7 A-2: 유예 중에는 시도 자체를 미룬다
           b.tried.push(e);
-          if(b.hcd<=0 && Math.random()<seizeChance(e,b)){
+          if(Math.random()<seizeChance(e,b)){
             b.owner='enemy'; b.dmg=BASE_DMG; b.tried=[];
             b.dir=Math.atan2(P.y-b.y,P.x-b.x);
             e.seizeFx=0.35; say('SEIZED','red'); sfx('seize'); burst(b.x,b.y,'red',8);
@@ -693,22 +854,49 @@ function update(dt){
     if(b.owner==='player'){
       let hitIdx=-1;
       for(let j=0;j<ens.length;j++){
+        if(ens[j].inv>0) continue;                 // v1.9.2 무적 중인 적은 통과시킨다
         if(dist(b.x,b.y,ens[j].x,ens[j].y)<ens[j].r+R_BULLET){hitIdx=j;break;}
+      }
+      if(hitIdx>=0 && shielded(ens[hitIdx],b)){
+        /* v1.8 방패병 정면 — 피해 없이 튕겨낸다. 소유권은 그대로라 다른 적을 노릴 수 있다 */
+        const e=ens[hitIdx];
+        const out=Math.atan2(b.y-e.y,b.x-e.x);
+        b.x=e.x+Math.cos(out)*(e.r+R_BULLET+3);
+        b.y=e.y+Math.sin(out)*(e.r+R_BULLET+3);
+        b.dir=out; b.trail.length=0;
+        /* v1.9.1 막을 때마다 방패가 반동으로 밀리고 잠시 회전이 멈춘다.
+           같은 방향으로 계속 쏘면 틈이 벌어져 결국 측면이 열린다 */
+        const d=norm((e.sa!=null?e.sa:out)-out);
+        e.sa=(e.sa!=null?e.sa:out)+(d>=0?1:-1)*0.42;
+        e.saStun=0.55; e.shieldFx=0.3;
+        say('SHIELDED','red'); sfx('block'); shake=5; burst(b.x,b.y,'red',6,120);
+        continue;
       }
       if(hitIdx>=0){
         const e=ens[hitIdx];
-        e.hp-=b.dmg; e.hurt=.22; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
+        e.hp-=b.dmg; e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
         if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('OVERWRITE','red'); sfx('boss'); shake=16; }
         const pts=Math.round(10*Math.max(1,b.returns)*CFG.scoreMul);
         run.score+=pts; say('+'+pts+(b.returns>1?'  ×'+b.returns:''),'warn');
         if(e.hp<=0){
-          const bonus=e.grade==='boss'?1000:(e.grade==='elite'?150:50);
+          const bonus=G(e).score;
           run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
           burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240); hitstop=e.grade==='boss'?0.25:0.07; sfx(e.grade==='boss'?'boss':'kill');
           if(e.grade==='boss'){run.bossKills++; announce('BOSS DOWN  +'+bonus,'cyan'); shake=20;}
           else say('DOWN  +'+bonus,'cyan');
           ens.splice(hitIdx,1);
+          bullets.forEach(z=>{ if(z.tried) z.tried=z.tried.filter(x=>x!==e); });   // v1.7 B-1
         }
+        /* v2.0 파편 — 명중 지점 주변에 추가 피해 */
+        const sh=boonLv('shard');
+        if(sh){
+          const dmg=HIT_UNIT*SHARD_UNIT*sh;
+          ens.forEach(o=>{ if(o===e||o.inv>0) return;
+            if(dist(b.x,b.y,o.x,o.y)<90+o.r){ o.hp-=dmg; o.hurt=.18; } });
+          burst(b.x,b.y,'warn',10,200);
+        }
+        /* v2.0 관통 — 적 1기를 뚫고 지나간다 (적 무적 0.1초 덕에 재충돌하지 않음) */
+        if(boonLv('pierce') && !b.pierced && ens.length){ b.pierced=true; continue; }
         bullets.splice(i,1); continue;
       }
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+(P.guard>0?14:0)){
@@ -762,13 +950,17 @@ function drawObstacles(){
 }
 function drawBody(x,y,r,color,hurt){
   const p=proj(x,y);
-  ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=.26;ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.ellipse(p[0],p[1],r+R_BULLET,(r+R_BULLET)*SQUASH,0,0,TAU);ctx.stroke();
-  ctx.globalAlpha=.09;ctx.fillStyle=color;ctx.fill();ctx.restore();
+  /* v1.9 히트박스는 디버그에서만 표시. 대신 몸통을 판정 크기에 맞춰 키웠다 */
+  if(debug){
+    ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=.30;ctx.lineWidth=1.5;
+    ctx.setLineDash([4,5]);
+    ctx.beginPath();ctx.ellipse(p[0],p[1],r+R_BULLET,(r+R_BULLET)*SQUASH,0,0,TAU);ctx.stroke();
+    ctx.restore();
+  }
   ctx.fillStyle='rgba(0,0,0,.45)';
-  ctx.beginPath();ctx.ellipse(p[0],p[1],r*.72,r*.72*SQUASH,0,0,TAU);ctx.fill();
+  ctx.beginPath();ctx.ellipse(p[0],p[1],r*.86,r*.86*SQUASH,0,0,TAU);ctx.fill();
   ctx.fillStyle=hurt>0?'#fff':color;
-  ctx.beginPath();ctx.ellipse(p[0],p[1],r*.7,r*.7*SQUASH*1.5,0,0,TAU);ctx.fill();
+  ctx.beginPath();ctx.ellipse(p[0],p[1],r*.84,r*.84*SQUASH*1.5,0,0,TAU);ctx.fill();
 }
 function drawWallPreview(){
   if(!CFG.wallMax||P.wallCd>0)return;
@@ -779,9 +971,22 @@ function drawWallPreview(){
   ctx.strokeRect(a[0]+.5,a[1]-WALL_HG+.5,b[0]-a[0]-1,b[1]-a[1]+WALL_HG-1);
   ctx.restore();
 }
+function drawShield(e){
+  const sh=G(e).shield; if(!sh) return;
+  const q=proj(e.x,e.y), half=(sh/2)*Math.PI/180;
+  const facing=e.sa!=null?e.sa:Math.atan2(P.y-e.y,P.x-e.x);
+  ctx.save(); ctx.translate(q[0],q[1]); ctx.scale(1,SQUASH);
+  const exposed=angDiff(facing,Math.atan2(P.y-e.y,P.x-e.x))>half;   // 플레이어가 사각에 있음
+  ctx.strokeStyle=(e.shieldFx>0)?'#ffffff':(exposed?'#44586a':'#8fb4c9');
+  ctx.lineWidth=6; ctx.lineCap='butt';
+  ctx.beginPath(); ctx.arc(0,0,e.r+11,facing-half,facing+half); ctx.stroke();
+  ctx.globalAlpha=.25; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(0,0,e.r+17,facing-half,facing+half); ctx.stroke();
+  ctx.restore();
+}
 function drawHpBar(e){
   const p=proj(e.x,e.y), w=e.r*1.7, hg=4, top=p[1]-e.r*1.3-16;
-  const seg=e.grade==='boss'?12:(e.grade==='elite'?4:2);
+  const seg=G(e).hits;
   ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(p[0]-w/2-1,top-1,w+2,hg+2);
   ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(p[0]-w/2,top,w,hg);
   ctx.fillStyle=C.red;ctx.fillRect(p[0]-w/2,top,w*Math.max(0,e.hp/e.hpMax),hg);
@@ -789,13 +994,21 @@ function drawHpBar(e){
   for(let k=1;k<seg;k++){const gx=p[0]-w/2+w*k/seg;
     ctx.beginPath();ctx.moveTo(gx,top);ctx.lineTo(gx,top+hg);ctx.stroke();}
 }
-function drawHpRing(){
-  const p=proj(P.x,P.y), R=R_PLAYER+13, ratio=P.hp/CFG.hpMax;
-  ctx.save();ctx.translate(p[0],p[1]);ctx.scale(1,SQUASH);
-  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=5;
-  ctx.beginPath();ctx.arc(0,0,R,0,TAU);ctx.stroke();
-  ctx.strokeStyle=ratio>.35?C.cyan:C.red;ctx.lineCap='round';
-  ctx.beginPath();ctx.arc(0,0,R,-Math.PI/2,-Math.PI/2+TAU*Math.max(0,ratio));ctx.stroke();
+/* v1.9 플레이어 체력 — 발밑 링에서 좌상단 바로 변경 */
+function drawHpBarPlayer(){
+  const ratio=clamp(P.hp/CFG.hpMax,0,1);
+  const x=18, y=18, w=232, h=12;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.5)';   ctx.fillRect(x-2,y-2,w+4,h+4);
+  ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=ratio>.35?C.cyan:C.red;  ctx.fillRect(x,y,w*ratio,h);
+  if(P.hurt>0){ ctx.globalAlpha=Math.min(1,P.hurt*3); ctx.fillStyle='#fff';
+    ctx.fillRect(x,y,w*ratio,h); ctx.globalAlpha=1; }
+  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=1;
+  ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+  ctx.textAlign='left'; ctx.font='700 12px ui-monospace,monospace';
+  ctx.fillStyle=C.fg;
+  ctx.fillText(Math.max(0,Math.ceil(P.hp))+' / '+Math.round(CFG.hpMax), x+w+10, y+h-1);
   ctx.restore();
 }
 function drawSkill(){
@@ -832,14 +1045,7 @@ function drawQ(){
 }
 function drawLock(){
   const p=proj(P.x,P.y);
-  if(P.lock<=0){
-    // 패링 가능 상태 표식
-    ctx.save();ctx.translate(p[0],p[1]);ctx.scale(1,SQUASH);
-    ctx.strokeStyle=C.cyan;ctx.globalAlpha=.55;ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(0,0,R_PLAYER+21,0,TAU);ctx.stroke();
-    ctx.restore();
-    return;
-  }
+  if(P.lock<=0) return;      // v1.9.1 평상시에는 아무것도 그리지 않는다
   const k=Math.max(0,P.lock/P.lockMax);
   const col=P.lockKind==='ok'?C.cyan:C.red;
   // 발밑 바깥 원호 — 남은 쿨타임
@@ -918,6 +1124,7 @@ function drawBullet(b){
 function fmtTime(s){const m=Math.floor(s/60),x=Math.floor(s%60);return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
 
 function drawHUD(){
+  drawHpBarPlayer();                       // v1.9 플레이어 체력 바
   ctx.textAlign='right';ctx.font='700 17px ui-monospace,monospace';
   ctx.fillStyle=C.warn;ctx.fillText('SCORE '+run.score.toLocaleString(),W-18,30);
   const mx=bullets.reduce((m,b)=>Math.max(m,b.returns),0);
@@ -953,6 +1160,12 @@ function drawHUD(){
     ctx.fillStyle=C.cyan;ctx.font='700 26px ui-monospace,monospace';ctx.fillText('PAUSED',W/2,H/2);
     ctx.fillStyle=C.dim;ctx.font='600 12px ui-monospace,monospace';
     ctx.fillText('ESC 로 계속',W/2,H/2+26);
+    const own=Object.keys(run.boons||{});
+    if(own.length){
+      ctx.fillStyle=C.cyan;ctx.font='600 11px ui-monospace,monospace';
+      ctx.fillText(own.map(k=>{const b=BOONS.find(x=>x.k===k);
+        return b.n+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join('  ·  '),W/2,H/2+58);
+    }
   }
 }
 function render(){
@@ -961,13 +1174,13 @@ function render(){
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   drawGrid();drawObstacles();drawWallPreview();drawZone();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
-    drawBody(e.x,e.y,e.r,C.red,e.hurt); drawHpBar(e);
+    drawBody(e.x,e.y,e.r,C.red,e.hurt); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
       ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+SEIZE_R*(1.2-e.seizeFx),(e.r+SEIZE_R*(1.2-e.seizeFx))*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); }
   });
   if(P.phase>0) ctx.globalAlpha=.4+.15*Math.sin(performance.now()/60);
   drawBody(P.x,P.y,R_PLAYER,P.inv>0?'#9fd8ff':C.cyan,P.hurt); ctx.globalAlpha=1;
-  drawHpRing(); drawLock(); drawSkill(); drawQ();
+  drawLock(); drawSkill(); drawQ();
   const p=proj(P.x,P.y);
   ctx.strokeStyle='rgba(223,233,242,.16)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(p[0],p[1]);
@@ -992,9 +1205,9 @@ function go(id){
 }
 function startRun(){ newRun(); go('game'); }
 function endRun(){
-  /* v1.3.1 재화: 점수÷3 + 처치×5 + 도달 웨이브×10 + 보스 격파×150 */
+  /* v1.7 재화: 점수÷3 + 처치×5 + 도달 웨이브×6 + 보스 격파×150 (점수 비중 상향) */
   const gScore=Math.round(run.score/3), gKill=run.kills*5,
-        gWave=((run.cycle-1)*(BOSS_WAVE+1)+run.wave)*10, gBoss=run.bossKills*150;
+        gWave=((run.cycle-1)*(BOSS_WAVE+1)+run.wave)*6, gBoss=run.bossKills*150;
   const gain=gScore+gKill+gWave+gBoss;
   META.cur+=gain;
   const isNew=run.score>META.best;
