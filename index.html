@@ -231,6 +231,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <button id="padParry">E · PARRY</button>
   <button id="padSkill">F · SKILL</button>
   <button id="padWall">Q · Q SKILL</button>
+  <button id="padR">R · R SKILL</button>
   <button id="padPause">II · 일시정지</button>
 </div>
 
@@ -277,21 +278,32 @@ const UPG=[
   steps:['잠김','회복 25 / 대기 18s','회복 30 / 대기 16s','회복 35 / 대기 14s','회복 40 / 대기 12s','회복 50 / 대기 10s']},
  {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, lv:0, max:5, cost:[800,700,1050,1580,2400],
   steps:['잠김','지속 1.5s / 대기 18s','지속 1.8s / 대기 16s','지속 2.1s / 대기 14s','지속 2.5s / 대기 12s','지속 3.0s / 대기 10s']},
+ {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, lv:0, max:5, cost:[800,700,1050,1580,2400],
+  steps:['잠김','거리 140 / 대기 8.0s','거리 155 / 대기 7.4s','거리 170 / 대기 6.8s','거리 185 / 대기 6.2s','거리 200 / 대기 5.5s']},
  {k:'phase', n:'Q · 위상 이동', s:'Q — 벽 통과 + 탄환 유도 무력화', skill:'q', lv:0, max:5, cost:[800,700,1050,1580,2400],
   d:'Q — 발동하는 동안 벽을 통과하고, 적 탄환이 더 이상 따라오지 않고 직진합니다. 끝날 때 벽 안에 있으면 밖으로 밀려납니다.',
   steps:['잠김','지속 2.0s / 대기 16s','지속 2.5s / 대기 15s','지속 3.0s / 대기 13s','지속 3.5s / 대기 12s','지속 4.0s / 대기 10s']},
  {k:'wall',  n:'Q · 벽 생성', s:'Q — 앞쪽에 벽 설치 (탄환 반사)', skill:'q', lv:0, max:4, cost:[1000,900,1400,2100],
   d:'Q — 바라보는 방향 앞에 벽을 세웁니다. 탄환은 벽에 튕깁니다. 벽끼리는 간격을 두어야 하고, 최대 개수를 넘기면 가장 오래된 벽이 사라집니다. 이 스킬을 장착하지 않으면 맵에 벽이 없습니다.',
-  steps:['잠김','벽 1개','벽 2개','벽 3개','벽 4개']}
+  steps:['잠김','벽 1개','벽 2개','벽 3개','벽 4개']},
+ {k:'hook',  n:'Q · 견인', s:'Q — 사거리 안 가장 가까운 적을 끌어당김', skill:'q', lv:0, max:5, cost:[800,700,1050,1580,2400],
+  d:'Q — 사거리 안의 가장 가까운 적을 순간적으로 끌어당깁니다. 도망 다니는 적을 붙잡거나 각을 강제로 열 때 씁니다.',
+  steps:['잠김','사거리 260 / 대기 9.0s','사거리 280 / 대기 8.0s','사거리 300 / 대기 7.0s','사거리 320 / 대기 6.0s','사거리 340 / 대기 5.0s']},
+ {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
+  d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다.',
+  steps:['잠김','대기 26s','대기 23s','대기 20s','대기 17s','대기 14s']},
+ {k:'echo', n:'R · 잔상', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
+  d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다.',
+  steps:['잠김','대기 22s','대기 19s','대기 16s','대기 13s','대기 10s']}
 ];
-const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:''};
+const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, shake:1, cb:0, keyParry:'e', keySkill:'f', keyWall:'q'};
+const OPT={vol:80, shake:1, cb:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
-const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q'};
+const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 let binding=null, bindMsg='';
 const keyName=k=>k===' '?'SPACE':(k.length===1?k.toUpperCase():k.charAt(0).toUpperCase()+k.slice(1));
 const SAVE_KEY='aether_chamber_save_v1';
@@ -310,7 +322,7 @@ function load(){
     if(META.skill==='phase'){ if(!META.skillQ) META.skillQ='phase'; META.skill=''; }
   }catch(e){}
 }
-function wipe(){ META.cur=0;META.best=0;META.bestCycle=1;META.skill='';META.skillQ=''; UPG.forEach(u=>u.lv=0); save(); }
+function wipe(){ META.cur=0;META.best=0;META.bestCycle=1;META.skill='';META.skillQ='';META.skillR=''; UPG.forEach(u=>u.lv=0); save(); }
 load();
 
 /* ================= 사운드 (WebAudio 합성, 외부 파일 없음) ================= */
@@ -350,13 +362,17 @@ function sfx(k,n){
     case 'block':  tone(900,500,0.08,'square',0.06); break;
     case 'phase':  tone(200,1200,0.35,'sine',0.07); tone(300,1500,0.3,'triangle',0.03,0.05); break;
     case 'wall':   tone(140,90,0.18,'square',0.1); noise(0.08,0.06); break;
+    case 'dash':   tone(500,140,0.14,'sawtooth',0.09); break;
+    case 'hook':   tone(220,680,0.16,'square',0.08); break;
+    case 'overwrite': tone(180,900,0.3,'sawtooth',0.09); tone(260,1300,0.25,'square',0.05,0.05); break;
+    case 'echo':   tone(500,650,0.2,'sine',0.07); tone(500,650,0.2,'sine',0.05,0.09); break;
   }
 }
 
 function lv(k){ return UPG.find(u=>u.k===k).lv; }
 function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'),
-        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall');
+        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo');
   return {
     rangeM: 3.5+0.3*r, fov: 60+5*f, whiff: 1.20-0.10*pe,
     moveSpd: 230+15*m,
@@ -365,16 +381,22 @@ function statsFromUpgrades(){
     multi: 1+mu,
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
+    skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
     healAmt:[0,25,30,35,40,50][h], healCd:[0,18,16,14,12,10][h],
     guardDur:[0,1.5,1.8,2.1,2.5,3.0][g], guardCd:[0,18,16,14,12,10][g],
     phaseDur:[0,2,2.5,3,3.5,4][ph], phaseCd:[0,16,15,13,12,10][ph],
-    wallMax:(META.skillQ==='wall'&&wl>0)?wl:0
+    wallMax:(META.skillQ==='wall'&&wl>0)?wl:0,
+    dashDist:[0,140,155,170,185,200][da], dashCd:[0,8.0,7.4,6.8,6.2,5.5][da],
+    hookRange:[0,260,280,300,320,340][hk], hookCd:[0,9.0,8.0,7.0,6.0,5.0][hk],
+    owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec]
   };
 }
 
 /* ================= 전투 설정 ================= */
 const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
+            dashDist:0, dashCd:8, hookRange:0, hookCd:9,
+            skillR:'', owCd:26, echoCd:22,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -395,9 +417,15 @@ const GRADES={
   mob:     {hits:2,  r:R_ENEMY, pool:'mob',     score:50,   seize:0.42},
   elite:   {hits:4,  r:R_ELITE, pool:'elite',   score:150,  seize:0.50},
   bulwark: {hits:2,  r:34,      pool:'bulwark', score:110,  seize:0.46, shield:100},
-  boss:    {hits:12, r:R_BOSS,  pool:'boss',    score:1000, seize:0.60}
+  boss:    {hits:12, r:R_BOSS,  pool:'boss',    score:1000, seize:0.60},
+  /* v2.1 송신기 — 쏘지 않는다. relay: 반경 RELAY_R 안의 다른 적에게 재탈취 확률을 더해준다 */
+  relay:   {hits:1,  r:R_ENEMY, pool:'mob',     score:60,   seize:0.42, relay:0.20},
+  /* v2.1 분열형 — 처치되면 1칸짜리 분열체(splinter) 2기로 갈라진다 */
+  splitter:{hits:2,  r:R_ENEMY, pool:'mob',     score:45,   seize:0.42},
+  splinter:{hits:1,  r:20,      pool:'mob',     score:15,   seize:0.38}
 };
 const G=e=>GRADES[e.grade]||GRADES.mob;
+const RELAY_R=240;   // 송신기 지원 반경
 /* v1.8.1 방패 — 플레이어를 따라 돌되 회전 속도에 제한이 있다.
    제한이 없으면 탄환도 늘 플레이어 쪽에서 오므로 측면이라는 게 성립하지 않는다.
    SHIELD_TURN(rad/s)보다 빠르게 옆으로 돌면 방패를 벗겨낼 수 있다 */
@@ -414,17 +442,25 @@ function shielded(e,b){
 /* v1.7 D-1 — 왕복이 이어질수록 재탈취가 잘 되도록 방향을 뒤집었다.
    기존: 탄속이 오를수록 확률 하락 -> 왕복이 시작돼도 금방 끊김
    변경: 왕복 횟수에 따라 확률 상승, 탄속은 완만한 감쇠만 */
+/* v2.1 송신기 지원 — 반경 안의 다른 송신기가 주는 보정을 모두 더한다 (자기 자신은 제외) */
+function relayBonus(e){
+  let s=0;
+  ens.forEach(o=>{ if(o!==e && G(o).relay && dist(o.x,o.y,e.x,e.y)<=RELAY_R) s+=G(o).relay; });
+  return s;
+}
 function seizeChance(e,b){
   const ratio=clamp((b.spd-CFG.spd)/Math.max(1,cap()-CFG.spd),0,1);
   const base=(e.grade==='boss'&&e.p2)?0.70:G(e).seize;
   const rally=0.12*Math.min(b.returns||0,3);
-  let p=(base+rally)*(1-0.25*ratio)*CFG.seizeMul;
+  let p=(base+rally+relayBonus(e))*(1-0.25*ratio)*CFG.seizeMul;
   return clamp(p,0,0.92);
 }
 
 /* v1.5 고정 장애물 제거. 벽은 Q 스킬(벽 생성)로만 생긴다.
    벽은 높이(WALL_HG)만큼 솟아 보이므로 충돌 영역(col)은 윗면까지 포함 */
 const WALL_HG=28, WALL_L=130, WALL_T=30, WALL_GAP=50, WALL_CD=1.0, BUILD_T=12;
+/* v2.1 R 슬롯 · 신규 F/Q 옵션 상수 */
+const DASH_DUR=0.16, ECHO_DUR=4, HOOK_DUR=0.4, HOOK_SPD=900;
 const colOf=o=>({x:o.x, y:o.y-WALL_HG/SQUASH, w:o.w, h:o.h+WALL_HG/SQUASH});
 function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가 (Liang–Barsky)
   let t0=0,t1=1; const dx=x2-x1, dy=y2-y1;
@@ -505,9 +541,12 @@ function newRun(){
   const st=statsFromUpgrades();
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
+    dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,
     spd:240,fire:1.8});
   syncUI();
-  P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1};
+  P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
+     dashT:0,dashDir:0,rCd:0,rCdMax:1,echoT:0};
   ens=[];bullets=[];queue=[];msgs=[];shake=0;parts=[];hitstop=0;
   run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
@@ -524,10 +563,20 @@ function waveSpawn(){
     /* v1.8 방패병 — 3웨이브부터 1기, 사이클 2부터 2기.
        기존 정원에 얹되 총원 6기를 넘지 않게 하고, 잡몹이 0이 되지 않도록 한 자리는 남긴다 */
     const bw=run.wave>=3?(run.cycle>=2?2:1):0;
+    /* v2.1 분열형·송신기 — 도입 웨이브는 잠정값. 실측 밸런싱 전까지 조정 가능 */
+    const sp=run.wave>=2?(run.cycle>=2?2:1):0;
+    const rl=run.wave>=4?(run.cycle>=3?2:1):0;
     const n=Math.min(6,base+bw);
     const elN=Math.min(el,n-bw-1);
-    for(let i=0;i<n;i++)
-      spawnEnemy(i<elN?'elite':(i<elN+bw?'bulwark':'mob'));
+    const spN=Math.min(sp,Math.max(0,n-bw-elN-1));
+    const rlN=Math.min(rl,Math.max(0,n-bw-elN-spN-1));
+    const order=[];
+    for(let i=0;i<elN;i++) order.push('elite');
+    for(let i=0;i<bw;i++) order.push('bulwark');
+    for(let i=0;i<rlN;i++) order.push('relay');
+    for(let i=0;i<spN;i++) order.push('splitter');
+    while(order.length<n) order.push('mob');
+    order.forEach(g=>spawnEnemy(g));
     announce('CYCLE '+run.cycle+'  ·  WAVE '+run.wave,'cyan'); sfx('wave');
   }
   run.phase='fight';
@@ -544,6 +593,17 @@ function spawnEnemy(grade){
     fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y};
   if(g.shield) en.sa=Math.atan2(P.y-y,P.x-x);      // 방패 초기 방향
   ens.push(en);
+}
+/* v2.1 분열형 처치 시 1칸짜리 분열체 2기를 그 자리에 바로 생성한다 */
+function spawnSplinters(e){
+  const g=GRADES.splinter;
+  for(let i=0;i<2;i++){
+    const a=Math.random()*TAU, d=18;
+    const x=clamp(e.x+Math.cos(a)*d,40,WORLD.w-40), y=clamp(e.y+Math.sin(a)*d,40,WORLD.h-40);
+    const hp=BASE_DMG*DMG_MULT*g.hits*run.diff;
+    ens.push({x,y,r:g.r,grade:'splinter',hp,hpMax:hp,hurt:0,
+      fireT:0.3+Math.random()*0.5, drift:Math.random()*TAU, ax:x, ay:y, inv:ENEMY_IFRAME});
+  }
 }
 function announce(text,color){ msgs.push({text,color,t:1.3,big:1}); }
 const say=(t,c)=>msgs.push({text:t,color:c||'cyan',t:0.7,big:0});
@@ -574,6 +634,7 @@ addEventListener('keydown',e=>{
   if(k===OPT.keyParry){e.preventDefault();doParry();}
   else if(k===OPT.keySkill){e.preventDefault();doSkill();}
   else if(k===OPT.keyWall){e.preventDefault();doQ();}
+  else if(k===OPT.keyR){e.preventDefault();doR();}
   if(k==='escape'){togglePause();}
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
@@ -587,6 +648,7 @@ gcv.addEventListener('mousedown',e=>{e.preventDefault(); if(screen==='game')doPa
 $('#padParry').onclick=()=>{ if(screen==='game')doParry(); };
 $('#padSkill').onclick=()=>{ if(screen==='game')doSkill(); };
 $('#padWall').onclick=()=>{ if(screen==='game')doQ(); };
+$('#padR').onclick=()=>{ if(screen==='game')doR(); };
 $('#padPause').onclick=()=>{ if(screen==='game')togglePause(); };
 
 function doParry(){
@@ -603,6 +665,7 @@ function doParry(){
     const toE=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):P.face;
     const mainDir=(tgt&&angDiff(P.face,toE)<=AIM_ASSIST*Math.PI/180)?toE:P.face;
     let maxRet=0;
+    const echoes=[];
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
       t.spd=Math.min(t.spd*CFG.accel,cap());
@@ -614,7 +677,14 @@ function doParry(){
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
       maxRet=Math.max(maxRet,t.returns);
       burst(t.x,t.y,'cyan',10,180);
+      /* v2.1 잔상 — 지속 시간 동안 패링마다 탄환을 하나 더 복제한다 */
+      if(P.echoT>0 && bullets.length+echoes.length<60){
+        echoes.push({x:t.x-Math.cos(t.dir)*22, y:t.y-Math.sin(t.dir)*22, dir:t.dir, spd:t.spd*0.92, base:t.base,
+          owner:'player', returns:t.returns, dmg:t.dmg, age:0, trail:[], glow:1, hcd:0.15, tried:[], ready:false,
+          feint:0, orbitDir:0, orbitAmt:0, pierced:false});
+      }
     });
+    if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
     say(ts.length>1?'RECLAIMED ×'+ts.length:'RECLAIMED','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
@@ -626,9 +696,9 @@ function doParry(){
            if(CFG.whiff>0){ say('MISS','red'); shake=4; sfx('miss'); } }
 }
 function refreshKeyLabels(){
-  const P_=keyName(OPT.keyParry), S_=keyName(OPT.keySkill), Q_=keyName(OPT.keyWall);
-  $('#tKeys').textContent='WASD 이동 · 마우스 조준 · '+P_+' 패링 · '+S_+' 스킬 · '+Q_+' 스킬';
-  $('#padParry').textContent=P_+' · PARRY'; $('#padSkill').textContent=S_+' · SKILL'; $('#padWall').textContent=Q_+' · Q SKILL';
+  const P_=keyName(OPT.keyParry), S_=keyName(OPT.keySkill), Q_=keyName(OPT.keyWall), R_=keyName(OPT.keyR);
+  $('#tKeys').textContent='WASD 이동 · 마우스 조준 · '+P_+' 패링 · '+S_+' 스킬 · '+Q_+' 스킬 · '+R_+' 스킬';
+  $('#padParry').textContent=P_+' · PARRY'; $('#padSkill').textContent=S_+' · SKILL'; $('#padWall').textContent=Q_+' · Q SKILL'; $('#padR').textContent=R_+' · R SKILL';
 }
 function doSkill(){
   if(paused||!CFG.skill||P.skillCd>0||P.hp<=0)return;
@@ -636,9 +706,17 @@ function doSkill(){
     if(P.hp>=CFG.hpMax){ say('HP FULL','dim'); return; }
     P.hp=Math.min(CFG.hpMax,P.hp+CFG.healAmt); P.skillCd=P.skillCdMax=CFG.healCd;
     say('RESTORED +'+CFG.healAmt,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',16,140);
-  } else {
+  } else if(CFG.skill==='guard'){
     P.guard=CFG.guardDur; P.skillCd=P.skillCdMax=CFG.guardCd;
     say('GUARD','cyan'); sfx('guard');
+  } else if(CFG.skill==='dash'){
+    const mx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
+    const my=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
+    const ml=Math.hypot(mx,my);
+    P.dashDir=ml>0?Math.atan2(my,mx):P.face;
+    P.dashT=DASH_DUR; P.inv=Math.max(P.inv,DASH_DUR);
+    P.skillCd=P.skillCdMax=CFG.dashCd;
+    say('DASH','cyan'); sfx('dash'); burst(P.x,P.y,'cyan',12,160);
   }
 }
 function wallCandidate(){
@@ -662,6 +740,36 @@ function doQ(){
     if(paused||P.wallCd>0||P.hp<=0)return;
     P.phase=CFG.phaseDur; P.wallCd=P.qCdMax=CFG.phaseCd;
     say('PHASE','cyan'); sfx('phase');
+  } else if(CFG.qSkill==='hook'){
+    if(paused||P.wallCd>0||P.hp<=0)return;
+    const cands=ens.filter(e=>dist(e.x,e.y,P.x,P.y)<=CFG.hookRange);
+    if(!cands.length){ say('NO TARGET','red'); sfx('miss'); P.wallCd=0.25; return; }
+    const tgt=cands.sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
+    tgt.hookT=HOOK_DUR;
+    P.wallCd=P.qCdMax=CFG.hookCd;
+    say('HOOK','cyan'); sfx('hook'); burst(tgt.x,tgt.y,'cyan',10,160);
+  }
+}
+/* v2.1 R 슬롯 — 덮어쓰기 / 잔상 */
+function doR(){
+  if(paused||!CFG.skillR||P.rCd>0||P.hp<=0)return;
+  if(CFG.skillR==='overwrite'){
+    const ts=bullets.filter(b=>b.owner==='enemy');
+    if(!ts.length){ say('NO BULLETS','dim'); return; }
+    const all=ens.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
+    ts.forEach((t,i)=>{
+      t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
+      t.spd=Math.min(t.spd*CFG.accel,cap());
+      t.dmg=BASE_DMG*DMG_MULT*((boonLv('grit')&&t.returns>=3)?2:1);
+      t.pierced=false; t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
+      const tgt=all.length?all[i%all.length]:null;
+      t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir;
+    });
+    say('OVERWRITE ×'+ts.length,'warn'); sfx('overwrite'); shake=10; hitstop=0.06;
+    P.rCd=P.rCdMax=CFG.owCd;
+  } else if(CFG.skillR==='echo'){
+    P.echoT=ECHO_DUR; P.rCd=P.rCdMax=CFG.echoCd;
+    say('ECHO','cyan'); sfx('echo');
   }
 }
 function doWall(){
@@ -727,14 +835,21 @@ function update(dt){
   if(!run||run.phase!=='build') run.time+=dt;   // v1.7 B-4
 
   // 플레이어
-  let ax=0,ay=0;
-  if(keys['a']||keys['arrowleft'])ax-=1;
-  if(keys['d']||keys['arrowright'])ax+=1;
-  if(keys['w']||keys['arrowup'])ay-=1;
-  if(keys['s']||keys['arrowdown'])ay+=1;
-  const l=Math.hypot(ax,ay)||1;
-  P.x=clamp(P.x+(ax/l)*CFG.moveSpd*dt,30,WORLD.w-30);
-  P.y=clamp(P.y+(ay/l)*CFG.moveSpd*dt,30,WORLD.h-30);
+  if(P.dashT>0){
+    P.dashT-=dt;
+    const spd=CFG.dashDist/DASH_DUR;
+    P.x=clamp(P.x+Math.cos(P.dashDir)*spd*dt,30,WORLD.w-30);
+    P.y=clamp(P.y+Math.sin(P.dashDir)*spd*dt,30,WORLD.h-30);
+  } else {
+    let ax=0,ay=0;
+    if(keys['a']||keys['arrowleft'])ax-=1;
+    if(keys['d']||keys['arrowright'])ax+=1;
+    if(keys['w']||keys['arrowup'])ay-=1;
+    if(keys['s']||keys['arrowdown'])ay+=1;
+    const l=Math.hypot(ax,ay)||1;
+    P.x=clamp(P.x+(ax/l)*CFG.moveSpd*dt,30,WORLD.w-30);
+    P.y=clamp(P.y+(ay/l)*CFG.moveSpd*dt,30,WORLD.h-30);
+  }
   if(P.phase<=0) run.walls.forEach(({col:o})=>{
     const h=rectHit(P.x,P.y,R_PLAYER,o); if(!h)return;
     if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0) P.x=h.dx>=0?o.x+o.w+R_PLAYER:o.x-R_PLAYER;
@@ -743,6 +858,7 @@ function update(dt){
   P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
+  if(P.rCd>0)P.rCd-=dt; if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
 
   // 웨이브
   if(run.phase==='build'){
@@ -751,21 +867,50 @@ function update(dt){
   } else if(run.phase==='break'){
     run.phaseT-=dt*(CFG.fastwave?4:1);
     if(run.phaseT<=0) waveSpawn();
+  } else if(run.phase==='clear'){
+    /* v2.1 웨이브를 비운 직후 3초는 그대로 대기한다. 보상/다음 웨이브 전환이 바로 튀어나오지 않게 한다 */
+    run.phaseT-=dt;
+    if(run.phaseT<=0){
+      const wasBoss = run.wave>BOSS_WAVE;
+      if(wasBoss){ run.cycle++; run.wave=0; run.diff*=1.15;
+        CFG.spd*=1.06; CFG.fire=Math.max(0.6,CFG.fire*0.92);
+        announce('CYCLE '+run.cycle,'warn'); run.phaseT=2.2; }
+      else run.phaseT=1.2;
+      run.phase='break';
+      /* v2.0 2웨이브마다 + 보스 격파 직후에 보상 선택.
+         매 웨이브마다 주면 한 사이클에 10개가 쌓여 성장이 너무 빠르다 */
+      if(wasBoss || run.wave%2===0) openReward(wasBoss);
+    }
   } else if(!ens.length && !queue.length){
-    const wasBoss = run.wave>BOSS_WAVE;
-    if(wasBoss){ run.cycle++; run.wave=0; run.diff*=1.15;
-      CFG.spd*=1.06; CFG.fire=Math.max(0.6,CFG.fire*0.92);
-      announce('CYCLE '+run.cycle,'warn'); run.phaseT=2.2; }
-    else run.phaseT=1.2;
-    run.phase='break';
-    /* v2.0 2웨이브마다 + 보스 격파 직후에 보상 선택.
-       매 웨이브마다 주면 한 사이클에 10개가 쌓여 성장이 너무 빠르다 */
-    if(wasBoss || run.wave%2===0) openReward(wasBoss);
+    run.phase='clear'; run.phaseT=3; say('CLEAR','cyan');
   }
 
   // 적
   ens.forEach(e=>{
     e.drift+=dt*0.7;
+    /* v2.1 앵커 이동 — 견인이 최우선, 그 다음 송신기 도주 / 분열체 접근 압박 */
+    if(e.hookT>0){
+      e.hookT-=dt;
+      const toward=Math.atan2(P.y-e.ay,P.x-e.ax), stopD=e.r+R_PLAYER+40;
+      if(dist(e.ax,e.ay,P.x,P.y)>stopD){
+        e.ax=clamp(e.ax+Math.cos(toward)*HOOK_SPD*dt,40,WORLD.w-40);
+        e.ay=clamp(e.ay+Math.sin(toward)*HOOK_SPD*dt,40,WORLD.h-40);
+      }
+    } else if(G(e).relay){
+      const d=dist(e.ax,e.ay,P.x,P.y), FLEE_R=300, FLEE_SPD=70;
+      if(d<FLEE_R){
+        const away=Math.atan2(e.ay-P.y,e.ax-P.x);
+        e.ax=clamp(e.ax+Math.cos(away)*FLEE_SPD*dt,40,WORLD.w-40);
+        e.ay=clamp(e.ay+Math.sin(away)*FLEE_SPD*dt,40,WORLD.h-40);
+      }
+    } else if(e.grade==='splinter'){
+      const d=dist(e.ax,e.ay,P.x,P.y), STOP_R=150, APPROACH_SPD=60;
+      if(d>STOP_R){
+        const toward=Math.atan2(P.y-e.ay,P.x-e.ax);
+        e.ax=clamp(e.ax+Math.cos(toward)*APPROACH_SPD*dt,40,WORLD.w-40);
+        e.ay=clamp(e.ay+Math.sin(toward)*APPROACH_SPD*dt,40,WORLD.h-40);
+      }
+    }
     e.x=e.ax+Math.cos(e.drift*0.8)*36;
     e.y=e.ay+Math.sin(e.drift)*54;
     if(e.hurt>0)e.hurt-=dt; if(e.seizeFx>0)e.seizeFx-=dt;
@@ -778,6 +923,7 @@ function update(dt){
       }
     }
     if(run.phase!=='fight')return;
+    if(G(e).relay)return;                            // v2.1 송신기는 쏘지 않는다
     e.fireT-=dt;
     if(e.fireT<=0){
       const room=CFG.maxB-(bullets.length+queue.length);
@@ -885,6 +1031,7 @@ function update(dt){
           if(e.grade==='boss'){run.bossKills++; announce('BOSS DOWN  +'+bonus,'cyan'); shake=20;}
           else say('DOWN  +'+bonus,'cyan');
           ens.splice(hitIdx,1);
+          if(e.grade==='splitter') spawnSplinters(e);   // v2.1 분열형 — 처치되면 분열체 2기
           bullets.forEach(z=>{ if(z.tried) z.tried=z.tried.filter(x=>x!==e); });   // v1.7 B-1
         }
         /* v2.0 파편 — 명중 지점 주변에 추가 피해 */
@@ -1043,6 +1190,33 @@ function drawQ(){
   ctx.fillText(qt.slice(0,3),x,y+3);
   if(CFG.wallMax){ ctx.font='600 9px ui-monospace,monospace';ctx.fillText(run.walls.length+'/'+CFG.wallMax,x,y+22); }
 }
+function drawR(){
+  if(!CFG.skillR)return;
+  const p=proj(P.x,P.y), x=p[0], y=p[1]-R_PLAYER*1.3-40, r=9, ready=P.rCd<=0;
+  ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.arc(x,y,r+2,0,TAU);ctx.fill();
+  if(!ready){ const k=1-P.rCd/P.rCdMax;
+    ctx.fillStyle='rgba(47,227,208,.35)';ctx.beginPath();ctx.moveTo(x,y);ctx.arc(x,y,r,-Math.PI/2,-Math.PI/2+TAU*k);ctx.closePath();ctx.fill(); }
+  ctx.strokeStyle=ready?C.cyan:C.dim;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
+  ctx.fillStyle=ready?C.cyan:C.dim;const rt=keyName(OPT.keyR);
+  ctx.font=(rt.length>1?'700 7px':'700 10px')+' ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText(rt.slice(0,3),x,y+3);
+  if(P.echoT>0){ ctx.font='600 9px ui-monospace,monospace'; ctx.fillStyle=C.cyan; ctx.fillText(P.echoT.toFixed(1)+'s',x,y-14); }
+}
+/* v2.1 송신기 — 지원 반경과, 영향받는 적으로 이어지는 선을 그려 원인을 보여준다 */
+function drawRelayLinks(){
+  ens.forEach(r=>{
+    if(!G(r).relay) return;
+    const p=proj(r.x,r.y);
+    ctx.save(); ctx.setLineDash([4,6]); ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,204,85,.18)';
+    ctx.beginPath(); ctx.ellipse(p[0],p[1],RELAY_R,RELAY_R*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
+    ens.forEach(o=>{
+      if(o===r||dist(o.x,o.y,r.x,r.y)>RELAY_R) return;
+      const q=proj(o.x,o.y);
+      ctx.save(); ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,204,85,.5)';
+      ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); ctx.restore();
+    });
+  });
+}
 function drawLock(){
   const p=proj(P.x,P.y);
   if(P.lock<=0) return;      // v1.9.1 평상시에는 아무것도 그리지 않는다
@@ -1172,15 +1346,15 @@ function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
-  drawGrid();drawObstacles();drawWallPreview();drawZone();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
-    drawBody(e.x,e.y,e.r,C.red,e.hurt); drawShield(e); drawHpBar(e);
+    drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
       ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+SEIZE_R*(1.2-e.seizeFx),(e.r+SEIZE_R*(1.2-e.seizeFx))*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); }
   });
   if(P.phase>0) ctx.globalAlpha=.4+.15*Math.sin(performance.now()/60);
   drawBody(P.x,P.y,R_PLAYER,P.inv>0?'#9fd8ff':C.cyan,P.hurt); ctx.globalAlpha=1;
-  drawLock(); drawSkill(); drawQ();
+  drawLock(); drawSkill(); drawQ(); drawR();
   const p=proj(P.x,P.y);
   ctx.strokeStyle='rgba(223,233,242,.16)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(p[0],p[1]);
@@ -1238,7 +1412,7 @@ function openModal(kind){
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔']];
   $('#modalBox').innerHTML='<h4>OPTIONS</h4>'+
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
-    [['패링 키','keyParry',' / 좌클릭'],['F 스킬 키','keySkill',''],['Q 스킬 키','keyWall','']].map(([a,k,suf])=>
+    [['패링 키','keyParry',' / 좌클릭'],['F 스킬 키','keySkill',''],['Q 스킬 키','keyWall',''],['R 스킬 키','keyR','']].map(([a,k,suf])=>
       '<div class="opt-row opt-tg" data-bind="'+k+'"><span>'+a+'</span><i>'+
       (binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
     '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+
@@ -1283,6 +1457,7 @@ function renderDetail(){
     META.cur-=u.cost[u.lv];u.lv++;
     if(u.skill===1&&u.lv===1&&!META.skill) META.skill=u.k;      // 처음 해금한 스킬은 자동 장착
     if(u.skill==='q'&&u.lv===1&&!META.skillQ) META.skillQ=u.k;
+    if(u.skill==='r'&&u.lv===1&&!META.skillR) META.skillR=u.k;
     save(); sfx('ui'); renderSkillSel();
     $('#cur').textContent=META.cur.toLocaleString();
     renderCards();renderDetail();
@@ -1294,12 +1469,16 @@ function renderSkillSel(){
     return '<button data-slot="'+slot+'" data-skill="'+k+'"'+(cur===k?' class="on"':'')+(ok?'':' disabled')+'>'+n+(ok?'':' (잠김)')+'</button>';
   }).join('')+'</div>';
   $('#skillSel').innerHTML=
-    row('f','F',[['heal','회복'],['guard','방어'],['','없음']],META.skill)+
-    row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['','없음']],META.skillQ);
+    row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['','없음']],META.skill)+
+    row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','견인'],['','없음']],META.skillQ)+
+    row('r','R',[['overwrite','덮어쓰기'],['echo','잔상'],['','없음']],META.skillR);
 }
 $('#skillSel').addEventListener('click',e=>{
   const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
-  if(b.dataset.slot==='q') META.skillQ=b.dataset.skill; else META.skill=b.dataset.skill;
+  const slot=b.dataset.slot;
+  if(slot==='q') META.skillQ=b.dataset.skill;
+  else if(slot==='r') META.skillR=b.dataset.skill;
+  else META.skill=b.dataset.skill;
   save(); sfx('ui'); renderSkillSel();
 });
 let debug=false;
@@ -1316,8 +1495,8 @@ $('#debugBtns').addEventListener('click',e=>{
   if(k==='cur') META.cur+=10000;
   if(k==='max') UPG.forEach(u=>{ u.lv=u.max; });
   if(k==='zero') UPG.forEach(u=>{ u.lv=0; });
-  if(k==='max'){ if(!META.skill)META.skill='heal'; if(!META.skillQ)META.skillQ='wall'; }
-  if(k==='zero'){ META.skill=''; META.skillQ=''; }
+  if(k==='max'){ if(!META.skill)META.skill='heal'; if(!META.skillQ)META.skillQ='wall'; if(!META.skillR)META.skillR='overwrite'; }
+  if(k==='zero'){ META.skill=''; META.skillQ=''; META.skillR=''; }
   save(); sfx('ui');
   if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); }
 });
