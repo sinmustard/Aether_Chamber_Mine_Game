@@ -22,6 +22,13 @@ body{background:var(--bg);color:var(--fg);
 
 #frame{position:relative;width:100%;max-width:1000px;aspect-ratio:1000/560;
   background:#080c11;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+/* v3.3 전체화면 — 프레임이 화면 전체를 비율 유지한 채 최대한 채우도록. 브라우저 전체화면만으로는
+   프레임이 가운데 작게 남고 캡션·여백이 그대로 보여서, 전체화면 상태를 body.fullscreen으로 감지해 별도 스타일을 준다 */
+body.fullscreen{padding:0;gap:0;background:#000}
+body.fullscreen #frame{max-width:none;border-radius:0;border:0;
+  width:min(100vw, calc(100vh * 1000 / 560));
+  height:min(100vh, calc(100vw * 560 / 1000));}
+body.fullscreen .caption,body.fullscreen #debugSpawn,body.fullscreen details.dev{display:none}
 #gamecv,#bgcv{position:absolute;inset:0;width:100%;height:100%}
 #bgcv{z-index:1}
 #gamecv{z-index:1;display:none}
@@ -225,7 +232,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.12</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.13</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1754,6 +1761,13 @@ function toggleFullscreen(){
     }
   }catch(e){}
 }
+/* v3.3 폰의 goLandscape()로 들어가든, 방금 만든 버튼으로 들어가든, ESC로 나가든
+   전체화면 상태가 바뀔 때마다 body.fullscreen을 맞춰서 #frame이 꽉 차게 한다 */
+function syncFsClass(){
+  document.body.classList.toggle('fullscreen', !!(document.fullscreenElement||document.webkitFullscreenElement));
+}
+document.addEventListener('fullscreenchange',syncFsClass);
+document.addEventListener('webkitfullscreenchange',syncFsClass);
 /* v2.5 폰에서는 첫 터치(또는 클릭) 때 바로 전체화면으로 들어간다.
    브라우저가 사용자 동작 없이는 전체화면을 허용하지 않기 때문에 첫 입력을 쓴다 */
 function armFullscreen(){
