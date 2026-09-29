@@ -1741,6 +1741,19 @@ function exitLandscape(){
   }catch(e){}
 }
 $('#goFs').onclick=goLandscape;
+/* v3.3 전체화면 — 폰의 자동 가로 전환과 별개로, 아무 기기에서나 옵션에서 수동으로 켜고 끌 수 있게 한다 */
+function toggleFullscreen(){
+  try{
+    if(document.fullscreenElement||document.webkitFullscreenElement){
+      if(document.exitFullscreen) document.exitFullscreen();
+      else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+      const el=document.documentElement;
+      if(el.requestFullscreen) el.requestFullscreen();
+      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+  }catch(e){}
+}
 /* v2.5 폰에서는 첫 터치(또는 클릭) 때 바로 전체화면으로 들어간다.
    브라우저가 사용자 동작 없이는 전체화면을 허용하지 않기 때문에 첫 입력을 쓴다 */
 function armFullscreen(){
@@ -1797,6 +1810,8 @@ function openModal(kind){
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔']];
   $('#modalBox').innerHTML='<h4>OPTIONS</h4>'+
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
+    /* v3.3 전체화면 — 폰이 아니어도 언제든 켜고 끌 수 있게 별도 행으로 둔다 (지속 저장값이 아니라 그때그때 상태를 보여줌) */
+    '<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
     [['패링 키','keyParry',' / 좌클릭'],['F 스킬 키','keySkill',''],['Q 스킬 키','keyWall',''],['R 스킬 키','keyR','']].map(([a,k,suf])=>
       '<div class="opt-row opt-tg" data-bind="'+k+'"><span>'+a+'</span><i>'+
       (binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
@@ -1809,6 +1824,8 @@ function openModal(kind){
 $('#modalBox').addEventListener('click',e=>{
   const r=e.target.closest('[data-opt]');
   const kb=e.target.closest('[data-bind]');
+  const fs=e.target.closest('[data-fs]');
+  if(fs){ toggleFullscreen(); setTimeout(openModal,150); sfx('ui'); return; }   // v3.3 전환 애니메이션 끝나고 라벨 갱신
   if(kb){ const k=kb.dataset.bind; bindMsg='';
     if(k==='reset'){ Object.assign(OPT,KEY_DEFAULT); binding=null; save(); refreshKeyLabels(); sfx('ui'); }
     else binding=(binding===k?null:k);
