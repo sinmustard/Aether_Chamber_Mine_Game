@@ -64,6 +64,9 @@ body.in-game #topPause{display:block}
 /* HUB */
 #hub{background:rgba(8,12,17,.96)}
 #hub .body{flex:1;display:flex;gap:12px;padding:14px 18px;min-height:0}
+.cards .grp{grid-column:1/-1;font-size:10px;letter-spacing:.18em;color:var(--dim);
+  padding:6px 2px 1px;border-top:1px solid var(--line)}
+.cards .grp:first-child{padding-top:0;border-top:0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;
   flex:1 1 58%;align-content:start;overflow:auto;min-height:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer}
@@ -232,7 +235,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.13</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.14</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -348,6 +351,9 @@ const UPG=[
   steps:['×1.20 / 점수 ×1.00','×1.24 / ×1.10','×1.28 / ×1.20','×1.32 / ×1.35','×1.36 / ×1.50','×1.40 / ×1.70']},
  {k:'vital', n:'생존', s:'최대 체력 · 피격 무적', lv:0, max:5, cost:[300,440,670,1000,1500],
   steps:['100 / 0.40s','115 / 0.45s','130 / 0.50s','145 / 0.55s','160 / 0.60s','175 / 0.70s']},
+ {k:'homing',n:'유도 보정', s:'되돌린 탄환이 적을 따라감', lv:0, max:5, cost:[400,650,1000,1500,2200],
+  d:'패링으로 되돌린 탄환이 앞쪽의 가장 가까운 적 쪽으로 휘어집니다. 단계가 오를수록 더 강하게 꺾이고, 뒤쪽으로 급하게 돌지는 않습니다.',
+  steps:['없음','약함','조금 약함','보통','강함','매우 강함']},
  {k:'multi', n:'다중 패링', s:'한 번에 빼앗는 탄환 수', lv:0, max:2, cost:[1500,3500],
   steps:['1발','2발','3발']},
  {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, lv:0, max:5, cost:[800,700,1050,1580,2400],
@@ -447,7 +453,7 @@ function sfx(k,n){
 
 function lv(k){ return UPG.find(u=>u.k===k).lv; }
 function statsFromUpgrades(){
-  const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'),
+  const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'),
         h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo');
   return {
     rangeM: 3.5+0.3*r, fov: 60+5*f, whiff: 1.20-0.10*pe,
@@ -455,6 +461,7 @@ function statsFromUpgrades(){
     accel: 1.20+0.04*b, scoreMul: [1,1.1,1.2,1.35,1.5,1.7][b],
     hpMax: 100+15*v, iframe: [0.40,0.45,0.50,0.55,0.60,0.70][v],
     multi: 1+mu,
+    homing: [0,0.8,1.4,2.0,2.8,3.6][hm],
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
     skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
@@ -469,7 +476,7 @@ function statsFromUpgrades(){
 }
 
 /* ================= 전투 설정 ================= */
-const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8,
+const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
             skillR:'', owCd:26, echoCd:22,
@@ -658,7 +665,7 @@ let touchMode=false;
 function newRun(){
   const st=statsFromUpgrades();
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
-    accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
+    accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
     skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,
     spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
@@ -1237,6 +1244,15 @@ function update(dt){
       const want=Math.atan2(P.y-b.y,P.x-b.x)+b.orbitDir*b.orbitAmt;
       if(P.phase<=0) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // 위상 이동 중엔 유도 무력화
     } else {
+      /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
+      if(CFG.homing>0&&ens.length){
+        let tg=null,bd=1e9;
+        for(const e of ens){
+          const d=dist(b.x,b.y,e.x,e.y);
+          if(d<bd&&Math.abs(norm(Math.atan2(e.y-b.y,e.x-b.x)-b.dir))<Math.PI*0.6){ bd=d; tg=e; }
+        }
+        if(tg) b.dir+=norm(Math.atan2(tg.y-b.y,tg.x-b.x)-b.dir)*Math.min(1,dt*CFG.homing);
+      }
       if(b.hcd>0) b.hcd-=dt;
       for(const e of ens){
         if(b.tried.includes(e)) continue;
@@ -1853,12 +1869,20 @@ $('#modalBox').addEventListener('click',e=>{
 });
 
 /* ================= HUB ================= */
-function renderCards(){
-  $('#cards').innerHTML=UPG.map((u,i)=>
-    '<div class="card'+(i===sel?' sel':'')+(u.skill?' skill':'')+(u.skill&&!u.lv?' locked':'')+'" data-i="'+i+'"><div class="n">'+u.n+(u.skill&&!u.lv?' · 잠김':'')+'</div>'+
+function cardHTML(u,i){
+  return '<div class="card'+(i===sel?' sel':'')+(u.skill?' skill':'')+(u.skill&&!u.lv?' locked':'')+'" data-i="'+i+'"><div class="n">'+u.n+(u.skill&&!u.lv?' · 잠김':'')+'</div>'+
     '<div class="s">'+u.s+'</div><div class="pips">'+
     Array.from({length:u.max},(_,k)=>'<div class="pip'+(k<u.lv?' f':'')+'"></div>').join('')+
-    '</div></div>').join('');
+    '</div></div>';
+}
+/* v2.14 강화와 능력을 나눠서 보여준다 */
+function renderCards(){
+  const idx=UPG.map((u,i)=>[u,i]);
+  const groups=[['강화', idx.filter(([u])=>!u.skill)],
+                ['능력 해방 / 강화', idx.filter(([u])=>u.skill)]];
+  $('#cards').innerHTML=groups.map(([title,list])=>
+    list.length? '<div class="grp">'+title+'</div>'+list.map(([u,i])=>cardHTML(u,i)).join('') : ''
+  ).join('');
 }
 function renderDetail(){
   const u=UPG[sel],maxed=u.lv>=u.max,cost=maxed?0:u.cost[u.lv];
