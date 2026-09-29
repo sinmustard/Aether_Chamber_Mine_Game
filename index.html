@@ -149,6 +149,17 @@ body{background:var(--bg);color:var(--fg);
   background:var(--panel);color:var(--cyan);border:1px solid var(--cyan);border-radius:8px;
   cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 body:not(.in-game) .pads{display:none}
+/* v2.4 폰 세로 모드 안내 — 가로로 돌리면 사라진다 */
+#rotate{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;text-align:center;padding:28px;
+  background:rgba(8,12,17,.96);color:var(--fg)}
+#rotate .ic{font-size:44px;animation:rot 1.8s ease-in-out infinite}
+@keyframes rot{0%,40%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+#rotate p{font-size:13px;line-height:1.7;color:var(--dim);letter-spacing:.04em}
+#rotate button{padding:12px 20px;font:inherit;font-size:12px;letter-spacing:.14em;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:7px;cursor:pointer}
+@media (max-width:900px) and (orientation:portrait){ body.in-game #rotate{display:flex} }
+@media (max-width:759px){ #gamecv{touch-action:none} }
 @media (min-width:760px){ .pads{display:none} }
 
 /* DEV */
@@ -174,7 +185,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.1</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.4</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -227,6 +238,12 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <div id="modal"><div class="box" id="modalBox"></div></div>
 </div>
 
+<div id="rotate">
+  <div class="ic">📱</div>
+  <div>화면을 가로로 돌려주세요</div>
+  <p>가로로 해야 게임 화면이 제대로 보입니다.<br>회전 잠금이 켜져 있으면 풀어주세요.</p>
+  <button id="goFs">전체화면으로 보기</button>
+</div>
 <div class="pads">
   <button id="padParry">E · PARRY</button>
   <button id="padSkill">F · SKILL</button>
@@ -536,6 +553,11 @@ let parts=[],hitstop=0;
 function burst(x,y,col,n,sp){ for(let i=0;i<n;i++){const a=Math.random()*TAU,v=(sp||160)*(0.4+Math.random()*0.8);
   parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0.35+Math.random()*0.25,col});} }
 const keys={}; let mouse={x:600,y:380};
+/* v2.3 모바일 — 왼쪽 절반 드래그: 이동 / 오른쪽 절반 드래그: 조준.
+   화면 좌표(px)로 받아서 세로 눌림(SQUASH)을 보정해 월드 방향으로 바꾼다 */
+const TOUCH_DEAD=14, TOUCH_MAX=70;
+const stick={move:null, aim:null};   // {id, ox, oy, x, y, dx, dy, len}
+let touchMode=false;
 
 function newRun(){
   const st=statsFromUpgrades();
@@ -605,6 +627,20 @@ function spawnSplinters(e){
       fireT:0.3+Math.random()*0.5, drift:Math.random()*TAU, ax:x, ay:y, inv:ENEMY_IFRAME});
   }
 }
+/* v2.2 처치 처리 — 직격이든 파편이든 여기로 모은다.
+   이전에는 직격 안에만 있어서 파편으로 체력이 0이 된 적이 살아남았다 */
+function killEnemy(e){
+  const idx=ens.indexOf(e); if(idx<0) return;
+  const bonus=G(e).score;
+  run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
+  burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
+  hitstop=e.grade==='boss'?0.25:0.07; sfx(e.grade==='boss'?'boss':'kill');
+  if(e.grade==='boss'){ run.bossKills++; announce('BOSS DOWN  +'+bonus,'cyan'); shake=20; }
+  else say('DOWN  +'+bonus,'cyan');
+  ens.splice(idx,1);
+  if(e.grade==='splitter') spawnSplinters(e);   // v2.1 분열형 — 처치되면 분열체 2기
+  bullets.forEach(z=>{ if(z.tried) z.tried=z.tried.filter(x=>x!==e); });   // v1.7 B-1
+}
 function announce(text,color){ msgs.push({text,color,t:1.3,big:1}); }
 const say=(t,c)=>msgs.push({text:t,color:c||'cyan',t:0.7,big:0});
 
@@ -645,6 +681,44 @@ gcv.addEventListener('mousemove',e=>{
   mouse.y=(((e.clientY-r.top)*(H/r.height))-OY)/SQUASH;
 });
 gcv.addEventListener('mousedown',e=>{e.preventDefault(); if(screen==='game')doParry();});
+/* ---- v2.3 터치 조작 ---- */
+function tPos(t){
+  const r=gcv.getBoundingClientRect();
+  return [ (t.clientX-r.left)*(W/r.width), (t.clientY-r.top)*(H/r.height) ];
+}
+function setStick(st,x,y){
+  const dx=x-st.ox, dy=(y-st.oy)/SQUASH;          // 화면 → 월드 방향 보정
+  const len=Math.hypot(dx,dy);
+  st.x=x; st.y=y; st.len=len;
+  if(len>TOUCH_DEAD){ st.dx=dx/len; st.dy=dy/len; } else { st.dx=st.dy=0; }
+}
+gcv.addEventListener('touchstart',e=>{
+  if(screen!=='game')return;
+  e.preventDefault(); touchMode=true;
+  for(const t of e.changedTouches){
+    const [x,y]=tPos(t);
+    const side = x < W/2 ? 'move' : 'aim';
+    if(stick[side]) continue;                      // 같은 쪽은 먼저 닿은 손가락 우선
+    stick[side]={id:t.identifier, ox:x, oy:y, x, y, dx:0, dy:0, len:0};
+  }
+},{passive:false});
+gcv.addEventListener('touchmove',e=>{
+  if(screen!=='game')return;
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    for(const k of ['move','aim']){
+      const st=stick[k]; if(!st||st.id!==t.identifier) continue;
+      const [x,y]=tPos(t); setStick(st,x,y);
+    }
+  }
+},{passive:false});
+function endTouch(e){
+  for(const t of e.changedTouches)
+    for(const k of ['move','aim'])
+      if(stick[k]&&stick[k].id===t.identifier) stick[k]=null;
+}
+gcv.addEventListener('touchend',endTouch,{passive:false});
+gcv.addEventListener('touchcancel',endTouch,{passive:false});
 $('#padParry').onclick=()=>{ if(screen==='game')doParry(); };
 $('#padSkill').onclick=()=>{ if(screen==='game')doSkill(); };
 $('#padWall').onclick=()=>{ if(screen==='game')doQ(); };
@@ -712,8 +786,8 @@ function doSkill(){
   } else if(CFG.skill==='dash'){
     const mx=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
     const my=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0);
-    const ml=Math.hypot(mx,my);
-    P.dashDir=ml>0?Math.atan2(my,mx):P.face;
+    const ms=stick.move, ml=Math.hypot(mx,my);
+    P.dashDir=(ms&&(ms.dx||ms.dy))?Math.atan2(ms.dy,ms.dx):(ml>0?Math.atan2(my,mx):P.face);
     P.dashT=DASH_DUR; P.inv=Math.max(P.inv,DASH_DUR);
     P.skillCd=P.skillCdMax=CFG.dashCd;
     say('DASH','cyan'); sfx('dash'); burst(P.x,P.y,'cyan',12,160);
@@ -813,7 +887,7 @@ function takeReward(i){
   run.boons[b.k]=(run.boons[b.k]||0)+1;
   b.fn();
   $('#reward').classList.remove('on');
-  run.phase='break'; run.phaseT=0.9;
+  run.phase='break'; run.phaseT=Math.max(run.phaseT,0.9);   // v2.2 보스 직후 CYCLE 연출 시간 유지
   say(b.n,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',14,150);
 }
 $('#rwRow').addEventListener('click',e=>{
@@ -846,16 +920,21 @@ function update(dt){
     if(keys['d']||keys['arrowright'])ax+=1;
     if(keys['w']||keys['arrowup'])ay-=1;
     if(keys['s']||keys['arrowdown'])ay+=1;
-    const l=Math.hypot(ax,ay)||1;
-    P.x=clamp(P.x+(ax/l)*CFG.moveSpd*dt,30,WORLD.w-30);
-    P.y=clamp(P.y+(ay/l)*CFG.moveSpd*dt,30,WORLD.h-30);
+    let l=Math.hypot(ax,ay)||1; ax/=l; ay/=l;
+    const ms=stick.move;                                   // v2.3 가상 조이스틱
+    let spdMul=1;
+    if(ms&&(ms.dx||ms.dy)){ ax=ms.dx; ay=ms.dy; spdMul=Math.min(1,ms.len/TOUCH_MAX); }
+    P.x=clamp(P.x+ax*CFG.moveSpd*spdMul*dt,30,WORLD.w-30);
+    P.y=clamp(P.y+ay*CFG.moveSpd*spdMul*dt,30,WORLD.h-30);
   }
   if(P.phase<=0) run.walls.forEach(({col:o})=>{
     const h=rectHit(P.x,P.y,R_PLAYER,o); if(!h)return;
     if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0) P.x=h.dx>=0?o.x+o.w+R_PLAYER:o.x-R_PLAYER;
     else P.y=h.dy>=0?o.y+o.h+R_PLAYER:o.y-R_PLAYER;
   });
-  P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
+  const as=stick.aim;                                     // v2.3 오른쪽 드래그 조준
+  if(as&&(as.dx||as.dy)) P.face=Math.atan2(as.dy,as.dx);
+  else if(!touchMode)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.rCd>0)P.rCd-=dt; if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
@@ -1020,26 +1099,24 @@ function update(dt){
       }
       if(hitIdx>=0){
         const e=ens[hitIdx];
-        e.hp-=b.dmg; e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
+        /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용) */
+        e.hp-=HIT_UNIT*((boonLv('grit')&&b.returns>=3)?2:1);
+        e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
         if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('OVERWRITE','red'); sfx('boss'); shake=16; }
         const pts=Math.round(10*Math.max(1,b.returns)*CFG.scoreMul);
         run.score+=pts; say('+'+pts+(b.returns>1?'  ×'+b.returns:''),'warn');
-        if(e.hp<=0){
-          const bonus=G(e).score;
-          run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
-          burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240); hitstop=e.grade==='boss'?0.25:0.07; sfx(e.grade==='boss'?'boss':'kill');
-          if(e.grade==='boss'){run.bossKills++; announce('BOSS DOWN  +'+bonus,'cyan'); shake=20;}
-          else say('DOWN  +'+bonus,'cyan');
-          ens.splice(hitIdx,1);
-          if(e.grade==='splitter') spawnSplinters(e);   // v2.1 분열형 — 처치되면 분열체 2기
-          bullets.forEach(z=>{ if(z.tried) z.tried=z.tried.filter(x=>x!==e); });   // v1.7 B-1
-        }
+        if(e.hp<=0) killEnemy(e);
         /* v2.0 파편 — 명중 지점 주변에 추가 피해 */
         const sh=boonLv('shard');
         if(sh){
-          const dmg=HIT_UNIT*SHARD_UNIT*sh;
-          ens.forEach(o=>{ if(o===e||o.inv>0) return;
-            if(dist(b.x,b.y,o.x,o.y)<90+o.r){ o.hp-=dmg; o.hurt=.18; } });
+          const base=HIT_UNIT*SHARD_UNIT*sh;
+          ens.slice().forEach(o=>{ if(o===e||o.inv>0) return;
+            if(dist(b.x,b.y,o.x,o.y)>=90+o.r) return;
+            /* v2.2 방패가 폭발 지점을 향하면 절반만 들어간다 */
+            o.hp-=base*(shielded(o,{x:b.x,y:b.y})?0.5:1);
+            o.hurt=.18;
+            if(o.hp<=0) killEnemy(o);   // v2.2 파편으로도 죽는다
+          });
           burst(b.x,b.y,'warn',10,200);
         }
         /* v2.0 관통 — 적 1기를 뚫고 지나간다 (적 무적 0.1초 덕에 재충돌하지 않음) */
@@ -1297,6 +1374,18 @@ function drawBullet(b){
 }
 function fmtTime(s){const m=Math.floor(s/60),x=Math.floor(s%60);return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
 
+/* v2.3 조이스틱 표시 — 손가락이 닿은 자리에 그린다 */
+function drawSticks(){
+  [['move',C.cyan],['aim',C.warn]].forEach(([k,col])=>{
+    const st=stick[k]; if(!st)return;
+    ctx.save(); ctx.globalAlpha=.30; ctx.strokeStyle=col; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(st.ox,st.oy,TOUCH_MAX,0,TAU); ctx.stroke();
+    const d=Math.hypot(st.x-st.ox,st.y-st.oy), f=d>TOUCH_MAX?TOUCH_MAX/d:1;
+    ctx.globalAlpha=.55; ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(st.ox+(st.x-st.ox)*f, st.oy+(st.y-st.oy)*f, 16,0,TAU); ctx.fill();
+    ctx.restore();
+  });
+}
 function drawHUD(){
   drawHpBarPlayer();                       // v1.9 플레이어 체력 바
   ctx.textAlign='right';ctx.font='700 17px ui-monospace,monospace';
@@ -1363,10 +1452,35 @@ function render(){
   parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
     ctx.fillRect(pp[0]-2,pp[1]-2,4,4);});ctx.globalAlpha=1;
   ctx.restore();
-  drawHUD();
+  drawSticks(); drawHUD();
 }
 
 /* ================= 화면 전환 ================= */
+/* v2.4 폰에서 전체화면 + 가로 고정.
+   안드로이드 크롬은 전체화면 상태에서만 회전 고정이 되고, 아이폰 사파리는 고정을 지원하지 않는다.
+   그래서 실패해도 조용히 넘어가고, 세로면 안내를 띄운다 */
+const isPhone=()=>{ const m=window.matchMedia; if(!m)return false;
+  return m('(max-width:900px)').matches||m('(pointer:coarse)').matches; };
+async function goLandscape(){
+  if(!isPhone())return;
+  try{
+    const el=document.documentElement;
+    if(!document.fullscreenElement){
+      if(el.requestFullscreen) await el.requestFullscreen({navigationUI:'hide'});
+      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+    const so=window.screen&&window.screen.orientation;
+    if(so&&so.lock) await so.lock('landscape');
+  }catch(e){}
+}
+function exitLandscape(){
+  try{
+    const so=window.screen&&window.screen.orientation;
+    if(so&&so.unlock) so.unlock();
+    if(document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen();
+  }catch(e){}
+}
+$('#goFs').onclick=goLandscape;
 function go(id){
   screen=id;
   document.body.classList.toggle('in-game',id==='game');
@@ -1376,6 +1490,7 @@ function go(id){
   $('#modal').classList.remove('on'); paused=false;
   if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
+  if(id==='game') goLandscape(); else if(isPhone()) exitLandscape();   // v2.4
 }
 function startRun(){ newRun(); go('game'); }
 function endRun(){
