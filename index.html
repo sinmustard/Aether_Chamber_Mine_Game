@@ -256,7 +256,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.35</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.36</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2321,7 +2321,16 @@ const SPECS=[
  {k:'seizeMul',lab:'적 재탈취 확률 배율',min:0,max:2,step:.1,dec:1,u:' ×'},
  {k:'fire',lab:'적 발사 간격',min:.4,max:4,step:.1,dec:1,u:' s'},
  {k:'maxB',lab:'동시 탄환 상한',min:1,max:12,step:1,dec:0,u:' 발'},
- {k:'multi',lab:'다중 패링',min:1,max:3,step:1,dec:0,u:' 발'}
+ {k:'multi',lab:'다중 패링',min:1,max:3,step:1,dec:0,u:' 발'},
+ /* v2.36 디버그 패널에 빠져 있던 항목 */
+ {k:'homing',lab:'유도 보정',min:0,max:5,step:.2,dec:1,u:''},
+ {k:'rNeed',lab:'R 필요 충전',min:10,max:200,step:10,dec:0,u:''},
+ {k:'empDur',lab:'해킹 지속',min:0,max:5,step:.1,dec:1,u:' s'},
+ {k:'healAmt',lab:'회복량',min:0,max:120,step:5,dec:0,u:''},
+ {k:'guardDur',lab:'방어막 지속',min:0,max:6,step:.1,dec:1,u:' s'},
+ {k:'phaseDur',lab:'위상 이동 지속',min:0,max:8,step:.1,dec:1,u:' s'},
+ {k:'wallMax',lab:'벽 최대 수',min:0,max:8,step:1,dec:0,u:' 개'},
+ {k:'gainMul',lab:'재화 배율',min:1,max:3,step:.1,dec:1,u:' ×'}
 ];
 const TOGS=[{k:'bounce',on:'충돌: 반사',off:'충돌: 소멸'},
             {k:'god',on:'무적: 켬',off:'무적: 끔'},
