@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 엘리트 — 잡몹의 상위형. 8각 별 + 바깥 갑주 링으로 "더 단단하다"는 인상 -->
+  <defs>
+    <radialGradient id="core" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#ffd9b0"/>
+      <stop offset="35%" stop-color="#ff8a63"/>
+      <stop offset="75%" stop-color="#c21f36"/>
+      <stop offset="100%" stop-color="#3a0d12"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#3a1216" stroke-width="10"/>
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#ff3b52" stroke-width="2.5" opacity="0.6"/>
+  <polygon points="100,15 116,61 160,28 139,84 185,100 139,116 160,172 116,139 100,185 84,139 40,172 61,116 15,100 61,84 40,28 84,61"
+    fill="url(#core)" filter="url(#glow)"/>
+  <polygon points="100,15 116,61 160,28 139,84 185,100 139,116 160,172 116,139 100,185 84,139 40,172 61,116 15,100 61,84 40,28 84,61"
+    fill="none" stroke="#2a0810" stroke-width="2" opacity="0.7"/>
+</svg>

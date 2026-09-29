@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 잡졸 — 소환사가 불러내는 1칸짜리 최하급. 가장 단순한 4각 다이아몬드 -->
+  <defs>
+    <radialGradient id="core" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffd9b0"/>
+      <stop offset="45%" stop-color="#ff6a52"/>
+      <stop offset="100%" stop-color="#3a0d12"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <polygon points="100,40 145,100 100,160 55,100" fill="url(#core)" filter="url(#glow)"/>
+  <polygon points="100,40 145,100 100,160 55,100" fill="none" stroke="#2a0810" stroke-width="2" opacity="0.8"/>
+</svg>

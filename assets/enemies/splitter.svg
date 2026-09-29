@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 분열형 — 죽으면 갈라진다는 걸 미리 보여주는 좌우 대칭 두 덩어리 + 이음선 -->
+  <defs>
+    <radialGradient id="core" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffd9b0"/>
+      <stop offset="40%" stop-color="#ff6a52"/>
+      <stop offset="100%" stop-color="#3a0d12"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M65,100 C65,60 45,40 25,45 C10,75 10,125 25,155 C45,160 65,140 65,100 Z" fill="url(#core)" filter="url(#glow)"/>
+  <path d="M135,100 C135,60 155,40 175,45 C190,75 190,125 175,155 C155,160 135,140 135,100 Z" fill="url(#core)" filter="url(#glow)"/>
+  <path d="M65,100 C65,60 45,40 25,45 C10,75 10,125 25,155 C45,160 65,140 65,100 Z" fill="none" stroke="#2a0810" stroke-width="2" opacity="0.7"/>
+  <path d="M135,100 C135,60 155,40 175,45 C190,75 190,125 175,155 C155,160 135,140 135,100 Z" fill="none" stroke="#2a0810" stroke-width="2" opacity="0.7"/>
+  <line x1="100" y1="55" x2="100" y2="145" stroke="#ff3b52" stroke-width="4" stroke-dasharray="3,5" opacity="0.85"/>
+</svg>

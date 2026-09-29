@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 보스 알레테이아 — 잡몹 코어의 완성형. 다중 발사구를 암시하는 12각 만다라 -->
+  <defs>
+    <radialGradient id="core" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#ffe6c2"/>
+      <stop offset="30%" stop-color="#ff8a63"/>
+      <stop offset="65%" stop-color="#c21f36"/>
+      <stop offset="100%" stop-color="#2a0810"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#3a1216" stroke-width="6"/>
+  <g fill="#5c1420">
+    <circle cx="100" cy="8" r="7"/><circle cx="146" cy="21" r="7"/><circle cx="179" cy="54" r="7"/>
+    <circle cx="192" cy="100" r="7"/><circle cx="179" cy="146" r="7"/><circle cx="146" cy="179" r="7"/>
+    <circle cx="100" cy="192" r="7"/><circle cx="54" cy="179" r="7"/><circle cx="21" cy="146" r="7"/>
+    <circle cx="8" cy="100" r="7"/><circle cx="21" cy="54" r="7"/><circle cx="54" cy="21" r="7"/>
+  </g>
+  <polygon points="100,25 122,60 164,44 152,88 185,100 152,112 164,156 122,140 100,175 78,140 36,156 48,112 15,100 48,88 36,44 78,60"
+    fill="url(#core)" filter="url(#glow)"/>
+  <polygon points="100,25 122,60 164,44 152,88 185,100 152,112 164,156 122,140 100,175 78,140 36,156 48,112 15,100 48,88 36,44 78,60"
+    fill="none" stroke="#2a0810" stroke-width="2" opacity="0.7"/>
+  <circle cx="100" cy="100" r="26" fill="#ffe6c2" opacity="0.9"/>
+</svg>

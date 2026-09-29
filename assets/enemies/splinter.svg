@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 분열체 — 분열형의 절반 조각. 부서진 단면이 그대로 보이는 작고 사나운 파편 -->
+  <defs>
+    <radialGradient id="core" cx="55%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffd9b0"/>
+      <stop offset="40%" stop-color="#ff6a52"/>
+      <stop offset="100%" stop-color="#3a0d12"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M150,100 C150,55 125,30 100,35 C82,55 78,80 90,100 C78,120 82,145 100,165 C125,170 150,145 150,100 Z"
+    fill="url(#core)" filter="url(#glow)"/>
+  <path d="M150,100 C150,55 125,30 100,35 C82,55 78,80 90,100 C78,120 82,145 100,165 C125,170 150,145 150,100 Z"
+    fill="none" stroke="#2a0810" stroke-width="2" opacity="0.8"/>
+  <path d="M100,35 L90,100 L100,165" fill="none" stroke="#ff3b52" stroke-width="3" stroke-dasharray="2,4" opacity="0.9"/>
+</svg>

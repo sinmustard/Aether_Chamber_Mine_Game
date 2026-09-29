@@ -1598,6 +1598,9 @@ function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[g
 loadSprite('mob','assets/enemies/mob.png');
 loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
+/* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
+['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer']
+  .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
 function drawEnemyBody(e){
   const img=SPRITES[e.grade];
   if(e.stunT>0){   // v2.22 정지 표시
@@ -1606,7 +1609,7 @@ function drawEnemyBody(e){
     ctx.lineWidth=2; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+10,(e.r+10)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
   }
-  if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:(G(e).heal?'#7ce38b':C.red),e.hurt); return; }
+  if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); return; }
   const p=proj(e.x,e.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],e.r*.86,e.r*.86*SQUASH,0,0,TAU);ctx.fill();

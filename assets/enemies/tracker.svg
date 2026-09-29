@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 추적자 — 탄환 없이 달려드는 근접 위협. 앞으로 기울어진 날카로운 쐐기 + 발톱 3개 -->
+  <defs>
+    <radialGradient id="core" cx="65%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#ffe0b0"/>
+      <stop offset="35%" stop-color="#ff7a33"/>
+      <stop offset="80%" stop-color="#b3121f"/>
+      <stop offset="100%" stop-color="#2a0810"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <polygon points="185,100 95,55 70,75 60,100 70,125 95,145" fill="url(#core)" filter="url(#glow)"/>
+  <polygon points="185,100 95,55 70,75 60,100 70,125 95,145" fill="none" stroke="#2a0810" stroke-width="2" opacity="0.8"/>
+  <polygon points="60,100 20,70 45,95" fill="#7a1018"/>
+  <polygon points="60,100 15,100 45,100" fill="#7a1018"/>
+  <polygon points="60,100 20,130 45,105" fill="#7a1018"/>
+</svg>

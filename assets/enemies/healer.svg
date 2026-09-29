@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 힐러 — 공격형과 다르게 뾰족한 부분 없이 둥글게. 회복을 상징하는 십자 문양 -->
+  <defs>
+    <radialGradient id="core" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#ffd9b0"/>
+      <stop offset="45%" stop-color="#ff3b52"/>
+      <stop offset="100%" stop-color="#3a0d12"/>
+    </radialGradient>
+    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="100" cy="100" r="70" fill="url(#core)" filter="url(#glow)"/>
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#3a0d12" stroke-width="2" opacity="0.7"/>
+  <g fill="#ffd9b0" opacity="0.95">
+    <rect x="88" y="55" width="24" height="90" rx="6"/>
+    <rect x="55" y="88" width="90" height="24" rx="6"/>
+  </g>
+</svg>
