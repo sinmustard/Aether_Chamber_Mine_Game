@@ -599,29 +599,38 @@ function newRun(){
   if(CFG.qSkill==='wall'){ run.phase='build'; run.phaseT=BUILD_T; }   // v1.6 벽 설치 준비 시간
 }
 
+/* v2.4 웨이브 구성 — 1·2웨이브는 고정(잡몹만), 3웨이브부터는 해금된 적 중에서 무작위로 뽑는다.
+   from: 그 등급이 등장하기 시작하는 웨이브(사이클마다 초기화되는 run.wave 기준)
+   w: 뽑힐 가중치 / cap: 한 웨이브 안에서 그 등급의 최대 마리 수 */
+function enemyPool(){
+  return [
+    {g:'mob',      from:1, w:5, cap:6},
+    {g:'splitter', from:2, w:2, cap:run.cycle>=2?2:1},
+    {g:'elite',    from:3, w:2, cap:2},
+    {g:'bulwark',  from:5, w:2, cap:run.cycle>=2?2:1},
+    {g:'relay',    from:7, w:1, cap:run.cycle>=3?2:1}
+  ];
+}
+function rollWave(n){
+  const pool=enemyPool(), counts={}, order=[];
+  for(let i=0;i<n;i++){
+    const cands=pool.filter(p=>run.wave>=p.from && (counts[p.g]||0)<p.cap);
+    const totalW=cands.reduce((s,p)=>s+p.w,0);
+    let r=Math.random()*totalW, pick=cands[cands.length-1];
+    for(const p of cands){ if(r<p.w){ pick=p; break; } r-=p.w; }
+    counts[pick.g]=(counts[pick.g]||0)+1;
+    order.push(pick.g);
+  }
+  return order;
+}
 function waveSpawn(){
   run.wave++;
   const boss = run.wave>BOSS_WAVE;
   if(boss){ spawnEnemy('boss'); announce('ALETHEIA','red'); sfx('boss'); }
   else{
     const base=Math.min(5,1+Math.ceil(run.wave/2));
-    const el=run.wave>=3?Math.floor(run.wave/3):0;
-    /* v1.8 방패병 — 3웨이브부터 1기, 사이클 2부터 2기.
-       기존 정원에 얹되 총원 6기를 넘지 않게 하고, 잡몹이 0이 되지 않도록 한 자리는 남긴다 */
-    const bw=run.wave>=3?(run.cycle>=2?2:1):0;
-    /* v2.1 분열형·송신기 — 도입 웨이브는 잠정값. 실측 밸런싱 전까지 조정 가능 */
-    const sp=run.wave>=2?(run.cycle>=2?2:1):0;
-    const rl=run.wave>=4?(run.cycle>=3?2:1):0;
-    const n=Math.min(6,base+bw);
-    const elN=Math.min(el,n-bw-1);
-    const spN=Math.min(sp,Math.max(0,n-bw-elN-1));
-    const rlN=Math.min(rl,Math.max(0,n-bw-elN-spN-1));
-    const order=[];
-    for(let i=0;i<elN;i++) order.push('elite');
-    for(let i=0;i<bw;i++) order.push('bulwark');
-    for(let i=0;i<rlN;i++) order.push('relay');
-    for(let i=0;i<spN;i++) order.push('splitter');
-    while(order.length<n) order.push('mob');
+    const n=Math.min(6, base+(run.cycle>=2?1:0));
+    const order = run.wave<=2 ? Array(n).fill('mob') : rollWave(n);
     order.forEach(g=>spawnEnemy(g));
     announce('CYCLE '+run.cycle+'  ·  WAVE '+run.wave,'cyan'); sfx('wave');
   }
