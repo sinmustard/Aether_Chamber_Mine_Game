@@ -1,24 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 추적자 — 같은 암석+발광 코어 기법. 앞으로 기운 쐐기 + 발톱, 뜨거운 오렌지 코어(공격적인 인상) -->
+  <!-- 추적자 — mob과 밀도를 맞춘 상세 버전. 겹친 장갑판 쐐기 + 눈처럼 보이는 코어 + 발톱 5개 + 등쪽 돌기 -->
   <defs>
     <linearGradient id="rock" x1="70%" y1="30%" x2="10%" y2="80%">
       <stop offset="0%" stop-color="#3a2418"/><stop offset="55%" stop-color="#1e130d"/><stop offset="100%" stop-color="#0a0605"/>
     </linearGradient>
+    <linearGradient id="rock2" x1="70%" y1="20%" x2="20%" y2="90%">
+      <stop offset="0%" stop-color="#2c1c12"/><stop offset="100%" stop-color="#0a0605"/>
+    </linearGradient>
     <radialGradient id="gem" cx="60%" cy="45%" r="60%">
-      <stop offset="0%" stop-color="#ffe0b0"/><stop offset="35%" stop-color="#ff7a33"/><stop offset="75%" stop-color="#b3121f"/><stop offset="100%" stop-color="#3a0d12"/>
+      <stop offset="0%" stop-color="#ffe0b0"/><stop offset="30%" stop-color="#ff7a33"/><stop offset="70%" stop-color="#b3121f"/><stop offset="100%" stop-color="#3a0d12"/>
     </radialGradient>
     <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
     <filter id="crackGlow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <ellipse cx="140" cy="100" rx="30" ry="22" fill="#ff7a33" opacity="0.55" filter="url(#halo)"/>
+  <ellipse cx="142" cy="100" rx="26" ry="20" fill="#ff7a33" opacity="0.6" filter="url(#halo)"/>
+  <!-- 등쪽 돌기(위아래 작은 가시) -->
+  <polygon points="110,60 122,30 130,62" fill="url(#rock2)" stroke="#000" stroke-opacity="0.4"/>
+  <polygon points="110,140 122,170 130,138" fill="url(#rock2)" stroke="#000" stroke-opacity="0.4"/>
+  <!-- 뒤쪽 겹친 장갑판(몸 뒤에 한 겹 더) -->
+  <polygon points="150,100 88,68 78,100 88,132" fill="url(#rock2)" opacity="0.9"/>
+  <!-- 몸통 쐐기 -->
   <polygon points="185,100 95,55 70,75 60,100 70,125 95,145" fill="url(#rock)" stroke="#000" stroke-opacity="0.5"/>
-  <path d="M75,100 L130,100 L170,100" fill="none" stroke="#ff7a33" stroke-width="2.5" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)"/>
-  <polygon points="150,86 185,100 150,114 135,100" fill="url(#gem)"/>
-  <polygon points="60,100 20,70 45,95" fill="#160c08"/>
-  <polygon points="60,100 15,100 45,100" fill="#160c08"/>
-  <polygon points="60,100 20,130 45,105" fill="#160c08"/>
+  <!-- 결 -->
+  <path d="M78,72 L120,90 L150,100" fill="none" stroke="#000" stroke-width="1.5" opacity="0.4"/>
+  <path d="M78,128 L120,110 L150,100" fill="none" stroke="#000" stroke-width="1.5" opacity="0.4"/>
+  <!-- 균열(코어에서 몸통으로) -->
+  <path d="M75,100 L110,100 L130,100" fill="none" stroke="#ff7a33" stroke-width="2" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)"/>
+  <path d="M100,85 L120,92" fill="none" stroke="#ff7a33" stroke-width="1.4" stroke-linecap="round" opacity="0.7" filter="url(#crackGlow)"/>
+  <path d="M100,115 L120,108" fill="none" stroke="#ff7a33" stroke-width="1.4" stroke-linecap="round" opacity="0.7" filter="url(#crackGlow)"/>
+  <!-- 눈처럼 보이는 코어 -->
+  <polygon points="150,86 185,100 150,114 133,100" fill="url(#gem)"/>
+  <ellipse cx="158" cy="100" rx="10" ry="6" fill="#fff3e6" opacity="0.6"/>
+  <!-- 발톱 5개 -->
+  <g fill="#160c08" stroke="#000" stroke-opacity="0.3">
+    <polygon points="60,100 18,66 44,92"/>
+    <polygon points="62,92 22,80 48,98"/>
+    <polygon points="60,100 15,100 45,100"/>
+    <polygon points="62,108 22,120 48,102"/>
+    <polygon points="60,100 18,134 44,108"/>
+  </g>
 </svg>

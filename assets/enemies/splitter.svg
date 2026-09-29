@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 분열형 — 같은 암석+발광 코어 기법. 좌우 대칭 암석 두 덩이 + 갈라진 발광 이음선 -->
+  <!-- 분열형 — mob과 밀도를 맞춘 상세 버전. 톱니 단면의 좌우 암석 + 갈라지는 균열망 + 이탈한 파편 -->
   <defs>
     <linearGradient id="rockL" x1="70%" y1="10%" x2="10%" y2="90%">
       <stop offset="0%" stop-color="#332a30"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
@@ -11,13 +11,31 @@
       <feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
     <filter id="crackGlow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <ellipse cx="100" cy="100" rx="16" ry="55" fill="#ff3b52" opacity="0.5" filter="url(#halo)"/>
-  <path d="M65,100 C65,60 45,40 25,45 C10,75 10,125 25,155 C45,160 65,140 65,100 Z" fill="url(#rockL)" stroke="#000" stroke-opacity="0.4"/>
-  <path d="M135,100 C135,60 155,40 175,45 C190,75 190,125 175,155 C155,160 135,140 135,100 Z" fill="url(#rockR)" stroke="#000" stroke-opacity="0.4"/>
-  <path d="M40,60 L48,100 L40,140" fill="none" stroke="#ff3b52" stroke-width="2" stroke-linecap="round" opacity="0.7" filter="url(#crackGlow)"/>
-  <path d="M160,60 L152,100 L160,140" fill="none" stroke="#ff3b52" stroke-width="2" stroke-linecap="round" opacity="0.7" filter="url(#crackGlow)"/>
-  <line x1="100" y1="50" x2="100" y2="150" stroke="#ff6a52" stroke-width="5" stroke-linecap="round" filter="url(#crackGlow)"/>
+  <ellipse cx="100" cy="100" rx="18" ry="58" fill="#ff3b52" opacity="0.5" filter="url(#halo)"/>
+  <!-- 톱니 단면 좌측 덩어리 -->
+  <polygon points="68,60 55,48 40,52 28,68 22,90 20,100 22,112 28,132 40,148 55,152 68,140 62,100"
+    fill="url(#rockL)" stroke="#000" stroke-opacity="0.4"/>
+  <!-- 톱니 단면 우측 덩어리 -->
+  <polygon points="132,60 145,48 160,52 172,68 178,90 180,100 178,112 172,132 160,148 145,152 132,140 138,100"
+    fill="url(#rockR)" stroke="#000" stroke-opacity="0.4"/>
+  <!-- 표면 결 -->
+  <path d="M40,70 L55,100 L40,130" fill="none" stroke="#000" stroke-width="1.4" opacity="0.4"/>
+  <path d="M160,70 L145,100 L160,130" fill="none" stroke="#000" stroke-width="1.4" opacity="0.4"/>
+  <!-- 하이라이트 -->
+  <ellipse cx="38" cy="75" rx="10" ry="16" fill="#4a2f36" opacity="0.5"/>
+  <ellipse cx="162" cy="75" rx="10" ry="16" fill="#4a2f36" opacity="0.5"/>
+  <!-- 갈라지는 균열망(가운데 세로 + 가지) -->
+  <g fill="none" stroke="#ff6a52" stroke-linecap="round" filter="url(#crackGlow)">
+    <path d="M100,45 L100,155" stroke-width="5" opacity="0.95"/>
+    <path d="M100,70 L80,85" stroke-width="2" opacity="0.75"/>
+    <path d="M100,70 L120,85" stroke-width="2" opacity="0.75"/>
+    <path d="M100,130 L80,115" stroke-width="2" opacity="0.75"/>
+    <path d="M100,130 L120,115" stroke-width="2" opacity="0.75"/>
+  </g>
+  <!-- 먼저 떨어져 나온 작은 파편 -->
+  <polygon points="96,20 104,16 108,26 100,30" fill="url(#rockL)" stroke="#000" stroke-opacity="0.4"/>
+  <polygon points="94,180 102,176 106,186 98,190" fill="url(#rockR)" stroke="#000" stroke-opacity="0.4"/>
 </svg>

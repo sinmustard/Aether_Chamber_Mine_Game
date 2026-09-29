@@ -1,40 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 송신기 — 같은 암석+발광 코어 기법(옐로). 무기 없는 안테나 + 신호파, 쏘지 않는다는 걸 실루엣으로 표현 -->
+  <!-- 송신기 — mob과 밀도를 맞춘 상세 버전. 5갈래 안테나(균열 포함) + 신호파 3겹 + 코어 받침대 -->
   <defs>
     <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
-      <stop offset="0%" stop-color="#332e20"/>
-      <stop offset="55%" stop-color="#1c1810"/>
-      <stop offset="100%" stop-color="#0a0806"/>
+      <stop offset="0%" stop-color="#332e20"/><stop offset="55%" stop-color="#1c1810"/><stop offset="100%" stop-color="#0a0806"/>
     </linearGradient>
     <radialGradient id="gem" cx="42%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#fff6d8"/>
-      <stop offset="40%" stop-color="#ffcc55"/>
-      <stop offset="80%" stop-color="#c98a12"/>
-      <stop offset="100%" stop-color="#5c4a10"/>
+      <stop offset="0%" stop-color="#fff6d8"/><stop offset="40%" stop-color="#ffcc55"/><stop offset="80%" stop-color="#c98a12"/><stop offset="100%" stop-color="#5c4a10"/>
     </radialGradient>
     <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
     <filter id="crackGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <g fill="none" stroke="#ffcc55" opacity="0.3">
-    <circle cx="100" cy="115" r="55"/>
-    <circle cx="100" cy="115" r="78"/>
+  <g fill="none" stroke="#ffcc55" opacity="0.28">
+    <circle cx="100" cy="118" r="42"/>
+    <circle cx="100" cy="118" r="62"/>
+    <circle cx="100" cy="118" r="84"/>
   </g>
-  <circle cx="100" cy="115" r="38" fill="#ffcc55" opacity="0.5" filter="url(#halo)"/>
+  <circle cx="100" cy="118" r="38" fill="#ffcc55" opacity="0.5" filter="url(#halo)"/>
+  <!-- 메인 안테나 5갈래 (가운데 위/좌상/우상/좌하/우하) -->
   <g fill="url(#rock)" stroke="#000" stroke-opacity="0.4">
-    <polygon points="100,15 108,95 92,95"/>
-    <polygon points="58,58 96,100 86,110"/>
-    <polygon points="142,58 104,100 114,110"/>
+    <polygon points="94,90 100,10 106,90"/>
+    <polygon points="88,96 30,50 92,88"/>
+    <polygon points="112,96 170,50 108,88"/>
+    <polygon points="86,104 26,132 90,102"/>
+    <polygon points="114,104 174,132 110,102"/>
   </g>
-  <g fill="none" stroke="#ffcc55" stroke-width="2" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)">
-    <path d="M100,90 L100,30"/>
-    <path d="M90,95 L66,70"/>
-    <path d="M110,95 L134,70"/>
+  <!-- 안테나 끝 작은 가지(디테일) -->
+  <g fill="url(#rock)" stroke="#000" stroke-opacity="0.35">
+    <polygon points="100,10 92,24 100,28 108,24"/>
+    <polygon points="30,50 42,54 38,62"/>
+    <polygon points="170,50 158,54 162,62"/>
+    <polygon points="26,132 40,128 38,138"/>
+    <polygon points="174,132 160,128 162,138"/>
   </g>
-  <circle cx="100" cy="118" r="32" fill="url(#gem)"/>
-  <circle cx="100" cy="118" r="32" fill="none" stroke="#5c4a10" stroke-width="2" opacity="0.7"/>
-  <path d="M78,102 A32,32 0 0 1 118,90" fill="none" stroke="#fff6d8" stroke-width="6" opacity="0.35" stroke-linecap="round"/>
+  <!-- 균열 -->
+  <g fill="none" stroke="#ffcc55" stroke-width="1.8" stroke-linecap="round" opacity="0.85" filter="url(#crackGlow)">
+    <path d="M100,95 L96,50 L100,15"/>
+    <path d="M92,100 L60,72 L34,53"/>
+    <path d="M108,100 L142,72 L166,53"/>
+    <path d="M90,108 L58,120 L30,133"/>
+    <path d="M110,108 L142,120 L170,133"/>
+  </g>
+  <!-- 받침대(코어 아래 지지 구조) -->
+  <path d="M78,140 L100,150 L122,140 L122,148 L100,158 L78,148 Z" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <!-- 코어 -->
+  <circle cx="100" cy="118" r="30" fill="url(#gem)"/>
+  <circle cx="100" cy="118" r="30" fill="none" stroke="#5c4a10" stroke-width="2" opacity="0.7"/>
+  <path d="M80,104 A30,30 0 0 1 116,92" fill="none" stroke="#fff6d8" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+  <!-- 리벳 -->
+  <g fill="#0a0806">
+    <circle cx="88" cy="94" r="2.5"/><circle cx="112" cy="94" r="2.5"/>
+    <circle cx="86" cy="102" r="2.5"/><circle cx="114" cy="102" r="2.5"/>
+  </g>
 </svg>

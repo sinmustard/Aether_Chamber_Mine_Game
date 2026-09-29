@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 잡졸 — 같은 암석+발광 코어 기법의 가장 단순한 버전(1칸짜리 최하급) -->
+  <!-- 잡졸 — 여전히 가장 작고 단순하지만, 표면 디테일(톱니 단면·균열·파편)은 챙겨서 "대충 만듦" 느낌을 뺐다 -->
   <defs>
     <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
       <stop offset="0%" stop-color="#332a30"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
@@ -10,9 +10,23 @@
     <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
+    <filter id="crackGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <circle cx="100" cy="100" r="26" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
-  <polygon points="100,45 145,100 100,155 55,100" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
-  <polygon points="100,68 122,100 100,132 78,100" fill="url(#gem)"/>
-  <polygon points="100,68 122,100 100,132 78,100" fill="none" stroke="#3a0d12" stroke-width="1.5" opacity="0.7"/>
+  <circle cx="100" cy="100" r="28" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
+  <!-- 톱니 단면이 있는 다이아몬드 (완전히 매끈하지 않게) -->
+  <polygon points="100,42 112,58 146,100 112,142 100,158 88,142 54,100 88,58"
+    fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <!-- 갈라진 균열 -->
+  <path d="M100,58 L94,80 L100,100 L90,118 L100,142" fill="none" stroke="#ff6a52" stroke-width="2" stroke-linecap="round" opacity="0.85" filter="url(#crackGlow)"/>
+  <!-- 코어 -->
+  <polygon points="100,68 120,100 100,132 80,100" fill="url(#gem)"/>
+  <polygon points="100,68 120,100 100,132 80,100" fill="none" stroke="#3a0d12" stroke-width="1.5" opacity="0.7"/>
+  <polygon points="100,68 110,100 100,100 90,100" fill="#ffe6c8" opacity="0.35"/>
+  <!-- 떨어져 나온 작은 파편 2개 -->
+  <g fill="url(#rock)" stroke="#000" stroke-opacity="0.4">
+    <polygon points="58,50 66,44 68,54 60,58"/>
+    <polygon points="140,148 148,144 150,154 142,156"/>
+  </g>
 </svg>

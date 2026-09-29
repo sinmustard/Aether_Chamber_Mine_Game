@@ -1,18 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 분열체 — 같은 암석+발광 코어 기법. 분열형의 절반, 부서진 단면이 발광 -->
+  <!-- 분열체 — 둔탁했던 이전 버전을 대신해 훨씬 얇고 날카로운 파편 형태로 재작업 -->
   <defs>
-    <linearGradient id="rock" x1="30%" y1="10%" x2="90%" y2="90%">
-      <stop offset="0%" stop-color="#332a30"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
+    <linearGradient id="rock" x1="20%" y1="20%" x2="90%" y2="80%">
+      <stop offset="0%" stop-color="#3a2e33"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
     </linearGradient>
     <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
-      <feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+      <feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
     <filter id="crackGlow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <ellipse cx="95" cy="100" rx="14" ry="48" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
-  <path d="M150,100 C150,55 125,30 100,35 C82,55 78,80 90,100 C78,120 82,145 100,165 C125,170 150,145 150,100 Z"
-    fill="url(#rock)" stroke="#000" stroke-opacity="0.5"/>
-  <path d="M100,35 L90,100 L100,165" fill="none" stroke="#ff6a52" stroke-width="5" stroke-linecap="round" filter="url(#crackGlow)"/>
+  <ellipse cx="130" cy="100" rx="42" ry="12" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
+  <!-- 얇고 날카로운 파편 몸체 — 왼쪽(깨진 단면)은 들쭉날쭉, 오른쪽은 뾰족한 촉 -->
+  <polygon points="18,100 46,72 88,86 118,64 150,80 192,100 150,120 118,138 88,116 46,130"
+    fill="url(#rock)" stroke="#000" stroke-opacity="0.5" stroke-width="1"/>
+  <!-- 표면 결(각지고 얇다는 느낌 강조) -->
+  <path d="M46,72 L88,86 L118,64" fill="none" stroke="#000" stroke-width="1.2" opacity="0.4"/>
+  <path d="M46,130 L88,116 L118,138" fill="none" stroke="#000" stroke-width="1.2" opacity="0.4"/>
+  <path d="M88,86 L130,100 L88,116" fill="none" stroke="#5a3038" stroke-width="1" opacity="0.5"/>
+  <!-- 촉 끝 하이라이트 -->
+  <polygon points="150,80 192,100 150,120 138,100" fill="#5a3038" opacity="0.5"/>
+  <!-- 중심을 가로지르는 균열 -->
+  <path d="M24,100 L70,100 L130,100 L185,100" fill="none" stroke="#ff6a52" stroke-width="3.5" stroke-linecap="round" opacity="0.95" filter="url(#crackGlow)"/>
+  <path d="M70,100 L60,80" fill="none" stroke="#ff6a52" stroke-width="1.6" stroke-linecap="round" opacity="0.7" filter="url(#crackGlow)"/>
+  <path d="M70,100 L60,120" fill="none" stroke="#ff6a52" stroke-width="1.6" stroke-linecap="round" opacity="0.7" filter="url(#crackGlow)"/>
+  <!-- 깨진 단면에서 떨어져 나온 미세 조각 -->
+  <polygon points="12,86 20,82 22,90 14,94" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <polygon points="12,114 20,110 22,118 14,122" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
 </svg>

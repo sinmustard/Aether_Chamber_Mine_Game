@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 힐러 — 같은 암석+발광 코어 기법. 공격형과 달리 뾰족한 가시 없이 둥근 암석 + 십자 코어(빨강) -->
+  <!-- 힐러 — mob과 밀도를 맞춘 상세 버전. 가시 대신 룬스톤 톱니 링 + 이중 십자 + 주변을 도는 회복 문양 4개 -->
   <defs>
     <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
       <stop offset="0%" stop-color="#332a30"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
@@ -10,14 +10,43 @@
     <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <circle cx="100" cy="100" r="42" fill="#ff3b52" opacity="0.5" filter="url(#halo)"/>
-  <circle cx="100" cy="100" r="70" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
-  <circle cx="100" cy="100" r="46" fill="url(#gem)"/>
-  <circle cx="100" cy="100" r="46" fill="none" stroke="#3a0d12" stroke-width="2" opacity="0.7"/>
-  <ellipse cx="86" cy="86" rx="16" ry="9" fill="#ffe6c8" opacity="0.4"/>
+  <circle cx="100" cy="100" r="44" fill="#ff3b52" opacity="0.5" filter="url(#halo)"/>
+  <!-- 톱니 달린 룬스톤 링 -->
+  <path d="M100,32 L108,40 L122,36 L126,50 L140,52 L138,66 L151,72 L145,85
+           L156,95 L146,105 L153,118 L138,123 L136,137 L122,135 L114,148
+           L100,142 L86,148 L78,135 L64,137 L62,123 L47,118 L54,105
+           L44,95 L55,85 L49,72 L62,66 L60,52 L74,50 L78,36 L92,40 Z"
+    fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <circle cx="100" cy="100" r="58" fill="none" stroke="#ffe6d0" stroke-width="1" stroke-dasharray="2,5" opacity="0.35"/>
+  <!-- 룬 홈(가느다란 결) -->
+  <g fill="none" stroke="#ff8a63" stroke-width="1.4" opacity="0.55">
+    <path d="M100,50 L100,66"/><path d="M100,134 L100,150"/>
+    <path d="M50,100 L66,100"/><path d="M134,100 L150,100"/>
+  </g>
+  <!-- 코어 -->
+  <circle cx="100" cy="100" r="42" fill="url(#gem)"/>
+  <circle cx="100" cy="100" r="42" fill="none" stroke="#3a0d12" stroke-width="2" opacity="0.7"/>
+  <ellipse cx="87" cy="87" rx="15" ry="8" fill="#ffe6c8" opacity="0.4"/>
+  <!-- 이중 십자 -->
   <g fill="#ffd9b0" opacity="0.95">
-    <rect x="90" y="66" width="20" height="68" rx="6"/>
-    <rect x="66" y="90" width="68" height="20" rx="6"/>
+    <rect x="91" y="70" width="18" height="60" rx="5"/>
+    <rect x="70" y="91" width="60" height="18" rx="5"/>
+  </g>
+  <g fill="none" stroke="#fff3e6" stroke-width="1.5" opacity="0.6">
+    <rect x="91" y="70" width="18" height="60" rx="5"/>
+    <rect x="70" y="91" width="60" height="18" rx="5"/>
+  </g>
+  <!-- 주변을 도는 작은 회복 문양 4개 -->
+  <g filter="url(#glow)">
+    <g fill="#ffb199" opacity="0.9">
+      <g transform="translate(100,18) scale(0.5)"><rect x="-9" y="-3" width="18" height="6" rx="2"/><rect x="-3" y="-9" width="6" height="18" rx="2"/></g>
+      <g transform="translate(182,100) scale(0.5)"><rect x="-9" y="-3" width="18" height="6" rx="2"/><rect x="-3" y="-9" width="6" height="18" rx="2"/></g>
+      <g transform="translate(100,182) scale(0.5)"><rect x="-9" y="-3" width="18" height="6" rx="2"/><rect x="-3" y="-9" width="6" height="18" rx="2"/></g>
+      <g transform="translate(18,100) scale(0.5)"><rect x="-9" y="-3" width="18" height="6" rx="2"/><rect x="-3" y="-9" width="6" height="18" rx="2"/></g>
+    </g>
   </g>
 </svg>
