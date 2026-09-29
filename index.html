@@ -654,13 +654,14 @@ function enemyPool(){
     {g:'elite',    from:3, w:2, cap:2},
     {g:'bulwark',  from:5, w:2, cap:run.cycle>=2?2:1},
     {g:'relay',    from:7, w:1, cap:run.cycle>=3?2:1},
-    {g:'tracker',  from:8, w:1, cap:1}
+    /* v3.0 추적자 — 웨이브가 아니라 사이클 기준. 1사이클 보스를 잡고 2사이클부터 나온다 */
+    {g:'tracker',  from:1, w:1, cap:1, ok:()=>run.cycle>=2}
   ];
 }
 function rollWave(n){
   const pool=enemyPool(), counts={}, order=[];
   for(let i=0;i<n;i++){
-    const cands=pool.filter(p=>run.wave>=p.from && (counts[p.g]||0)<p.cap);
+    const cands=pool.filter(p=>run.wave>=p.from && (!p.ok||p.ok()) && (counts[p.g]||0)<p.cap);
     const totalW=cands.reduce((s,p)=>s+p.w,0);
     let r=Math.random()*totalW, pick=cands[cands.length-1];
     for(const p of cands){ if(r<p.w){ pick=p; break; } r-=p.w; }
