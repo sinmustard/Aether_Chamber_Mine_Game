@@ -361,7 +361,7 @@ const UPG=[
  {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
   d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다.',
   steps:['잠김','대기 26s','대기 23s','대기 20s','대기 17s','대기 14s']},
- {k:'echo', n:'R · 잔상', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
+ {k:'echo', n:'R · 메아리', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
   d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다.',
   steps:['잠김','대기 22s','대기 19s','대기 16s','대기 13s','대기 10s']}
 ];
@@ -837,8 +837,21 @@ function doParry(){
     lunger.hp-=HIT_UNIT; lunger.hurt=.22; lunger.lungeHit=true;
     lunger.lungePhase='cd'; lunger.lungeT=LUNGE_CD*0.6;
     say('PARRIED','cyan'); sfx('parry',2); shake=9; hitstop=0.05; burst(lunger.x,lunger.y,'cyan',14,220);
+    /* v2.0 파편 — 일반 명중과 동일하게 돌진 패링도 주변에 추가 피해를 준다 */
+    const sh=boonLv('shard');
+    if(sh){
+      const base=HIT_UNIT*SHARD_UNIT*sh;
+      ens.slice().forEach(o=>{ if(o===lunger||o.inv>0) return;
+        if(dist(lunger.x,lunger.y,o.x,o.y)>=90+o.r) return;
+        o.hp-=base*(shielded(o,{x:lunger.x,y:lunger.y})?0.5:1);
+        o.hurt=.18;
+        if(o.hp<=0) killEnemy(o);
+      });
+      burst(lunger.x,lunger.y,'warn',10,200);
+    }
     if(lunger.hp<=0) killEnemy(lunger);
-    P.lock=0.12; P.lockMax=0.12; P.lockKind='ok';
+    /* v1.7 D-2 / 무결 보너스와 동일하게 처리한다 — 돌진 패링만 회복 경직이 남는 건 형평에 안 맞는다 */
+    P.lock=boonLv('flow')?0:0.12; P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
     return;
   }
   /* v1.3.2 다중 패링: 사거리·시야 안의 적 탄환을 가까운 순으로 최대 CFG.multi발 */
@@ -864,7 +877,7 @@ function doParry(){
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
       maxRet=Math.max(maxRet,t.returns);
       burst(t.x,t.y,'cyan',10,180);
-      /* v2.1 잔상 — 지속 시간 동안 패링마다 탄환을 하나 더 복제한다 */
+      /* v2.1 메아리 — 지속 시간 동안 패링마다 탄환을 하나 더 복제한다 */
       if(P.echoT>0 && bullets.length+echoes.length<60){
         echoes.push({x:t.x-Math.cos(t.dir)*22, y:t.y-Math.sin(t.dir)*22, dir:t.dir, spd:t.spd*0.92, base:t.base,
           owner:'player', returns:t.returns, age:0, trail:[], glow:1, hcd:0.15, tried:[], ready:false,
@@ -937,7 +950,7 @@ function doQ(){
     say('HOOK','cyan'); sfx('hook'); burst(tgt.x,tgt.y,'cyan',10,160);
   }
 }
-/* v2.1 R 슬롯 — 덮어쓰기 / 잔상 */
+/* v2.1 R 슬롯 — 덮어쓰기 / 메아리 (웨이브 보상 '잔상'과 이름이 겹쳐서 개명) */
 function doR(){
   if(paused||!CFG.skillR||P.rCd>0||P.hp<=0)return;
   if(CFG.skillR==='overwrite'){
@@ -1111,10 +1124,12 @@ function update(dt){
           e.ax=clamp(e.ax+Math.cos(toward)*TRACK_SPD*dt,40,WORLD.w-40);
           e.ay=clamp(e.ay+Math.sin(toward)*TRACK_SPD*dt,40,WORLD.h-40);
         }
-        if(d<=LUNGE_RANGE && run.phase==='fight'){ e.lungePhase='wind'; e.lungeT=LUNGE_WIND; }
+        /* v3.1 벽 너머에서는 돌진을 걸지 않는다 — 벽이 다른 위협을 다 막아주는데 추적자만 뚫고 오면 벽의 의미가 없다 */
+        if(d<=LUNGE_RANGE && run.phase==='fight' && !wallBetween(e.x,e.y,P.x,P.y)){ e.lungePhase='wind'; e.lungeT=LUNGE_WIND; }
       } else if(e.lungePhase==='wind'){
         e.lungeT-=dt;
-        if(e.lungeT<=0){ e.lungePhase='dash'; e.lungeT=LUNGE_DUR; e.lungeHit=false;
+        if(wallBetween(e.x,e.y,P.x,P.y)){ e.lungePhase='chase'; }   // 예비 동작 중 벽이 생기면 추격으로 되돌아간다
+        else if(e.lungeT<=0){ e.lungePhase='dash'; e.lungeT=LUNGE_DUR; e.lungeHit=false;
           e.lungeDir=Math.atan2(P.y-e.ay,P.x-e.ax); }
       } else if(e.lungePhase==='dash'){
         e.lungeT-=dt;
@@ -1146,9 +1161,10 @@ function update(dt){
       }
     }
     if(run.phase!=='fight')return;
-    /* v2.8 송신기·추적자는 평소엔 안 쏘지만, 혼자 남으면 패링할 탄환 자체가 없어 못 잡게 되므로
-       그럴 땐 다른 적처럼 쏘게 한다 */
-    if((G(e).relay||G(e).noFire) && ens.length>1)return;
+    /* v2.8 송신기·추적자는 평소엔 안 쏘지만, 남은 적이 전부 안 쏘는 부류뿐이면 패링할 탄환 자체가
+       없어 못 잡게 되므로(예: 송신기 2기만 남는 경우) 그럴 땐 다른 적처럼 쏘게 한다.
+       "혼자 남았는지"가 아니라 "나 말고 쏠 수 있는 적이 남아있는지"로 판정해야 안전하다 */
+    if((G(e).relay||G(e).noFire) && ens.some(o=>o!==e && !(G(o).relay||G(o).noFire)))return;
     e.fireT-=dt;
     if(e.fireT<=0){
       const room=CFG.maxB-(bullets.length+queue.length);
@@ -1804,7 +1820,7 @@ function renderSkillSel(){
   $('#skillSel').innerHTML=
     row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['','없음']],META.skill)+
     row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','견인'],['','없음']],META.skillQ)+
-    row('r','R',[['overwrite','덮어쓰기'],['echo','잔상'],['','없음']],META.skillR);
+    row('r','R',[['overwrite','덮어쓰기'],['echo','메아리'],['','없음']],META.skillR);
 }
 $('#skillSel').addEventListener('click',e=>{
   const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
