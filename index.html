@@ -157,6 +157,17 @@ body.in-game #topPause{display:block}
 #modal{position:absolute;inset:0;background:rgba(8,12,17,.93);z-index:6;
   display:none;align-items:center;justify-content:center;padding:20px}
 #modal.on{display:flex}
+#pause{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+  background:rgba(8,12,17,.82);padding:16px}
+#pause.on{display:flex}
+#pause .box{width:min(300px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:16px;max-height:100%;overflow:auto;text-align:center}
+#pause h4{margin:0 0 12px;font-size:12.5px;letter-spacing:.2em;color:var(--dim)}
+#pause .pm{display:block;width:100%;margin-bottom:8px;padding:11px;font:inherit;font-size:12px;letter-spacing:.1em;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:7px;cursor:pointer}
+#pause .pm:hover{background:rgba(47,227,208,.08)}
+#pause .hint{font-size:10px;color:var(--dim);letter-spacing:.1em;margin-top:6px}
+@media (max-height:560px){ #pause .box{padding:11px} #pause .pm{padding:8px;margin-bottom:6px} }
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -235,7 +246,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.20</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.24</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -246,8 +257,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <h1 class="wordmark">ÆTHER <span>CHAMBER</span></h1>
     <div class="kr">에테르 챔버</div>
     <div class="menu">
-      <button class="primary" data-go="hub">START</button>
-      <button data-modal="opt">OPTIONS</button>
+      <button class="primary" data-go="hub">시작</button>
+      <button data-modal="opt">설정</button>
       <button data-modal="tutorial">튜토리얼</button>
     </div>
     <div class="ver" id="tKeys">WASD 이동 · 마우스 조준 · E 패링 · F 스킬 · Q 스킬</div>
@@ -288,10 +299,19 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="own" id="rwOwn"></div>
   </div>
   <div id="modal"><div class="box" id="modalBox"></div></div>
+  <div id="pause">
+    <div class="box">
+      <h4>일시정지</h4>
+      <button class="pm" id="pmResume">계속하기</button>
+      <button class="pm" id="pmOpt">설정</button>
+      <button class="pm" id="pmHub">HUB로 나가기</button>
+      <div class="hint">ESC — 계속하기</div>
+    </div>
+  </div>
 </div>
 
 <div id="debugSpawn">
-  <span>SPAWN</span>
+  <span>소환</span>
   <button data-spawn="mob">잡몹</button>
   <button data-spawn="elite">엘리트</button>
   <button data-spawn="bulwark">방패병</button>
@@ -383,9 +403,12 @@ const UPG=[
  {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', pos:{x:590,y:390}, lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
   req:[{k:'bullet',lv:3},{k:'multi',lv:1}], steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
- {k:'echo', n:'R · 메아리 복제', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', pos:{x:590,y:280}, lv:0, max:5, cost:[1200,1800,2700,4000,6000],
+ {k:'echo', n:'R · 복제', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
-  req:[{k:'multi',lv:1},{k:'homing',lv:1}], steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']}
+  req:[{k:'multi',lv:1},{k:'homing',lv:1}], steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
+ {k:'emp', n:'R · EMP', s:'R — 모든 적을 잠시 정지', skill:'r', lv:0, max:3, cost:[10000,20000,55000],
+  d:'R — 화면의 모든 적을 일정 시간 멈춥니다. 멈춘 적은 움직이지도, 쏘지도, 소환하지도 않습니다. EMP는 충전 100이 필요하고 단계가 올라도 줄지 않습니다. 충전은 패링 +1, 적 처치 +2.',
+  steps:['잠김','정지 0.4s · 충전 100','정지 0.8s · 충전 100','정지 2.0s · 충전 100']}
 ];
 const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
@@ -468,7 +491,7 @@ const reqLabel=u=>(u.req||[]).filter(r=>lv(r.k)<r.lv)
   .map(r=>UPG.find(x=>x.k===r.k).n+' Lv.'+r.lv).join(' · ');
 function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
-        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo');
+        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp');
   return {
     rangeM: 3.5+0.3*r, fov: 60+5*f, whiff: 1.20-0.10*pe,
     moveSpd: 230+15*m,
@@ -488,7 +511,9 @@ function statsFromUpgrades(){
     hookRange:[0,260,280,300,320,340][hk], hookCd:[0,9.0,8.0,7.0,6.0,5.0][hk],
     owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
-    rNeed: [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
+    empDur: [0,0.4,0.8,2.0][em],
+    rNeed: META.skillR==='emp' ? EMP_NEED
+         : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
   };
 }
 
@@ -496,7 +521,7 @@ function statsFromUpgrades(){
 const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22, rNeed:50,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -505,6 +530,7 @@ const WORLD={w:1000,h:760};
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
 const BOSS_WAVE=10;
+const EMP_NEED=100;   // v2.23 EMP만 충전 100 고정 (다른 R 스킬은 단계별로 줄어든다)
 const range=()=>CFG.rangeM*M;
 /* v1.7 A-1: 상한을 사이클 탄속과 분리. 기본 탄속이 올라가도 패링이 감속이 되지 않게 한다 */
 const cap=()=>Math.max(range()/CFG.dwell, CFG.spd*1.55);
@@ -706,7 +732,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,
     spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -887,7 +913,10 @@ addEventListener('keydown',e=>{
   else if(k===OPT.keySkill){e.preventDefault();doSkill();}
   else if(k===OPT.keyWall){e.preventDefault();doQ();}
   else if(k===OPT.keyR){e.preventDefault();doR();}
-  if(k==='escape'){togglePause();}
+  if(k==='escape'){
+    if($('#modal').classList.contains('on')){ binding=null; bindMsg=''; $('#modal').classList.remove('on'); }
+    else togglePause();
+  }
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 const gcv=$('#gamecv');
@@ -1023,7 +1052,7 @@ function doParry(){
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
     P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1
-    say(ts.length>1?'RECLAIMED ×'+ts.length:'RECLAIMED','cyan');
+    say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     hitstop=0.045+0.02*(ts.length-1);
     /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
@@ -1106,7 +1135,14 @@ function doR(){
     P.rChg=0;
   } else if(CFG.skillR==='echo'){
     P.echoT=ECHO_DUR; P.rChg=0;
-    say('메아리 복제','cyan'); sfx('echo');
+    say('복제','cyan'); sfx('echo');
+  } else if(CFG.skillR==='emp'){
+    /* v2.22 EMP — 화면의 모든 적을 멈춘다 */
+    if(!ens.length){ say('적 없음','dim'); return; }
+    ens.forEach(e=>{ e.stunT=Math.max(e.stunT||0,CFG.empDur); });
+    P.rChg=0;
+    say('EMP  '+CFG.empDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=12; hitstop=0.05;
+    burst(P.x,P.y,'cyan',26,320);
   }
 }
 function doWall(){
@@ -1230,6 +1266,8 @@ function update(dt){
 
   // 적
   ens.forEach(e=>{
+    /* v2.22 EMP로 멈춘 동안에는 움직임·발사·소환이 전부 정지한다 */
+    if(e.stunT>0){ e.stunT-=dt; return; }
     e.drift+=dt*0.7;
     /* v2.1 앵커 이동 — 견인이 최우선, 그 다음 송신기 도주 / 분열체 접근 압박 */
     if(e.hookT>0){
@@ -1287,7 +1325,7 @@ function update(dt){
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
     if(e.grade==='tracker' && e.lungePhase==='dash' && !e.lungeHit && dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER){
       e.lungeHit=true;
-      if(P.guard>0){ say('BLOCKED','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
+      if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){
         P.hp-=CONTACT_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=14; say('충돌','red'); sfx('breach'); burst(P.x,P.y,'red',14);
       }
@@ -1469,7 +1507,7 @@ function update(dt){
         bullets.splice(i,1); continue;
       }
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+(P.guard>0?14:0)){
-      if(P.guard>0){ say('BLOCKED','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
+      if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){ P.hp-=PLAYER_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
       bullets.splice(i,1); continue;
     }
@@ -1542,6 +1580,12 @@ loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 function drawEnemyBody(e){
   const img=SPRITES[e.grade];
+  if(e.stunT>0){   // v2.22 정지 표시
+    const q=proj(e.x,e.y);
+    ctx.save(); ctx.strokeStyle='#9fd8ff'; ctx.globalAlpha=.5+.3*Math.sin(performance.now()/70);
+    ctx.lineWidth=2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+10,(e.r+10)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
+  }
   if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); return; }
   const p=proj(e.x,e.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
@@ -1703,7 +1747,7 @@ function drawLock(){
     const top=p[1]-R_PLAYER*1.3-30;
     ctx.textAlign='center';
     ctx.fillStyle=col;ctx.font='700 12px ui-monospace,monospace';
-    ctx.fillText('LOCK  '+P.lock.toFixed(2),p[0],top);
+    ctx.fillText('경직  '+P.lock.toFixed(2),p[0],top);
     const w=64,hg=4;
     ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(p[0]-w/2-1,top+5,w+2,hg+2);
     ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(p[0]-w/2,top+6,w,hg);
@@ -1824,7 +1868,7 @@ function drawHUD(){
   });
   if(paused){
     ctx.fillStyle='rgba(8,12,17,.8)';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle=C.cyan;ctx.font='700 26px ui-monospace,monospace';ctx.fillText('PAUSED',W/2,H/2);
+    ctx.fillStyle=C.cyan;ctx.font='700 26px ui-monospace,monospace';ctx.fillText('일시정지',W/2,H/2);
     ctx.fillStyle=C.dim;ctx.font='600 12px ui-monospace,monospace';
     ctx.fillText('ESC 로 계속',W/2,H/2+26);
     const own=Object.keys(run.boons||{});
@@ -1919,7 +1963,7 @@ function go(id){
   $$('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
   gcv.style.display = id==='game'?'block':'none';
   $('#bgcv').style.display = id==='game'?'none':'block';
-  $('#modal').classList.remove('on'); paused=false;
+  $('#modal').classList.remove('on'); $('#pause').classList.remove('on'); paused=false;
   if(id!=='game') unlockMouse();   // v2.12
   if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs();
     if(!OPT.tutSeen) openModal('tutorial'); }   // v3.4 처음 HUB에 들어오면 튜토리얼
@@ -1951,11 +1995,21 @@ function endRun(){
   go('result');
 }
 /* v3.4 일시정지하면 설정 화면이 같이 뜬다. 재개할 땐(ESC·상단 버튼·설정 닫기) 같이 닫힌다 */
-function togglePause(){
-  paused=!paused;
-  if(paused){ unlockMouse(); openModal('opt'); }
-  else{ lockMouse(); binding=null; bindMsg=''; $('#modal').classList.remove('on'); }
+/* v2.21 ESC — 일시정지 메뉴(계속하기 · 설정 · HUB). 전체화면이 풀리거나 창을 벗어나면 자동으로 멈춘다 */
+function setPause(on){
+  paused=on;
+  $('#pause').classList.toggle('on',on);
+  if(on){ unlockMouse(); }
+  else { $('#modal').classList.remove('on'); lockMouse(); if(isPhone()) goLandscape(); }
 }
+function togglePause(){ if(screen!=='game')return; setPause(!paused); }
+$('#pmResume').onclick=()=>setPause(false);
+$('#pmOpt').onclick=()=>openModal('opt');
+$('#pmHub').onclick=()=>{ setPause(false); go('hub'); };
+document.addEventListener('fullscreenchange',()=>{
+  if(screen==='game'&&!document.fullscreenElement&&isPhone()&&!paused) setPause(true);
+});
+addEventListener('blur',()=>{ if(screen==='game'&&!paused) setPause(true); });
 document.addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go);return;}
   const m=e.target.closest('[data-modal]'); if(m){openModal(m.dataset.modal);}
@@ -1983,7 +2037,7 @@ function openModal(kind){
               ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔']];
-  $('#modalBox').innerHTML='<h4>OPTIONS</h4>'+
+  $('#modalBox').innerHTML='<h4>설정</h4>'+
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
     /* v3.3 전체화면 — 폰이 아니어도 언제든 켜고 끌 수 있게 별도 행으로 둔다 (지속 저장값이 아니라 그때그때 상태를 보여줌) */
     '<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
@@ -2066,7 +2120,7 @@ function renderSkillSel(){
   $('#skillSel').innerHTML=
     row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['','없음']],META.skill)+
     row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','견인'],['','없음']],META.skillQ)+
-    row('r','R',[['overwrite','덮어쓰기'],['echo','메아리 복제'],['','없음']],META.skillR);
+    row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['emp','EMP'],['','없음']],META.skillR);
 }
 $('#skillSel').addEventListener('click',e=>{
   const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
