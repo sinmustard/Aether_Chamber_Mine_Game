@@ -339,51 +339,53 @@ const angDiff=(a,b)=>Math.abs(norm(a-b));
 const dist=(a,b,c,d)=>Math.hypot(a-c,b-d);
 
 /* ================= 메타 / 강화 ================= */
+/* v3.5 스킬트리 — req: 이 강화를 사려면(레벨 무관하게 매번) 먼저 만족해야 하는 다른 강화의 최소 레벨.
+   없으면 뿌리(선행 조건 없음). reqMet()/reqLabel()이 이 필드를 읽는다 */
 const UPG=[
- {k:'range', n:'패링 사거리', s:'패링이 닿는 거리', lv:0, max:5, cost:[590,890,1330,2000,3000],
+ {k:'range', n:'패링 사거리', s:'패링이 닿는 거리', pos:{x:50,y:80}, lv:0, max:5, cost:[590,890,1330,2000,3000],
   steps:['3.5m','3.8m','4.1m','4.4m','4.7m','5.0m']},
- {k:'fov',   n:'패링 시야각', s:'바라보는 방향 기준 패링 각도', lv:0, max:5, cost:[490,740,1110,1670,2500],
-  steps:['60°','65°','70°','75°','80°','85°']},
- {k:'penalty',n:'빗나감 페널티', s:'패링이 빗나갔을 때 다시 패링하기까지 시간', lv:0, max:5, cost:[250,420,710,1190,2000],
-  steps:['1.20s','1.10s','1.00s','0.90s','0.80s','0.70s']},
- {k:'move',  n:'이동', s:'이동 속도', lv:0, max:5, cost:[490,740,1110,1670,2500],
+ {k:'fov',   n:'패링 시야각', s:'바라보는 방향 기준 패링 각도', pos:{x:230,y:30}, lv:0, max:5, cost:[490,740,1110,1670,2500],
+  req:[{k:'range',lv:1}], steps:['60°','65°','70°','75°','80°','85°']},
+ {k:'penalty',n:'빗나감 페널티', s:'패링이 빗나갔을 때 다시 패링하기까지 시간', pos:{x:230,y:170}, lv:0, max:5, cost:[250,420,710,1190,2000],
+  req:[{k:'range',lv:1}], steps:['1.20s','1.10s','1.00s','0.90s','0.80s','0.70s']},
+ {k:'move',  n:'이동', s:'이동 속도', pos:{x:50,y:300}, lv:0, max:5, cost:[490,740,1110,1670,2500],
   steps:['230','245','260','275','290','305']},
- {k:'bullet',n:'탄환', s:'왕복당 가속 · 점수 배율', lv:0, max:5, cost:[790,1190,1780,2670,4000],
+ {k:'bullet',n:'탄환', s:'왕복당 가속 · 점수 배율', pos:{x:50,y:480}, lv:0, max:5, cost:[790,1190,1780,2670,4000],
   steps:['×1.20 / 점수 ×1.00','×1.24 / ×1.10','×1.28 / ×1.20','×1.32 / ×1.35','×1.36 / ×1.50','×1.40 / ×1.70']},
- {k:'vital', n:'생존', s:'최대 체력 · 피격 무적', grp:'life', lv:0, max:5, cost:[300,440,670,1000,1500],
+ {k:'vital', n:'생존', s:'최대 체력 · 피격 무적', grp:'life', pos:{x:50,y:600}, lv:0, max:5, cost:[300,440,670,1000,1500],
   steps:['100 / 0.40s','115 / 0.45s','130 / 0.50s','145 / 0.55s','160 / 0.60s','175 / 0.70s']},
- {k:'greed', n:'재화 획득', s:'한 판에서 버는 재화가 늘어남', grp:'life', lv:0, max:5, cost:[600,900,1350,2000,3000],
+ {k:'greed', n:'재화 획득', s:'한 판에서 버는 재화가 늘어남', grp:'life', pos:{x:230,y:690}, lv:0, max:5, cost:[600,900,1350,2000,3000],
   d:'전투가 끝나고 받는 재화가 늘어납니다. 점수·처치·웨이브·보스 보상 전부에 적용됩니다.',
-  steps:['+0%','+8%','+16%','+24%','+32%','+40%']},
- {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', lv:0, max:2, cost:[2500,5000],
+  req:[{k:'vital',lv:2}], steps:['+0%','+8%','+16%','+24%','+32%','+40%']},
+ {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', pos:{x:230,y:760}, lv:0, max:2, cost:[2500,5000],
   d:'출격 직후에 웨이브 보상을 미리 고릅니다. 1단계는 1회, 2단계는 2회입니다.',
-  steps:['없음','출격 시 1회','출격 시 2회']},
- {k:'homing',n:'유도 보정', s:'되돌린 탄환이 적을 따라감', lv:0, max:5, cost:[400,1600,2800,4400,6500],
+  req:[{k:'vital',lv:3}], steps:['없음','출격 시 1회','출격 시 2회']},
+ {k:'homing',n:'유도 보정', s:'되돌린 탄환이 적을 따라감', pos:{x:230,y:480}, lv:0, max:5, cost:[400,1600,2800,4400,6500],
   d:'패링으로 되돌린 탄환이 앞쪽의 가장 가까운 적 쪽으로 휘어집니다. 단계가 오를수록 더 강하게 꺾이고, 뒤쪽으로 급하게 돌지는 않습니다.',
-  steps:['없음','약함','조금 약함','보통','강함','매우 강함']},
- {k:'multi', n:'다중 패링', s:'한 번에 빼앗는 탄환 수', lv:0, max:2, cost:[1500,3500],
-  steps:['1발','2발','3발']},
- {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
-  steps:['잠김','회복 25 / 대기 26s','회복 30 / 대기 24s','회복 35 / 대기 22s','회복 40 / 대기 20s','회복 50 / 대기 18s']},
- {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
-  steps:['잠김','지속 1.5s / 대기 18s','지속 1.8s / 대기 16s','지속 2.1s / 대기 14s','지속 2.5s / 대기 12s','지속 3.0s / 대기 10s']},
- {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
-  steps:['잠김','거리 140 / 대기 8.0s','거리 155 / 대기 7.4s','거리 170 / 대기 6.8s','거리 185 / 대기 6.2s','거리 200 / 대기 5.5s']},
- {k:'phase', n:'Q · 위상 이동', s:'Q — 벽 통과 + 탄환 유도 무력화', skill:'q', lv:0, max:5, cost:[800,1200,1800,2700,4000],
+  req:[{k:'bullet',lv:2}], steps:['없음','약함','조금 약함','보통','강함','매우 강함']},
+ {k:'multi', n:'다중 패링', s:'한 번에 빼앗는 탄환 수', pos:{x:410,y:100}, lv:0, max:2, cost:[1500,3500],
+  req:[{k:'fov',lv:2},{k:'penalty',lv:2}], steps:['1발','2발','3발']},
+ {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, pos:{x:230,y:550}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
+  req:[{k:'vital',lv:1}], steps:['잠김','회복 25 / 대기 26s','회복 30 / 대기 24s','회복 35 / 대기 22s','회복 40 / 대기 20s','회복 50 / 대기 18s']},
+ {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, pos:{x:230,y:620}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
+  req:[{k:'vital',lv:1}], steps:['잠김','지속 1.5s / 대기 18s','지속 1.8s / 대기 16s','지속 2.1s / 대기 14s','지속 2.5s / 대기 12s','지속 3.0s / 대기 10s']},
+ {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, pos:{x:230,y:320}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
+  req:[{k:'move',lv:2}], steps:['잠김','거리 140 / 대기 8.0s','거리 155 / 대기 7.4s','거리 170 / 대기 6.8s','거리 185 / 대기 6.2s','거리 200 / 대기 5.5s']},
+ {k:'phase', n:'Q · 위상 이동', s:'Q — 벽 통과 + 탄환 유도 무력화', skill:'q', pos:{x:230,y:250}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   d:'Q — 발동하는 동안 벽을 통과하고, 적 탄환이 더 이상 따라오지 않고 직진합니다. 끝날 때 벽 안에 있으면 밖으로 밀려납니다.',
-  steps:['잠김','지속 2.0s / 대기 16s','지속 2.5s / 대기 15s','지속 3.0s / 대기 13s','지속 3.5s / 대기 12s','지속 4.0s / 대기 10s']},
- {k:'wall',  n:'Q · 벽 생성', s:'Q — 앞쪽에 벽 설치 (탄환 반사)', skill:'q', lv:0, max:4, cost:[1000,1500,2200,3300],
+  req:[{k:'move',lv:1}], steps:['잠김','지속 2.0s / 대기 16s','지속 2.5s / 대기 15s','지속 3.0s / 대기 13s','지속 3.5s / 대기 12s','지속 4.0s / 대기 10s']},
+ {k:'wall',  n:'Q · 벽 생성', s:'Q — 앞쪽에 벽 설치 (탄환 반사)', skill:'q', pos:{x:230,y:100}, lv:0, max:4, cost:[1000,1500,2200,3300],
   d:'Q — 바라보는 방향 앞에 벽을 세웁니다. 탄환은 벽에 튕깁니다. 벽끼리는 간격을 두어야 하고, 최대 개수를 넘기면 가장 오래된 벽이 사라집니다. 이 스킬을 장착하지 않으면 맵에 벽이 없습니다.',
-  steps:['잠김','벽 1개','벽 2개','벽 3개','벽 4개']},
- {k:'hook',  n:'Q · 견인', s:'Q — 사거리 안 가장 가까운 적을 끌어당김', skill:'q', lv:0, max:5, cost:[800,1200,1800,2700,4000],
+  req:[{k:'range',lv:2}], steps:['잠김','벽 1개','벽 2개','벽 3개','벽 4개']},
+ {k:'hook',  n:'Q · 견인', s:'Q — 사거리 안 가장 가까운 적을 끌어당김', skill:'q', pos:{x:230,y:390}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   d:'Q — 사거리 안의 가장 가까운 적을 순간적으로 끌어당깁니다. 도망 다니는 적을 붙잡거나 각을 강제로 열 때 씁니다.',
-  steps:['잠김','사거리 260 / 대기 9.0s','사거리 280 / 대기 8.0s','사거리 300 / 대기 7.0s','사거리 320 / 대기 6.0s','사거리 340 / 대기 5.0s']},
- {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
+  req:[{k:'move',lv:2},{k:'range',lv:1}], steps:['잠김','사거리 260 / 대기 9.0s','사거리 280 / 대기 8.0s','사거리 300 / 대기 7.0s','사거리 320 / 대기 6.0s','사거리 340 / 대기 5.0s']},
+ {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', pos:{x:590,y:390}, lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
-  steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
- {k:'echo', n:'R · 메아리 복제', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
+  req:[{k:'bullet',lv:3},{k:'multi',lv:1}], steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
+ {k:'echo', n:'R · 메아리 복제', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', pos:{x:590,y:280}, lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
-  steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']}
+  req:[{k:'multi',lv:1},{k:'homing',lv:1}], steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']}
 ];
 const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
@@ -460,6 +462,10 @@ function sfx(k,n){
 }
 
 function lv(k){ return UPG.find(u=>u.k===k).lv; }
+/* v3.5 스킬트리 — 선행 조건 확인 */
+const reqMet=u=>!u.req||u.req.every(r=>lv(r.k)>=r.lv);
+const reqLabel=u=>(u.req||[]).filter(r=>lv(r.k)<r.lv)
+  .map(r=>UPG.find(x=>x.k===r.k).n+' Lv.'+r.lv).join(' · ');
 function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
         h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo');
@@ -2012,9 +2018,12 @@ $('#modalBox').addEventListener('click',e=>{
 });
 
 /* ================= HUB ================= */
+/* v3.6 스킬트리 — 노드 하나. 원 안에는 레벨, 아래에 이름을 짧게 붙인다 */
+/* v3.5 스킬트리(선행 조건)는 유지하되, 화면은 카드 목록으로 되돌렸다 — 노드+연결선 트리가 너무 안 보인다는 피드백 */
 function cardHTML(u,i){
-  return '<div class="card'+(i===sel?' sel':'')+(u.skill?' skill':'')+(u.skill&&!u.lv?' locked':'')+'" data-i="'+i+'"><div class="n">'+u.n+(u.skill&&!u.lv?' · 잠김':'')+'</div>'+
-    '<div class="s">'+u.s+'</div><div class="pips">'+
+  const rMet=reqMet(u);
+  return '<div class="card'+(i===sel?' sel':'')+(u.skill?' skill':'')+((u.skill&&!u.lv)||!rMet?' locked':'')+'" data-i="'+i+'"><div class="n">'+u.n+(u.skill&&!u.lv?' · 잠김':'')+'</div>'+
+    (rMet?'<div class="s">'+u.s+'</div>':'<div class="s">🔒 '+reqLabel(u)+' 필요</div>')+'<div class="pips">'+
     Array.from({length:u.max},(_,k)=>'<div class="pip'+(k<u.lv?' f':'')+'"></div>').join('')+
     '</div></div>';
 }
@@ -2029,16 +2038,17 @@ function renderCards(){
   ).join('');
 }
 function renderDetail(){
-  const u=UPG[sel],maxed=u.lv>=u.max,cost=maxed?0:u.cost[u.lv];
+  const u=UPG[sel],maxed=u.lv>=u.max,cost=maxed?0:u.cost[u.lv],rMet=reqMet(u);
   $('#detail').innerHTML=
     '<h4>'+u.n+' <span style="color:var(--dim);font-size:11px">Lv '+u.lv+' / '+u.max+'</span></h4>'+
     '<div class="eff">'+(u.d||u.s)+'<br><br>현재 <b>'+u.steps[u.lv]+'</b>'+
-    (maxed?'':'<br><span class="arrow">↓ 다음</span><br><b>'+u.steps[u.lv+1]+'</b>')+'</div>'+
-    '<button class="buy" id="buy"'+(maxed||cost>META.cur?' disabled':'')+'>'+
-    (maxed?'MAX':((u.skill&&u.lv===0)?'해금':'강화')+'  ◆ '+cost.toLocaleString())+'</button>';
+    (maxed?'':'<br><span class="arrow">↓ 다음</span><br><b>'+u.steps[u.lv+1]+'</b>')+
+    (rMet?'':'<br><br><span style="color:var(--red)">🔒 선행 조건: '+reqLabel(u)+'</span>')+'</div>'+
+    '<button class="buy" id="buy"'+(maxed||!rMet||cost>META.cur?' disabled':'')+'>'+
+    (maxed?'MAX':!rMet?'선행 조건 필요':((u.skill&&u.lv===0)?'해금':'강화')+'  ◆ '+cost.toLocaleString())+'</button>';
   const b=$('#buy');
   if(b)b.onclick=()=>{
-    if(u.lv>=u.max||u.cost[u.lv]>META.cur)return;
+    if(u.lv>=u.max||!reqMet(u)||u.cost[u.lv]>META.cur)return;
     META.cur-=u.cost[u.lv];u.lv++;
     if(u.skill===1&&u.lv===1&&!META.skill) META.skill=u.k;      // 처음 해금한 스킬은 자동 장착
     if(u.skill==='q'&&u.lv===1&&!META.skillQ) META.skillQ=u.k;
