@@ -235,7 +235,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.17</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.18</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -363,7 +363,7 @@ const UPG=[
  {k:'multi', n:'다중 패링', s:'한 번에 빼앗는 탄환 수', lv:0, max:2, cost:[1500,3500],
   steps:['1발','2발','3발']},
  {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
-  steps:['잠김','회복 25 / 대기 18s','회복 30 / 대기 16s','회복 35 / 대기 14s','회복 40 / 대기 12s','회복 50 / 대기 10s']},
+  steps:['잠김','회복 25 / 대기 26s','회복 30 / 대기 24s','회복 35 / 대기 22s','회복 40 / 대기 20s','회복 50 / 대기 18s']},
  {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   steps:['잠김','지속 1.5s / 대기 18s','지속 1.8s / 대기 16s','지속 2.1s / 대기 14s','지속 2.5s / 대기 12s','지속 3.0s / 대기 10s']},
  {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
@@ -378,11 +378,11 @@ const UPG=[
   d:'Q — 사거리 안의 가장 가까운 적을 순간적으로 끌어당깁니다. 도망 다니는 적을 붙잡거나 각을 강제로 열 때 씁니다.',
   steps:['잠김','사거리 260 / 대기 9.0s','사거리 280 / 대기 8.0s','사거리 300 / 대기 7.0s','사거리 320 / 대기 6.0s','사거리 340 / 대기 5.0s']},
  {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
-  d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다.',
-  steps:['잠김','대기 26s','대기 23s','대기 20s','대기 17s','대기 14s']},
- {k:'echo', n:'R · 메아리', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
-  d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다.',
-  steps:['잠김','대기 22s','대기 19s','대기 16s','대기 13s','대기 10s']}
+  d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
+  steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
+ {k:'echo', n:'R · 메아리 복제', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
+  d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
+  steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']}
 ];
 const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
@@ -472,13 +472,15 @@ function statsFromUpgrades(){
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
     skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
-    healAmt:[0,25,30,35,40,50][h], healCd:[0,18,16,14,12,10][h],
+    healAmt:[0,25,30,35,40,50][h], healCd:[0,26,24,22,20,18][h],
     guardDur:[0,1.5,1.8,2.1,2.5,3.0][g], guardCd:[0,18,16,14,12,10][g],
     phaseDur:[0,2,2.5,3,3.5,4][ph], phaseCd:[0,16,15,13,12,10][ph],
     wallMax:(META.skillQ==='wall'&&wl>0)?wl:0,
     dashDist:[0,140,155,170,185,200][da], dashCd:[0,8.0,7.4,6.8,6.2,5.5][da],
     hookRange:[0,260,280,300,320,340][hk], hookCd:[0,9.0,8.0,7.0,6.0,5.0][hk],
-    owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec]
+    owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
+    /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
+    rNeed: [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
   };
 }
 
@@ -486,7 +488,7 @@ function statsFromUpgrades(){
 const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22,
+            skillR:'', owCd:26, echoCd:22, rNeed:50,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -616,7 +618,12 @@ const BOSS_PATTERNS=[
  {n:'FAN',     d:'3발 부채꼴 동시',    specs:[{t:0,ang:-0.55},{t:0},{t:0,ang:0.55}]},
  {n:'CHAIN',   d:'4발 연쇄',          specs:[{t:0},{t:0.45},{t:0.9},{t:1.35}]},
  {n:'PINCER',  d:'양쪽 우회 협공',     specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1}]},
- {n:'DOUBLE FEINT',d:'시차 페인트 2발', specs:[{t:0,feint:1},{t:0.35,feint:1,ang:0.4}]}
+ {n:'DOUBLE FEINT',d:'시차 페인트 2발', specs:[{t:0,feint:1},{t:0.35,feint:1,ang:0.4}]},
+ /* v2.18 추가 */
+ {n:'SPIRAL',  d:'5발 나선 — 각도가 조금씩 벌어진다',
+  specs:[{t:0,ang:-0.7},{t:0.14,ang:-0.35},{t:0.28},{t:0.42,ang:0.35},{t:0.56,ang:0.7}]},
+ {n:'TRAP',    d:'양쪽 우회로 가두고 정면 고속 한 발',
+  specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.55,fast:0.9}]}
 ];
 /* 체력 50% 이하 2페이즈 전용 */
 const BOSS_P2={n:'OVERDRIVE', d:'고속 + 우회 혼합', specs:[{t:0,fast:0.8},{t:0.5,orbit:1},{t:1.0,fast:0.8}]};
@@ -674,11 +681,11 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,
     spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
-     dashT:0,dashDir:0,rCd:0,rCdMax:1,echoT:0};
+     dashT:0,dashDir:0,rCd:0,rCdMax:1,rChg:0,echoT:0};
   ens=[];bullets=[];queue=[];msgs=[];shake=0;parts=[];hitstop=0;
   run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
@@ -765,7 +772,8 @@ function spawnEnemy(grade){
     x=60+Math.random()*(WORLD.w-120); y=80+Math.random()*(WORLD.h-160); tries++;
   }while(tries<40 && dist(x,y,P.x,P.y)<340);
   [x,y]=pushOutOfWalls(x,y,r);
-  const hp=BASE_DMG*DMG_MULT*hits*run.diff;
+  /* v2.18 같은 사이클 안에서도 웨이브가 갈수록 단단해진다 (웨이브당 +6%) */
+  const hp=BASE_DMG*DMG_MULT*hits*run.diff*(1+0.06*Math.max(0,run.wave-1));
   const en={x,y,r,grade,hp,hpMax:hp,hurt:0,
     fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y};
   if(g.shield) en.sa=Math.atan2(P.y-y,P.x-x);      // 방패 초기 방향
@@ -777,7 +785,7 @@ function spawnSplinters(e){
   for(let i=0;i<2;i++){
     const a=Math.random()*TAU, d=18;
     const x=clamp(e.x+Math.cos(a)*d,40,WORLD.w-40), y=clamp(e.y+Math.sin(a)*d,40,WORLD.h-40);
-    const hp=BASE_DMG*DMG_MULT*g.hits*run.diff;
+    const hp=BASE_DMG*DMG_MULT*g.hits*run.diff*(1+0.06*Math.max(0,run.wave-1));
     ens.push({x,y,r:g.r,grade:'splinter',hp,hpMax:hp,hurt:0,
       fireT:0.3+Math.random()*0.5, drift:Math.random()*TAU, ax:x, ay:y, inv:ENEMY_IFRAME});
   }
@@ -788,6 +796,7 @@ function killEnemy(e){
   const idx=ens.indexOf(e); if(idx<0) return;
   const bonus=G(e).score;
   run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
+  P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
   hitstop=e.grade==='boss'?0.25:0.07; sfx(e.grade==='boss'?'boss':'kill');
   if(e.grade==='boss'){ run.bossKills++; announce('BOSS DOWN  +'+bonus,'cyan'); shake=20; }
@@ -971,6 +980,7 @@ function doParry(){
     });
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
+    P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1
     say(ts.length>1?'RECLAIMED ×'+ts.length:'RECLAIMED','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     hitstop=0.045+0.02*(ts.length-1);
@@ -1027,7 +1037,7 @@ function doQ(){
     say('PHASE','cyan'); sfx('phase');
   } else if(CFG.qSkill==='hook'){
     if(paused||P.wallCd>0||P.hp<=0)return;
-    const cands=ens.filter(e=>dist(e.x,e.y,P.x,P.y)<=CFG.hookRange);
+    const cands=ens.filter(e=>dist(e.x,e.y,P.x,P.y)<=CFG.hookRange && !wallBetween(P.x,P.y,e.x,e.y));   // v2.18 벽 너머는 못 끈다
     if(!cands.length){ say('NO TARGET','red'); sfx('miss'); P.wallCd=0.25; return; }
     const tgt=cands.sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
     tgt.hookT=HOOK_DUR;
@@ -1037,7 +1047,8 @@ function doQ(){
 }
 /* v2.1 R 슬롯 — 덮어쓰기 / 메아리 (웨이브 보상 '잔상'과 이름이 겹쳐서 개명) */
 function doR(){
-  if(paused||!CFG.skillR||P.rCd>0||P.hp<=0)return;
+  if(paused||!CFG.skillR||P.hp<=0)return;
+  if(P.rChg<CFG.rNeed){ say('CHARGE '+Math.floor(P.rChg)+' / '+CFG.rNeed,'dim'); return; }
   if(CFG.skillR==='overwrite'){
     const ts=bullets.filter(b=>b.owner==='enemy');
     if(!ts.length){ say('NO BULLETS','dim'); return; }
@@ -1050,9 +1061,9 @@ function doR(){
       t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir;
     });
     say('OVERWRITE ×'+ts.length,'warn'); sfx('overwrite'); shake=10; hitstop=0.06;
-    P.rCd=P.rCdMax=CFG.owCd;
+    P.rChg=0;
   } else if(CFG.skillR==='echo'){
-    P.echoT=ECHO_DUR; P.rCd=P.rCdMax=CFG.echoCd;
+    P.echoT=ECHO_DUR; P.rChg=0;
     say('ECHO','cyan'); sfx('echo');
   }
 }
@@ -1148,7 +1159,7 @@ function update(dt){
   else if(!touchMode)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
-  if(P.rCd>0)P.rCd-=dt; if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
+  if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
 
   // 웨이브
   if(run.phase==='build'){
@@ -1182,7 +1193,8 @@ function update(dt){
     if(e.hookT>0){
       e.hookT-=dt;
       const toward=Math.atan2(P.y-e.ay,P.x-e.ax), stopD=e.r+R_PLAYER+40;
-      if(dist(e.ax,e.ay,P.x,P.y)>stopD){
+      if(wallBetween(e.ax,e.ay,P.x,P.y)) e.hookT=0;             // v2.18 벽이 끼면 끌기 중단
+      else if(dist(e.ax,e.ay,P.x,P.y)>stopD){
         e.ax=clamp(e.ax+Math.cos(toward)*HOOK_SPD*dt,40,WORLD.w-40);
         e.ay=clamp(e.ay+Math.sin(toward)*HOOK_SPD*dt,40,WORLD.h-40);
       }
@@ -1227,6 +1239,7 @@ function update(dt){
         if(e.lungeT<=0) e.lungePhase='chase';
       }
     }
+    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r);   // v2.18 적이 벽을 뚫던 문제
     e.x=e.ax+Math.cos(e.drift*0.8)*36;
     e.y=e.ay+Math.sin(e.drift)*54;
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
@@ -1309,6 +1322,7 @@ function update(dt){
         }
       }
     }
+    const prevX=b.x, prevY=b.y;
     b.x+=Math.cos(b.dir)*b.spd*dt; b.y+=Math.sin(b.dir)*b.spd*dt;
 
     // 장애물
@@ -1316,7 +1330,13 @@ function update(dt){
     if(obstacles.length){
       let gone=false;
       for(const {col:o} of obstacles){
-        const h=rectHit(b.x,b.y,R_BULLET,o); if(!h)continue;
+        /* v2.18 한 프레임에 벽을 건너뛰는 경우까지 잡는다. 관통 보상이 있어도 벽은 통과하지 못한다 */
+        let h=rectHit(b.x,b.y,R_BULLET,o);
+        if(!h && segHitsRect(prevX,prevY,b.x,b.y,o)){
+          b.x=prevX; b.y=prevY;
+          h=rectHit(b.x,b.y,R_BULLET,o)||{dx:b.x-(o.x+o.w/2), dy:b.y-(o.y+o.h/2)};
+        }
+        if(!h)continue;
         if(!CFG.bounce){ bullets.splice(i,1); gone=true; break; }
         let vx=Math.cos(b.dir), vy=Math.sin(b.dir);
         if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0){ vx=-vx; b.x=h.dx>=0?o.x+o.w+R_BULLET+.5:o.x-R_BULLET-.5; }
@@ -1567,15 +1587,17 @@ function drawQ(){
 }
 function drawR(){
   if(!CFG.skillR)return;
-  const p=proj(P.x,P.y), x=p[0], y=p[1]-R_PLAYER*1.3-40, r=9, ready=P.rCd<=0;
+  const p=proj(P.x,P.y), x=p[0], y=p[1]-R_PLAYER*1.3-40, r=9, ready=P.rChg>=CFG.rNeed;
   ctx.fillStyle='rgba(0,0,0,.55)';ctx.beginPath();ctx.arc(x,y,r+2,0,TAU);ctx.fill();
-  if(!ready){ const k=1-P.rCd/P.rCdMax;
+  if(!ready){ const k=P.rChg/CFG.rNeed;
     ctx.fillStyle='rgba(47,227,208,.35)';ctx.beginPath();ctx.moveTo(x,y);ctx.arc(x,y,r,-Math.PI/2,-Math.PI/2+TAU*k);ctx.closePath();ctx.fill(); }
   ctx.strokeStyle=ready?C.cyan:C.dim;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
   ctx.fillStyle=ready?C.cyan:C.dim;const rt=keyName(OPT.keyR);
   ctx.font=(rt.length>1?'700 7px':'700 10px')+' ui-monospace,monospace';ctx.textAlign='center';
   ctx.fillText(rt.slice(0,3),x,y+3);
-  if(P.echoT>0){ ctx.font='600 9px ui-monospace,monospace'; ctx.fillStyle=C.cyan; ctx.fillText(P.echoT.toFixed(1)+'s',x,y-14); }
+  ctx.font='600 9px ui-monospace,monospace'; ctx.fillStyle=ready?C.cyan:C.dim;
+  ctx.fillText(Math.floor(P.rChg)+'/'+CFG.rNeed,x,y+22);
+  if(P.echoT>0){ ctx.fillStyle=C.cyan; ctx.fillText(P.echoT.toFixed(1)+'s',x,y-14); }
 }
 /* v2.1 송신기 — 지원 반경과, 영향받는 적으로 이어지는 선을 그려 원인을 보여준다 */
 function drawRelayLinks(){
@@ -1954,7 +1976,7 @@ function renderSkillSel(){
   $('#skillSel').innerHTML=
     row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['','없음']],META.skill)+
     row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','견인'],['','없음']],META.skillQ)+
-    row('r','R',[['overwrite','덮어쓰기'],['echo','메아리'],['','없음']],META.skillR);
+    row('r','R',[['overwrite','덮어쓰기'],['echo','메아리 복제'],['','없음']],META.skillR);
 }
 $('#skillSel').addEventListener('click',e=>{
   const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
