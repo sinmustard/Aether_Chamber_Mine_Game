@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!--
+    임시 플레이스홀더 — 나중에 AI 이미지로 교체 가능.
+    기준 방향: 왼쪽(x≈20, y=100)이 몸통 쪽, 오른쪽(x≈188, y=100)이 막는 정면.
+    코드에서 이 정면 방향을 플레이어 쪽으로 회전시켜 사용한다 (index.html drawShield).
+  -->
+  <defs>
+    <linearGradient id="plate" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#17171b"/>
+      <stop offset="55%" stop-color="#241a1c"/>
+      <stop offset="100%" stop-color="#3a1216"/>
+    </linearGradient>
+    <radialGradient id="core" cx="85%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#ffd9b0"/>
+      <stop offset="30%" stop-color="#ff8a63"/>
+      <stop offset="70%" stop-color="#ff3b52"/>
+      <stop offset="100%" stop-color="#7a0f1d" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 방패 판 본체 (다면체 실루엣) -->
+  <path d="M20,44 C58,24 118,34 152,56 C174,70 188,90 188,100 C188,110 174,130 152,144
+           C118,166 58,176 20,156 C40,132 40,68 20,44 Z"
+        fill="url(#plate)" filter="url(#glow)"/>
+
+  <!-- 바깥 정면 테두리(막는 면) — 밝게 강조 -->
+  <path d="M152,56 C174,70 188,90 188,100 C188,110 174,130 152,144"
+        fill="none" stroke="#ff3b52" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- 단면 결(facet) 라인 -->
+  <path d="M30,55 L120,80 L188,100 M30,145 L120,120 L188,100 M20,100 L150,100"
+        fill="none" stroke="#ff3b52" stroke-width="2" opacity="0.55"/>
+
+  <!-- 중심 발광 코어 -->
+  <ellipse cx="150" cy="100" rx="46" ry="34" fill="url(#core)"/>
+
+  <!-- 전체 외곽선 -->
+  <path d="M20,44 C58,24 118,34 152,56 C174,70 188,90 188,100 C188,110 174,130 152,144
+           C118,166 58,176 20,156 C40,132 40,68 20,44 Z"
+        fill="none" stroke="#0b0f14" stroke-width="2" opacity="0.6"/>
+</svg>
