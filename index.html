@@ -1121,7 +1121,7 @@ function update(dt){
            같은 방향으로 계속 쏘면 틈이 벌어져 결국 측면이 열린다 */
         const d=norm((e.sa!=null?e.sa:out)-out);
         e.sa=(e.sa!=null?e.sa:out)+(d>=0?1:-1)*0.42;
-        e.saStun=0.55; e.shieldFx=0.3;
+        e.saStun=1.1; e.shieldFx=0.3;   // v2.2 막은 뒤 방패가 다시 돌아오기까지 더 오래 걸리게 (0.55 -> 1.1)
         say('SHIELDED','red'); sfx('block'); shake=5; burst(b.x,b.y,'red',6,120);
         continue;
       }
@@ -1250,12 +1250,13 @@ function drawShield(e){
   const exposed=angDiff(facing,Math.atan2(P.y-e.y,P.x-e.x))>half;   // 플레이어가 사각에 있음
   const img=SPRITES.bulwark_shield;
   if(img){
-    /* v2.2 방패 스프라이트 — 이미지는 오른쪽(0rad)이 정면이 되도록 그려져 있어 facing만큼 회전시킨다 */
-    const w=e.r*1.9, h=e.r*2.0;
+    /* v2.2 방패 스프라이트 — 이미지는 오른쪽(0rad)이 정면이 되도록 그려져 있어 facing만큼 회전시킨다.
+       w=뻗는 길이, h=좌우 폭. 너무 길쭉해 보여서 폭을 넓히고 길이를 줄였다 */
+    const w=e.r*1.2, h=e.r*2.7;
     ctx.save(); ctx.translate(q[0],q[1]); ctx.scale(1,SQUASH); ctx.rotate(facing);
     ctx.globalAlpha=exposed?0.45:1;
     if(e.shieldFx>0) ctx.filter='brightness('+(1.6+e.shieldFx*3)+')';
-    ctx.drawImage(img,-0.1*w,-h/2,w,h);
+    ctx.drawImage(img,-0.15*w,-h/2,w,h);
     ctx.restore();
     return;
   }
