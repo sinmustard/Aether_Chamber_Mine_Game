@@ -536,6 +536,21 @@ const DASH_DUR=0.16, ECHO_DUR=4, HOOK_DUR=0.4, HOOK_SPD=900;
 /* v2.7 추적자 — 접근(chase) -> 예비 동작(wind) -> 돌진(dash) -> 재사용 대기(cd) 상태를 순환한다 */
 const TRACK_SPD=110, LUNGE_RANGE=130, LUNGE_WIND=0.45, LUNGE_DUR=0.22, LUNGE_SPD=900, LUNGE_CD=1.8, CONTACT_DMG=18;
 const colOf=o=>({x:o.x, y:o.y-WALL_HG/SQUASH, w:o.w, h:o.h+WALL_HG/SQUASH});
+/* v3.2 맵 — 판마다 고정 장애물 배치를 하나 골라서 깐다(run.mapWalls). Q 스킬 벽(run.walls)과는 별개라
+   설치 개수 제한(CFG.wallMax)에 안 걸리고 부서지지도 않는다. 플레이어 출발점(200,380) 주변은 비워둔다 */
+const MAPS=[
+  [{x:560,y:200,w:40,h:180},  {x:680,y:460,w:200,h:40}],                    // 교차로
+  [{x:520,y:120,w:36,h:160},  {x:520,y:480,w:36,h:160}, {x:820,y:300,w:36,h:200}], // 회랑
+  [{x:600,y:260,w:120,h:36},  {x:750,y:480,w:36,h:140}]                     // 개활지+엄폐
+];
+const allWalls=()=>run.mapWalls.concat(run.walls);
+/* v3.2 맵 교체 — 직전과 다른 배치가 나오도록 고른다 (판 시작 1회 + 5웨이브마다) */
+function rerollMap(){
+  let idx=Math.floor(Math.random()*MAPS.length);
+  if(MAPS.length>1 && idx===run.mapIdx) idx=(idx+1)%MAPS.length;
+  run.mapIdx=idx;
+  run.mapWalls=MAPS[idx].map(o=>({x:o.x,y:o.y,w:o.w,h:o.h,col:colOf(o),static:true}));
+}
 function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가 (Liang–Barsky)
   let t0=0,t1=1; const dx=x2-x1, dy=y2-y1;
   const pp=[-dx,dx,-dy,dy], qq=[x1-o.x,o.x+o.w-x1,y1-o.y,o.y+o.h-y1];
@@ -547,7 +562,7 @@ function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가
   }
   return true;
 }
-const wallBetween=(x1,y1,x2,y2)=>run.walls.some(({col:o})=>segHitsRect(x1,y1,x2,y2,o));
+const wallBetween=(x1,y1,x2,y2)=>allWalls().some(({col:o})=>segHitsRect(x1,y1,x2,y2,o));
 const rectGap=(a,b)=>Math.max(a.x-(b.x+b.w), b.x-(a.x+a.w), a.y-(b.y+b.h), b.y-(a.y+a.h));
 function rectHit(cx,cy,r,o){
   const nx=clamp(cx,o.x,o.x+o.w), ny=clamp(cy,o.y,o.y+o.h);
@@ -607,11 +622,16 @@ const BOONS=[
  {k:'vital', n:'예비 회로', d:'최대 체력 +25, 즉시 25 회복',   max:3, tag:'생존',   fn:()=>{CFG.hpMax+=25;P.hp=Math.min(CFG.hpMax,P.hp+25);}},
  {k:'iframe',n:'잔상',      d:'피격 무적 +0.15초',            max:2, tag:'생존',   fn:()=>CFG.iframe+=0.15},
  {k:'greed', n:'탐욕',      d:'점수 배율 +0.30, 최대 체력 −10',max:2, tag:'점수',   fn:()=>{CFG.scoreMul+=0.30;CFG.hpMax=Math.max(40,CFG.hpMax-10);P.hp=Math.min(P.hp,CFG.hpMax);}},
- {k:'pierce',n:'관통',      d:'패링한 탄환이 적 1기를 뚫고 지나간다', max:1, tag:'탄환', fn:()=>{}},
+ {k:'pierce',n:'관통',      d:'패링한 탄환이 적을 뚫고 지나간다 (레벨당 +1기)', max:3, tag:'탄환', fn:()=>{}},
  {k:'shard', n:'파편',      d:'명중 시 주변 적에게 0.5칸 추가 피해',  max:2, tag:'탄환', fn:()=>{}},
- {k:'grit',  n:'집념',      d:'왕복 3회 이상 탄환의 피해 ×2',  max:1, tag:'탄환',   fn:()=>{}},
+ {k:'grit',  n:'집념',      d:'왕복 3회 이상 탄환의 피해 배율 (레벨당 +100%p, 1중첩 ×2·2중첩 ×3)',  max:2, tag:'탄환',   fn:()=>{}},
  {k:'flow',  n:'무결',      d:'패링에 성공하면 회복 경직이 없다', max:1, tag:'경직', fn:()=>{}},
- {k:'multi', n:'분배',      d:'한 번에 빼앗는 탄환 +1',        max:1, tag:'패링',   fn:()=>CFG.multi+=1}
+ {k:'multi', n:'분배',      d:'한 번에 빼앗는 탄환 +1',        max:1, tag:'패링',   fn:()=>CFG.multi+=1},
+ /* v3.1 웨이브 보상 3종 추가 */
+ {k:'overload', n:'회로 과부하', d:'장착한 스킬(F·Q·R)의 재사용 대기시간 −10%', max:3, tag:'스킬',
+  fn:()=>['healCd','guardCd','dashCd','phaseCd','hookCd','owCd','echoCd'].forEach(k=>CFG[k]*=0.9)},
+ {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
+ {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}}
 ];
 const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
 
@@ -634,13 +654,14 @@ function newRun(){
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
     skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,
-    spd:240,fire:1.8});
+    spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
      dashT:0,dashDir:0,rCd:0,rCdMax:1,echoT:0};
   ens=[];bullets=[];queue=[];msgs=[];shake=0;parts=[];hitstop=0;
   run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
+  rerollMap();   // v3.2
   if(CFG.qSkill==='wall'){ run.phase='build'; run.phaseT=BUILD_T; }   // v1.6 벽 설치 준비 시간
 }
 
@@ -672,6 +693,7 @@ function rollWave(n){
 }
 function waveSpawn(){
   run.wave++;
+  if(run.wave>1 && run.wave%5===1){ rerollMap(); say('TERRAIN SHIFT','warn'); }   // v3.2 5웨이브마다 맵 교체
   const boss = run.wave>BOSS_WAVE;
   if(boss){ spawnEnemy('boss'); announce('ALETHEIA','red'); sfx('boss'); }
   else{
@@ -690,7 +712,7 @@ function spawnEnemy(grade){
   let x,y,tries=0;
   do{
     x=60+Math.random()*(WORLD.w-120); y=80+Math.random()*(WORLD.h-160); tries++;
-  }while(tries<80 && (run.walls.some(({col:o})=>rectHit(x,y,r+10,o)) || dist(x,y,P.x,P.y)<340));
+  }while(tries<80 && (allWalls().some(({col:o})=>rectHit(x,y,r+10,o)) || dist(x,y,P.x,P.y)<340));
   const hp=BASE_DMG*DMG_MULT*hits*run.diff;
   const en={x,y,r,grade,hp,hpMax:hp,hurt:0,
     fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y};
@@ -720,6 +742,17 @@ function killEnemy(e){
   else say('DOWN  +'+bonus,'cyan');
   ens.splice(idx,1);
   if(e.grade==='splitter') spawnSplinters(e);   // v2.1 분열형 — 처치되면 분열체 2기
+  /* v3.1 여진 — 처치 지점 주변에 추가 피해. killEnemy로 다시 들어오는 연쇄 처치도 자연스럽게 처리된다 */
+  const as=boonLv('aftershock');
+  if(as){
+    const dmg=HIT_UNIT*0.4*as;
+    ens.slice().forEach(o=>{ if(o.inv>0) return;
+      if(dist(e.x,e.y,o.x,o.y)>=80+o.r) return;
+      o.hp-=dmg*(shielded(o,{x:e.x,y:e.y})?0.5:1); o.hurt=.18;
+      if(o.hp<=0) killEnemy(o);
+    });
+    burst(e.x,e.y,'warn',10,200);
+  }
   bullets.forEach(z=>{ if(z.tried) z.tried=z.tried.filter(x=>x!==e); });   // v1.7 B-1
 }
 function announce(text,color){ msgs.push({text,color,t:1.3,big:1}); }
@@ -870,7 +903,7 @@ function doParry(){
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
       t.spd=Math.min(t.spd*CFG.accel,cap());
-      t.pierced=false;                                                 // 관통은 패링마다 초기화
+      t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
       t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       if(i===0) t.dir=mainDir;
       else if(foes[i]) t.dir=Math.atan2(foes[i].y-P.y,foes[i].x-P.x);   // 추가 탄환은 다른 적에게
@@ -881,7 +914,7 @@ function doParry(){
       if(P.echoT>0 && bullets.length+echoes.length<60){
         echoes.push({x:t.x-Math.cos(t.dir)*22, y:t.y-Math.sin(t.dir)*22, dir:t.dir, spd:t.spd*0.92, base:t.base,
           owner:'player', returns:t.returns, age:0, trail:[], glow:1, hcd:0.15, tried:[], ready:false,
-          feint:0, orbitDir:0, orbitAmt:0, pierced:false});
+          feint:0, orbitDir:0, orbitAmt:0, pierceLeft:t.pierceLeft});
       }
     });
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
@@ -930,7 +963,7 @@ function wallCandidate(){
 function wallProblem(o){
   if(rectHit(P.x,P.y,R_PLAYER+4,o.col)) return 'TOO CLOSE';
   if(ens.some(e=>rectHit(e.ax,e.ay,e.r+60,o.col))) return 'ENEMY IN THE WAY';
-  const keep=run.walls.length>=CFG.wallMax?run.walls.slice(1):run.walls;   // 꽉 찼으면 가장 오래된 벽은 곧 사라짐
+  const keep=(run.walls.length>=CFG.wallMax?run.walls.slice(1):run.walls).concat(run.mapWalls);   // 꽉 찼으면 가장 오래된 벽은 곧 사라짐. 맵 장애물은 항상 유지
   if(keep.some(q=>rectGap(q.col,o.col)<WALL_GAP)) return 'NEED SPACE';
   return '';
 }
@@ -960,7 +993,7 @@ function doR(){
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
       t.spd=Math.min(t.spd*CFG.accel,cap());
-      t.pierced=false; t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
+      t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       const tgt=all.length?all[i%all.length]:null;
       t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir;
     });
@@ -1052,7 +1085,7 @@ function update(dt){
     P.x=clamp(P.x+ax*CFG.moveSpd*spdMul*dt,30,WORLD.w-30);
     P.y=clamp(P.y+ay*CFG.moveSpd*spdMul*dt,30,WORLD.h-30);
   }
-  if(P.phase<=0) run.walls.forEach(({col:o})=>{
+  if(P.phase<=0) allWalls().forEach(({col:o})=>{
     const h=rectHit(P.x,P.y,R_PLAYER,o); if(!h)return;
     if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0) P.x=h.dx>=0?o.x+o.w+R_PLAYER:o.x-R_PLAYER;
     else P.y=h.dy>=0?o.y+o.h+R_PLAYER:o.y-R_PLAYER;
@@ -1217,9 +1250,10 @@ function update(dt){
     b.x+=Math.cos(b.dir)*b.spd*dt; b.y+=Math.sin(b.dir)*b.spd*dt;
 
     // 장애물
-    if(run.walls.length){
+    const obstacles=allWalls();
+    if(obstacles.length){
       let gone=false;
-      for(const {col:o} of run.walls){
+      for(const {col:o} of obstacles){
         const h=rectHit(b.x,b.y,R_BULLET,o); if(!h)continue;
         if(!CFG.bounce){ bullets.splice(i,1); gone=true; break; }
         let vx=Math.cos(b.dir), vy=Math.sin(b.dir);
@@ -1266,8 +1300,10 @@ function update(dt){
       }
       if(hitIdx>=0){
         const e=ens[hitIdx];
-        /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용) */
-        e.hp-=HIT_UNIT*((boonLv('grit')&&b.returns>=3)?2:1);
+        /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
+           v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
+        const gl=boonLv('grit');
+        e.hp-=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1);
         e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
         if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('OVERDRIVE','red'); sfx('boss'); shake=16; }
         const pts=Math.round(10*Math.max(1,b.returns)*CFG.scoreMul);
@@ -1286,8 +1322,8 @@ function update(dt){
           });
           burst(b.x,b.y,'warn',10,200);
         }
-        /* v2.0 관통 — 적 1기를 뚫고 지나간다 (적 무적 0.1초 덕에 재충돌하지 않음) */
-        if(boonLv('pierce') && !b.pierced && ens.length){ b.pierced=true; continue; }
+        /* v2.0 관통 — 남은 관통 횟수만큼 적을 뚫고 지나간다 (적 무적 0.1초 덕에 재충돌하지 않음) */
+        if(b.pierceLeft>0 && ens.length){ b.pierceLeft--; continue; }
         bullets.splice(i,1); continue;
       }
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+(P.guard>0?14:0)){
@@ -1330,12 +1366,13 @@ function drawGrid(){
 }
 function drawObstacles(){
   const HG=WALL_HG;
-  run.walls.forEach(o=>{
+  allWalls().forEach(o=>{
     const a=proj(o.x,o.y),b=proj(o.x+o.w,o.y+o.h),w=b[0]-a[0],d=b[1]-a[1];
     ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(a[0]+4,a[1]+4,w,d);
     ctx.fillStyle='#16202b';ctx.fillRect(a[0],a[1]-HG,w,d+HG);
     ctx.fillStyle='#1e2c3a';ctx.fillRect(a[0],a[1]-HG,w,d);
-    ctx.strokeStyle='rgba(47,227,208,.2)';ctx.lineWidth=1;
+    /* v3.2 맵 지형은 옅은 회색, 플레이어가 지은 벽은 시안으로 구분 */
+    ctx.strokeStyle=o.static?'rgba(127,146,159,.35)':'rgba(47,227,208,.2)';ctx.lineWidth=1;
     ctx.strokeRect(a[0]+.5,a[1]-HG+.5,w-1,d+HG-1);
   });
 }
