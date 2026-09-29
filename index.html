@@ -224,7 +224,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.10</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.11</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -565,7 +565,7 @@ const BOSS_PATTERNS=[
  {n:'DOUBLE FEINT',d:'시차 페인트 2발', specs:[{t:0,feint:1},{t:0.35,feint:1,ang:0.4}]}
 ];
 /* 체력 50% 이하 2페이즈 전용 */
-const BOSS_P2={n:'OVERWRITE', d:'고속 + 우회 혼합', specs:[{t:0,fast:0.8},{t:0.5,orbit:1},{t:1.0,fast:0.8}]};
+const BOSS_P2={n:'OVERDRIVE', d:'고속 + 우회 혼합', specs:[{t:0,fast:0.8},{t:0.5,orbit:1},{t:1.0,fast:0.8}]};
 function pickPattern(e){
   if(e.grade==='boss'){
     if(e.p2&&Math.random()<0.4) return BOSS_P2;
@@ -666,10 +666,11 @@ function waveSpawn(){
 function spawnEnemy(grade){
   const g=GRADES[grade]||GRADES.mob;
   const hits=g.hits, r=g.r;
+  /* v2.11 맵 전체에서 스폰. 예전에는 x 520~960으로 고정돼 왼쪽 절반이 안전지대였다 */
   let x,y,tries=0;
   do{
-    x=520+Math.random()*440; y=90+Math.random()*580; tries++;
-  }while(tries<60 && (run.walls.some(({col:o})=>rectHit(x,y,r+10,o)) || dist(x,y,P.x,P.y)<340));
+    x=60+Math.random()*(WORLD.w-120); y=80+Math.random()*(WORLD.h-160); tries++;
+  }while(tries<80 && (run.walls.some(({col:o})=>rectHit(x,y,r+10,o)) || dist(x,y,P.x,P.y)<340));
   const hp=BASE_DMG*DMG_MULT*hits*run.diff;
   const en={x,y,r,grade,hp,hpMax:hp,hurt:0,
     fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y};
@@ -807,7 +808,6 @@ function doParry(){
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
       t.spd=Math.min(t.spd*CFG.accel,cap());
-      t.dmg=BASE_DMG*DMG_MULT*((boonLv('grit')&&t.returns>=3)?2:1);   // v2.0 집념
       t.pierced=false;                                                 // 관통은 패링마다 초기화
       t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       if(i===0) t.dir=mainDir;
@@ -818,7 +818,7 @@ function doParry(){
       /* v2.1 잔상 — 지속 시간 동안 패링마다 탄환을 하나 더 복제한다 */
       if(P.echoT>0 && bullets.length+echoes.length<60){
         echoes.push({x:t.x-Math.cos(t.dir)*22, y:t.y-Math.sin(t.dir)*22, dir:t.dir, spd:t.spd*0.92, base:t.base,
-          owner:'player', returns:t.returns, dmg:t.dmg, age:0, trail:[], glow:1, hcd:0.15, tried:[], ready:false,
+          owner:'player', returns:t.returns, age:0, trail:[], glow:1, hcd:0.15, tried:[], ready:false,
           feint:0, orbitDir:0, orbitAmt:0, pierced:false});
       }
     });
@@ -898,7 +898,6 @@ function doR(){
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0;
       t.spd=Math.min(t.spd*CFG.accel,cap());
-      t.dmg=BASE_DMG*DMG_MULT*((boonLv('grit')&&t.returns>=3)?2:1);
       t.pierced=false; t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       const tgt=all.length?all[i%all.length]:null;
       t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir;
@@ -970,7 +969,7 @@ function update(dt){
   if(paused)return;
   if(run&&run.phase==='reward') return;     // v2.0 보상 선택 중에는 전투 정지
   if(hitstop>0){ hitstop-=dt; return; }
-  if(!run||run.phase!=='build') run.time+=dt;   // v1.7 B-4
+  if(run&&run.phase!=='build') run.time+=dt;   // v1.7 B-4
 
   // 플레이어
   if(P.dashT>0){
@@ -1104,9 +1103,11 @@ function update(dt){
         if(b.tried.includes(e)) continue;
         if(dist(b.x,b.y,e.x,e.y)<e.r+SEIZE_R){
           if(b.hcd>0) break;                 // v1.7 A-2: 유예 중에는 시도 자체를 미룬다
+          /* v2.11 벽 너머로는 재탈취도 못 한다. 패링만 벽에 막히던 비대칭을 맞춘다 */
+          if(wallBetween(e.x,e.y,b.x,b.y)) break;
           b.tried.push(e);
           if(Math.random()<seizeChance(e,b)){
-            b.owner='enemy'; b.dmg=BASE_DMG; b.tried=[];
+            b.owner='enemy'; b.tried=[];
             b.dir=Math.atan2(P.y-b.y,P.x-b.x);
             e.seizeFx=0.35; say('SEIZED','red'); sfx('seize'); burst(b.x,b.y,'red',8);
           }
@@ -1141,11 +1142,14 @@ function update(dt){
 
     // 충돌
     if(b.owner==='player'){
-      let hitIdx=-1;
+      /* v2.11 겹친 적 중 가장 가까운 하나만 본다. 무적이면 그 자리에서 아무 일도 없다.
+         예전에는 무적인 적을 통과해 뒤의 적이 대신 맞았다 */
+      let hitIdx=-1, hitD=1e9;
       for(let j=0;j<ens.length;j++){
-        if(ens[j].inv>0) continue;                 // v1.9.2 무적 중인 적은 통과시킨다
-        if(dist(b.x,b.y,ens[j].x,ens[j].y)<ens[j].r+R_BULLET){hitIdx=j;break;}
+        const d=dist(b.x,b.y,ens[j].x,ens[j].y);
+        if(d<ens[j].r+R_BULLET && d<hitD){ hitD=d; hitIdx=j; }
       }
+      if(hitIdx>=0 && ens[hitIdx].inv>0) hitIdx=-1;
       if(hitIdx>=0 && shielded(ens[hitIdx],b)){
         /* v1.8 방패병 정면 — 피해 없이 튕겨낸다. 소유권은 그대로라 다른 적을 노릴 수 있다 */
         const e=ens[hitIdx];
@@ -1166,7 +1170,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용) */
         e.hp-=HIT_UNIT*((boonLv('grit')&&b.returns>=3)?2:1);
         e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
-        if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('OVERWRITE','red'); sfx('boss'); shake=16; }
+        if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('OVERDRIVE','red'); sfx('boss'); shake=16; }
         const pts=Math.round(10*Math.max(1,b.returns)*CFG.scoreMul);
         run.score+=pts; say('+'+pts+(b.returns>1?'  ×'+b.returns:''),'warn');
         if(e.hp<=0) killEnemy(e);
@@ -1204,7 +1208,7 @@ function spawnBullet(q){
   const a=Math.atan2(P.y-q.ey,P.x-q.ex)+(q.spec.ang||0);
   const s0=q.spec.fast?Math.max(CFG.spd,cap()*q.spec.fast):CFG.spd*(q.boss?1.15:1);
   bullets.push({x:q.ex,y:q.ey,dir:a,spd:s0,base:s0,owner:'enemy',returns:0,
-    dmg:BASE_DMG,age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
+    age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
     feint:q.spec.feint||0, orbitDir:q.spec.orbit?(q.spec.odir||(Math.random()<.5?1:-1)):0,
     orbitAmt:q.spec.orbit?1.5:0});
 }
