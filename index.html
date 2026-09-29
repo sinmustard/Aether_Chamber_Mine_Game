@@ -1659,7 +1659,7 @@ function drawBody(x,y,r,color,hurt){
    assets/enemies/<grade>.png 하나만 넣어도 그 적만 이미지로 바뀐다 */
 const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
-loadSprite('mob','assets/enemies/mob.svg');   // v3.9 나머지 적들과 스타일 통일 — 벡터로 교체
+loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 복귀
 // v3.8 플레이어 회전 스프라이트 — 코드(drawPlayerBody)는 준비됐지만, 이미지가 없으면 자동으로 기존 원으로 나온다.
 // 실제로 쓸 이미지가 생기면 아래 줄 주석만 풀면 된다.
 // loadSprite('player','assets/player/player.svg');
