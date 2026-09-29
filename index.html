@@ -1605,6 +1605,7 @@ function drawBody(x,y,r,color,hurt){
 const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
 loadSprite('mob','assets/enemies/mob.png');
+loadSprite('player','assets/player/player.svg');   // v3.8 플레이어 — 기준 방향 오른쪽(0rad), P.face만큼 회전해서 그린다
 loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
@@ -1626,6 +1627,21 @@ function drawEnemyBody(e){
   ctx.save();
   if(e.hurt>0) ctx.filter='brightness('+(1+e.hurt*6)+') saturate('+Math.max(0,1-e.hurt*3)+')';
   ctx.drawImage(img,p[0]-s/2,p[1]-s/2,s,s);
+  ctx.restore();
+}
+/* v3.8 플레이어 — 이미지가 있으면 조준 방향(P.face)으로 회전시켜 그린다. 없으면 기존 원으로 대체 */
+function drawPlayerBody(){
+  const img=SPRITES.player;
+  if(!img){ drawBody(P.x,P.y,R_PLAYER,P.inv>0?'#9fd8ff':C.cyan,P.hurt); return; }
+  const p=proj(P.x,P.y);
+  ctx.fillStyle='rgba(0,0,0,.45)';
+  ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();
+  const s=R_PLAYER*2.6;
+  ctx.save();
+  ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.rotate(P.face);
+  if(P.hurt>0) ctx.filter='brightness('+(1+P.hurt*6)+') saturate('+Math.max(0,1-P.hurt*3)+')';
+  else if(P.inv>0) ctx.filter='brightness(1.4) hue-rotate(15deg)';
+  ctx.drawImage(img,-s/2,-s/2,s,s);
   ctx.restore();
 }
 function drawWallPreview(){
@@ -1937,7 +1953,7 @@ function render(){
       ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+SEIZE_R*(1.2-e.seizeFx),(e.r+SEIZE_R*(1.2-e.seizeFx))*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); }
   });
   if(P.phase>0) ctx.globalAlpha=.4+.15*Math.sin(performance.now()/60);
-  drawBody(P.x,P.y,R_PLAYER,P.inv>0?'#9fd8ff':C.cyan,P.hurt); ctx.globalAlpha=1;
+  drawPlayerBody(); ctx.globalAlpha=1;
   drawLock(); drawSkill(); drawQ(); drawR();
   const p=proj(P.x,P.y);
   ctx.strokeStyle='rgba(223,233,242,.16)';ctx.lineWidth=1;

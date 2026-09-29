@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!--
+    플레이어 — 임시 벡터 플레이스홀더. 기준 방향은 오른쪽(0rad)을 바라보게 그려져 있고,
+    코드에서 P.face(마우스 조준 방향) 각도만큼 회전시켜 쓴다 (index.html render()).
+  -->
+  <defs>
+    <radialGradient id="core" cx="60%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#eafffb"/>
+      <stop offset="45%" stop-color="#2fe3d0"/>
+      <stop offset="100%" stop-color="#0c2f2c"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- 몸체 — 오른쪽(정면)을 향한 화살촉 형태 -->
+  <polygon points="188,100 122,52 68,68 42,100 68,132 122,148" fill="url(#core)" filter="url(#glow)"/>
+  <polygon points="188,100 122,52 68,68 42,100 68,132 122,148" fill="none" stroke="#0c2f2c" stroke-width="2.5" opacity="0.85"/>
+  <!-- 정면 표시 — 눈에 띄는 밝은 촉 -->
+  <polygon points="188,100 150,86 150,114" fill="#eafffb" opacity="0.9"/>
+  <!-- 뒤쪽 결 — 방향 대비를 준다 -->
+  <line x1="70" y1="80" x2="100" y2="100" stroke="#0c2f2c" stroke-width="2" opacity="0.6"/>
+  <line x1="70" y1="120" x2="100" y2="100" stroke="#0c2f2c" stroke-width="2" opacity="0.6"/>
+</svg>
