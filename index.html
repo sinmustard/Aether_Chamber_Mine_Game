@@ -185,7 +185,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.4</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.5</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -715,7 +715,11 @@ gcv.addEventListener('touchmove',e=>{
 function endTouch(e){
   for(const t of e.changedTouches)
     for(const k of ['move','aim'])
-      if(stick[k]&&stick[k].id===t.identifier) stick[k]=null;
+      if(stick[k]&&stick[k].id===t.identifier){
+        stick[k]=null;
+        /* v2.5 오른쪽에서 손을 떼는 순간 패링. 조준 → 떼기 한 동작으로 이어진다 */
+        if(k==='aim'&&screen==='game') doParry();
+      }
 }
 gcv.addEventListener('touchend',endTouch,{passive:false});
 gcv.addEventListener('touchcancel',endTouch,{passive:false});
@@ -1498,6 +1502,14 @@ function exitLandscape(){
   }catch(e){}
 }
 $('#goFs').onclick=goLandscape;
+/* v2.5 폰에서는 첫 터치(또는 클릭) 때 바로 전체화면으로 들어간다.
+   브라우저가 사용자 동작 없이는 전체화면을 허용하지 않기 때문에 첫 입력을 쓴다 */
+function armFullscreen(){
+  if(!isPhone())return;
+  const once=()=>{ goLandscape();
+    removeEventListener('pointerdown',once); removeEventListener('touchstart',once); };
+  addEventListener('pointerdown',once); addEventListener('touchstart',once);
+}
 function go(id){
   screen=id;
   document.body.classList.toggle('in-game',id==='game');
@@ -1507,7 +1519,7 @@ function go(id){
   $('#modal').classList.remove('on'); paused=false;
   if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
-  if(id==='game') goLandscape(); else if(isPhone()) exitLandscape();   // v2.4
+  if(isPhone()) goLandscape();   // v2.5 어느 화면이든 전체화면 유지
 }
 function startRun(){ newRun(); go('game'); }
 function endRun(){
@@ -1735,7 +1747,7 @@ function loop(ts){
   if(screen==='game'&&run){update(dt);render();}
   raf=requestAnimationFrame(loop);
 }
-refreshColors();syncUI();refreshKeyLabels();go('title');bresize();
+refreshColors();syncUI();refreshKeyLabels();armFullscreen();go('title');bresize();
 requestAnimationFrame(bgFrame);t0=performance.now();requestAnimationFrame(loop);
 })();
 </script>
