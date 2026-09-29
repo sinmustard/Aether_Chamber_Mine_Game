@@ -246,7 +246,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.29</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.30</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -266,7 +266,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   </section>
 
   <section id="hub" class="screen">
-    <div class="bar"><div class="t">HUB · 강화 / 해금<span id="dbgTag"></span></div><div class="cur">◆ <span id="cur">0</span></div></div>
+    <div class="bar"><div class="t" id="hubTitle">HUB · 강화 / 해금<span id="dbgTag"></span></div><div class="cur">◆ <span id="cur">0</span></div></div>
     <div class="body">
       <div class="cards" id="cards"></div>
       <div class="side">
@@ -2178,6 +2178,14 @@ $('#skillSel').addEventListener('click',e=>{
   save(); sfx('ui'); renderSkillSel();
 });
 let debug=false;
+/* v2.30 폰에서도 디버그를 켤 수 있게 — HUB 제목을 1.5초 안에 5번 두드리면 전환된다 */
+let dbgTaps=0, dbgTapT=0;
+$('#hubTitle').addEventListener('click',()=>{
+  const now=performance.now();
+  if(now-dbgTapT>1500) dbgTaps=0;
+  dbgTapT=now; dbgTaps++;
+  if(dbgTaps>=5){ dbgTaps=0; toggleDebug(); }
+});
 function toggleDebug(){
   debug=!debug;
   document.body.classList.toggle('debug',debug);
