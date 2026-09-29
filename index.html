@@ -977,6 +977,7 @@ function doParry(){
       burst(lunger.x,lunger.y,'warn',10,200);
     }
     if(lunger.hp<=0) killEnemy(lunger);
+    P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1 — 돌진 패링도 똑같이 충전된다
     /* v1.7 D-2 / 무결 보너스와 동일하게 처리한다 — 돌진 패링만 회복 경직이 남는 건 형평에 안 맞는다 */
     P.lock=boonLv('flow')?0:0.12; P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
     return;
