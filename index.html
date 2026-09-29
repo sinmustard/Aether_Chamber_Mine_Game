@@ -216,7 +216,14 @@ body:not(.in-game) .pads{display:none}
 @media (max-width:759px){ #gamecv{touch-action:none} }
 /* v2.31 마우스가 있는 큰 화면에서만 숨긴다. 가로로 든 폰은 폭이 760을 넘어도 버튼이 필요하다 */
 @media (min-width:760px) and (pointer:fine){ .pads{display:none} }
-body.touch.in-game .pads{display:flex}
+/* v2.33 터치 기기에서는 버튼을 화면 위에 띄운다.
+   전체화면에서는 프레임이 화면을 다 채워서, 프레임 아래에 있던 버튼이 화면 밖으로 밀려 안 눌렸다 */
+body.touch.in-game .pads{display:flex;position:fixed;z-index:45;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(8px + env(safe-area-inset-bottom,0px));
+  width:min(96vw,1000px);pointer-events:auto}
+body.touch.in-game .pads button{background:rgba(8,12,17,.72);backdrop-filter:blur(2px);
+  padding:13px 6px;font-size:12px}
 @media (max-height:560px){ .pads button{padding:11px;font-size:12px} }
 
 /* DEV */
@@ -249,7 +256,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.32</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.33</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
