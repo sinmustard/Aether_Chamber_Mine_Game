@@ -235,7 +235,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.15</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.16</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -714,19 +714,49 @@ function waveSpawn(){
     const base=Math.min(5,1+Math.ceil(run.wave/2));
     const n=Math.min(6, base+(run.cycle>=2?1:0));
     const order = run.wave<=2 ? Array(n).fill('mob') : rollWave(n);
+    order.sort((a,b)=>(a==='relay'?1:0)-(b==='relay'?1:0));   // v2.16 송신기는 마지막에
     order.forEach(g=>spawnEnemy(g));
     announce('CYCLE '+run.cycle+'  ·  WAVE '+run.wave,'cyan'); sfx('wave');
   }
   run.phase='fight';
 }
+/* v2.16 벽에 걸린 자리는 다시 뽑지 않고 옆으로 밀어낸다. 겹친 벽의 가까운 면 쪽으로 빠져나간다 */
+function pushOutOfWalls(x,y,r){
+  for(let k=0;k<8;k++){
+    let moved=false;
+    for(const {col:o} of allWalls()){
+      if(!rectHit(x,y,r+8,o)) continue;
+      const cx=o.x+o.w/2, cy=o.y+o.h/2;
+      const ox=(o.w/2+r+10)-Math.abs(x-cx), oy=(o.h/2+r+10)-Math.abs(y-cy);
+      if(ox<oy) x+=(x<cx?-ox:ox); else y+=(y<cy?-oy:oy);
+      x=clamp(x,40,WORLD.w-40); y=clamp(y,40,WORLD.h-40);
+      moved=true;
+    }
+    if(!moved) break;
+  }
+  return [x,y];
+}
 function spawnEnemy(grade){
   const g=GRADES[grade]||GRADES.mob;
   const hits=g.hits, r=g.r;
-  /* v2.11 맵 전체에서 스폰. 예전에는 x 520~960으로 고정돼 왼쪽 절반이 안전지대였다 */
-  let x,y,tries=0;
-  do{
+  /* v2.11 맵 전체에서 스폰 · v2.16 벽은 피하지 않고, 걸리면 옆으로 밀어낸다 */
+  let x,y,tries=0,placed=false;
+  /* v2.16 송신기는 다른 적 곁에 붙여 놓는다. 혼자 떨어져 있으면 지원 효과가 의미가 없다 */
+  if(grade==='relay'){
+    const hosts=ens.filter(e=>e.grade!=='relay');
+    if(hosts.length){
+      const h=hosts[Math.floor(Math.random()*hosts.length)];
+      for(let k=0;k<14&&!placed;k++){
+        const a=Math.random()*TAU, d=90+Math.random()*80;
+        const nx=clamp(h.x+Math.cos(a)*d,60,WORLD.w-60), ny=clamp(h.y+Math.sin(a)*d,70,WORLD.h-70);
+        if(dist(nx,ny,P.x,P.y)>=260){ x=nx; y=ny; placed=true; }
+      }
+    }
+  }
+  if(!placed) do{
     x=60+Math.random()*(WORLD.w-120); y=80+Math.random()*(WORLD.h-160); tries++;
-  }while(tries<80 && (allWalls().some(({col:o})=>rectHit(x,y,r+10,o)) || dist(x,y,P.x,P.y)<340));
+  }while(tries<40 && dist(x,y,P.x,P.y)<340);
+  [x,y]=pushOutOfWalls(x,y,r);
   const hp=BASE_DMG*DMG_MULT*hits*run.diff;
   const en={x,y,r,grade,hp,hpMax:hp,hurt:0,
     fireT:0.6+Math.random()*1.2, drift:Math.random()*TAU, ax:x, ay:y};
