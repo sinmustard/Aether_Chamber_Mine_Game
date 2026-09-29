@@ -1186,6 +1186,23 @@ function drawBody(x,y,r,color,hurt){
   ctx.fillStyle=hurt>0?'#fff':color;
   ctx.beginPath();ctx.ellipse(p[0],p[1],r*.84,r*.84*SQUASH*1.5,0,0,TAU);ctx.fill();
 }
+/* v2.2 적 스프라이트 — 등급별 이미지가 있으면 그걸 쓰고, 없으면 기존 벡터 도형으로 대체한다.
+   assets/enemies/<grade>.png 하나만 넣어도 그 적만 이미지로 바뀐다 */
+const SPRITES={};
+function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
+loadSprite('mob','assets/enemies/mob.png');
+function drawEnemyBody(e){
+  const img=SPRITES[e.grade];
+  if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); return; }
+  const p=proj(e.x,e.y);
+  ctx.fillStyle='rgba(0,0,0,.45)';
+  ctx.beginPath();ctx.ellipse(p[0],p[1],e.r*.86,e.r*.86*SQUASH,0,0,TAU);ctx.fill();
+  const s=e.r*2.4;
+  ctx.save();
+  if(e.hurt>0) ctx.filter='brightness('+(1+e.hurt*6)+') saturate('+Math.max(0,1-e.hurt*3)+')';
+  ctx.drawImage(img,p[0]-s/2,p[1]-s/2,s,s);
+  ctx.restore();
+}
 function drawWallPreview(){
   if(!CFG.wallMax||P.wallCd>0)return;
   const o=wallCandidate(), bad=wallProblem(o);
@@ -1437,7 +1454,7 @@ function render(){
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
   drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
-    drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); drawShield(e); drawHpBar(e);
+    drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
       ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+SEIZE_R*(1.2-e.seizeFx),(e.r+SEIZE_R*(1.2-e.seizeFx))*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); }
   });

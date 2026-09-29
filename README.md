@@ -30,4 +30,5 @@ TITLE → HUB(강화 · 스킬 장착) → 전투(웨이브 10 → 보스 알레
 ## 기술
 
 - 단일 HTML 파일 (HTML + CSS + JavaScript, Canvas 2D)
-- 외부 라이브러리 · 이미지 · 사운드 파일 없음 (효과음은 WebAudio로 합성)
+- 외부 라이브러리 · 사운드 파일 없음 (효과음은 WebAudio로 합성)
+- 적 이미지는 `assets/enemies/`에 등급별로 추가. 이미지가 없는 등급은 기존 벡터 도형으로 자동 대체
