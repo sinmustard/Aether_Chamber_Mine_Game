@@ -246,7 +246,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.23</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.24</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -257,8 +257,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <h1 class="wordmark">ÆTHER <span>CHAMBER</span></h1>
     <div class="kr">에테르 챔버</div>
     <div class="menu">
-      <button class="primary" data-go="hub">START</button>
-      <button data-modal="opt">OPTIONS</button>
+      <button class="primary" data-go="hub">시작</button>
+      <button data-modal="opt">설정</button>
       <button data-modal="tutorial">튜토리얼</button>
     </div>
     <div class="ver" id="tKeys">WASD 이동 · 마우스 조준 · E 패링 · F 스킬 · Q 스킬</div>
@@ -311,7 +311,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </div>
 
 <div id="debugSpawn">
-  <span>SPAWN</span>
+  <span>소환</span>
   <button data-spawn="mob">잡몹</button>
   <button data-spawn="elite">엘리트</button>
   <button data-spawn="bulwark">방패병</button>
@@ -1046,7 +1046,7 @@ function doParry(){
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
     P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1
-    say(ts.length>1?'RECLAIMED ×'+ts.length:'RECLAIMED','cyan');
+    say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     hitstop=0.045+0.02*(ts.length-1);
     /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
@@ -1319,7 +1319,7 @@ function update(dt){
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
     if(e.grade==='tracker' && e.lungePhase==='dash' && !e.lungeHit && dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER){
       e.lungeHit=true;
-      if(P.guard>0){ say('BLOCKED','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
+      if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){
         P.hp-=CONTACT_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=14; say('충돌','red'); sfx('breach'); burst(P.x,P.y,'red',14);
       }
@@ -1501,7 +1501,7 @@ function update(dt){
         bullets.splice(i,1); continue;
       }
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+(P.guard>0?14:0)){
-      if(P.guard>0){ say('BLOCKED','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
+      if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){ P.hp-=PLAYER_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
       bullets.splice(i,1); continue;
     }
@@ -1741,7 +1741,7 @@ function drawLock(){
     const top=p[1]-R_PLAYER*1.3-30;
     ctx.textAlign='center';
     ctx.fillStyle=col;ctx.font='700 12px ui-monospace,monospace';
-    ctx.fillText('LOCK  '+P.lock.toFixed(2),p[0],top);
+    ctx.fillText('경직  '+P.lock.toFixed(2),p[0],top);
     const w=64,hg=4;
     ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(p[0]-w/2-1,top+5,w+2,hg+2);
     ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(p[0]-w/2,top+6,w,hg);
@@ -1862,7 +1862,7 @@ function drawHUD(){
   });
   if(paused){
     ctx.fillStyle='rgba(8,12,17,.8)';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle=C.cyan;ctx.font='700 26px ui-monospace,monospace';ctx.fillText('PAUSED',W/2,H/2);
+    ctx.fillStyle=C.cyan;ctx.font='700 26px ui-monospace,monospace';ctx.fillText('일시정지',W/2,H/2);
     ctx.fillStyle=C.dim;ctx.font='600 12px ui-monospace,monospace';
     ctx.fillText('ESC 로 계속',W/2,H/2+26);
     const own=Object.keys(run.boons||{});
@@ -2031,7 +2031,7 @@ function openModal(kind){
               ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔']];
-  $('#modalBox').innerHTML='<h4>OPTIONS</h4>'+
+  $('#modalBox').innerHTML='<h4>설정</h4>'+
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
     /* v3.3 전체화면 — 폰이 아니어도 언제든 켜고 끌 수 있게 별도 행으로 둔다 (지속 저장값이 아니라 그때그때 상태를 보여줌) */
     '<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
