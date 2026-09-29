@@ -246,7 +246,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.22</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.23</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -405,8 +405,8 @@ const UPG=[
   d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
   steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
  {k:'emp', n:'R · EMP', s:'R — 모든 적을 잠시 정지', skill:'r', lv:0, max:3, cost:[10000,20000,55000],
-  d:'R — 화면의 모든 적을 일정 시간 멈춥니다. 멈춘 적은 움직이지도, 쏘지도, 소환하지도 않습니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
-  steps:['잠김','정지 0.4s','정지 0.8s','정지 2.0s']}
+  d:'R — 화면의 모든 적을 일정 시간 멈춥니다. 멈춘 적은 움직이지도, 쏘지도, 소환하지도 않습니다. EMP는 충전 100이 필요하고 단계가 올라도 줄지 않습니다. 충전은 패링 +1, 적 처치 +2.',
+  steps:['잠김','정지 0.4s · 충전 100','정지 0.8s · 충전 100','정지 2.0s · 충전 100']}
 ];
 const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
@@ -506,7 +506,8 @@ function statsFromUpgrades(){
     owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.4,0.8,2.0][em],
-    rNeed: [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : META.skillR==='emp'?em : 0) ]
+    rNeed: META.skillR==='emp' ? EMP_NEED
+         : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
   };
 }
 
@@ -523,6 +524,7 @@ const WORLD={w:1000,h:760};
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
 const BOSS_WAVE=10;
+const EMP_NEED=100;   // v2.23 EMP만 충전 100 고정 (다른 R 스킬은 단계별로 줄어든다)
 const range=()=>CFG.rangeM*M;
 /* v1.7 A-1: 상한을 사이클 탄속과 분리. 기본 탄속이 올라가도 패링이 감속이 되지 않게 한다 */
 const cap=()=>Math.max(range()/CFG.dwell, CFG.spd*1.55);
