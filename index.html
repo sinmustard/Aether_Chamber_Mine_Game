@@ -25,6 +25,12 @@ body{background:var(--bg);color:var(--fg);
 #gamecv,#bgcv{position:absolute;inset:0;width:100%;height:100%}
 #bgcv{z-index:1}
 #gamecv{z-index:1;display:none}
+/* v2.8 일시정지 — 화면 위 중앙 */
+#topPause{position:absolute;z-index:3;top:8px;left:50%;transform:translateX(-50%);display:none;
+  padding:7px 16px;font:inherit;font-size:12px;letter-spacing:.2em;
+  background:rgba(8,12,17,.6);color:var(--dim);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+#topPause:hover{color:var(--cyan);border-color:var(--cyan)}
+body.in-game #topPause{display:block}
 .screen{position:absolute;inset:0;display:none;flex-direction:column;z-index:3}
 .screen.on{display:flex}
 
@@ -50,7 +56,7 @@ body{background:var(--bg);color:var(--fg);
 /* HUB */
 #hub{background:rgba(8,12,17,.96)}
 #hub .body{flex:1;display:flex;gap:12px;padding:14px 18px;min-height:0}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;
   flex:1 1 58%;align-content:start;overflow:auto;min-height:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer}
 .card:hover{border-color:var(--cyan)}
@@ -66,21 +72,20 @@ body{background:var(--bg);color:var(--fg);
 #debugBtns{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 #debugBtns button{padding:7px 11px;font:inherit;font-size:10.5px;background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:5px;cursor:pointer}
 #skillSel{display:flex;flex-direction:column;gap:5px;font-size:10.5px;color:var(--dim);padding:0 2px}
-#skillSel button{padding:6px 11px;font:inherit;font-size:10.5px;background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:5px;cursor:pointer}
+#skillSel button{padding:5px 8px;font:inherit;font-size:10px;background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:5px;cursor:pointer}
 #skillSel button.on{color:var(--cyan);border-color:var(--cyan)}
 #skillSel button:disabled{opacity:.45;cursor:not-allowed}
 .pips{display:flex;gap:4px}
 .pip{width:10px;height:10px;border-radius:50%;border:1px solid var(--line)}
 .pip.f{background:var(--cyan);border-color:var(--cyan)}
-.side{flex:1 1 45%;display:flex;flex-direction:column;gap:10px;min-width:0}
-.detail{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;
-  flex:1 1 auto;overflow:auto;min-height:0;display:flex;flex-direction:column}
-.detail .eff{flex:1 1 auto}
+.side{flex:1 1 42%;display:flex;flex-direction:column;gap:9px;min-width:0;min-height:0;overflow:auto}
+#skillSel,.recs{flex:0 0 auto}
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;flex:0 0 auto}
 .detail h4{margin:0 0 7px;font-size:12.5px;letter-spacing:.1em}
 .detail .eff{font-size:11px;line-height:1.85;color:var(--dim)}
 .detail .eff b{color:var(--fg)}
 .detail .arrow{color:var(--cyan)}
-.buy{width:100%;margin-top:11px;padding:10px;position:sticky;bottom:-13px;background:var(--panel);font:inherit;font-size:11.5px;letter-spacing:.14em;
+.buy{width:100%;margin-top:11px;padding:10px;font:inherit;font-size:11.5px;letter-spacing:.14em;
   background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:6px;cursor:pointer}
 .buy:disabled{color:var(--dim);border-color:var(--line);cursor:not-allowed}
 .recs{font-size:10.5px;color:var(--dim);line-height:1.8;padding:0 2px}
@@ -93,16 +98,17 @@ body{background:var(--bg);color:var(--fg);
   background:var(--cyan);color:#06211e;border:0;border-radius:7px;cursor:pointer}
 
 /* RESULT */
-#result{align-items:center;justify-content:center;text-align:center;padding:20px;background:rgba(8,12,17,.94)}
-#result .over{font-size:12px;letter-spacing:.34em;color:var(--red);margin-bottom:10px}
-#result .score{font-size:clamp(30px,6.6vw,54px);font-weight:700;color:var(--warn);line-height:1}
+#result{align-items:center;justify-content:center;text-align:center;padding:clamp(10px,2vw,20px);
+  background:rgba(8,12,17,.94);overflow:auto}
+#result .over{font-size:12px;letter-spacing:.34em;color:var(--red);margin-bottom:clamp(4px,1vw,10px)}
+#result .score{font-size:clamp(26px,5.4vw,54px);font-weight:700;color:var(--warn);line-height:1}
 #result .new{font-size:10.5px;letter-spacing:.2em;color:var(--cyan);margin-top:5px;min-height:14px}
-#result .stats{display:grid;grid-template-columns:repeat(3,auto);gap:6px 28px;margin:18px 0 14px;
+#result .stats{display:grid;grid-template-columns:repeat(3,auto);gap:clamp(3px,.8vw,6px) clamp(14px,3vw,28px);margin:clamp(8px,2vw,18px) 0 clamp(6px,1.6vw,14px);
   font-size:11px;color:var(--dim)}
 #result .stats b{display:block;color:var(--fg);font-size:14px;margin-top:2px}
-#result .gain{font-size:16px;color:var(--warn);letter-spacing:.1em;margin-bottom:18px}
+#result .gain{font-size:clamp(13px,1.8vw,16px);color:var(--warn);letter-spacing:.1em;margin-bottom:clamp(8px,2vw,18px)}
 #result .btns{display:flex;gap:9px}
-#result .btns button{padding:11px 26px;font:inherit;font-size:11.5px;letter-spacing:.18em;
+#result .btns button{padding:clamp(8px,1.6vw,11px) clamp(16px,3vw,26px);font:inherit;font-size:11.5px;letter-spacing:.18em;
   background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;cursor:pointer}
 #result .btns button.primary{border-color:var(--cyan);color:var(--cyan)}
 
@@ -158,12 +164,13 @@ body:not(.in-game) .pads{display:none}
   #hub .body{padding:10px 12px;gap:9px}
   .card{padding:8px}
   .card .n{font-size:11.5px}
-  .card .s{display:none}
+  .card .s{font-size:9px;line-height:1.35;margin-bottom:5px}
   .detail{padding:10px}
   .detail .eff{font-size:10.5px;line-height:1.7}
   .recs{display:none}
   #hub .foot{padding:0 12px 10px}
   .go,.ghost{padding:10px 14px}
+  #skillSel button{padding:4px 7px;font-size:9.5px}
 }
 /* v2.4 폰 세로 모드 안내 — 가로로 돌리면 사라진다 */
 #rotate{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;
@@ -201,11 +208,12 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.6</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.8</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
   <canvas id="gamecv" width="1000" height="560"></canvas>
+  <button id="topPause" title="일시정지">II</button>
 
   <section id="title" class="screen on">
     <h1 class="wordmark">ÆTHER <span>CHAMBER</span></h1>
@@ -265,7 +273,6 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <button id="padSkill">F · SKILL</button>
   <button id="padWall">Q · Q SKILL</button>
   <button id="padR">R · R SKILL</button>
-  <button id="padPause">II · 일시정지</button>
 </div>
 
 <details class="dev">
@@ -433,6 +440,7 @@ const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
+const BODY_SQ=0.95;   // v2.8 캐릭터 몸통 세로 비율 (바닥 그림자는 SQUASH 유지)
 const WORLD={w:1000,h:760};
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
@@ -743,7 +751,7 @@ $('#padParry').onclick=()=>{ if(screen==='game')doParry(); };
 $('#padSkill').onclick=()=>{ if(screen==='game')doSkill(); };
 $('#padWall').onclick=()=>{ if(screen==='game')doQ(); };
 $('#padR').onclick=()=>{ if(screen==='game')doR(); };
-$('#padPause').onclick=()=>{ if(screen==='game')togglePause(); };
+$('#topPause').onclick=()=>{ if(screen==='game')togglePause(); };
 
 function doParry(){
   if(paused||P.lock>0)return;
@@ -1203,8 +1211,9 @@ function drawBody(x,y,r,color,hurt){
   }
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],r*.86,r*.86*SQUASH,0,0,TAU);ctx.fill();
+  /* v2.8 몸통은 거의 원형으로 — 세로로 눌려 보이던 문제 */
   ctx.fillStyle=hurt>0?'#fff':color;
-  ctx.beginPath();ctx.ellipse(p[0],p[1],r*.84,r*.84*SQUASH*1.5,0,0,TAU);ctx.fill();
+  ctx.beginPath();ctx.ellipse(p[0],p[1],r*.84,r*.84*BODY_SQ,0,0,TAU);ctx.fill();
 }
 /* v2.2 적 스프라이트 — 등급별 이미지가 있으면 그걸 쓰고, 없으면 기존 벡터 도형으로 대체한다.
    assets/enemies/<grade>.png 하나만 넣어도 그 적만 이미지로 바뀐다 */
