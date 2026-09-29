@@ -50,8 +50,9 @@ body{background:var(--bg);color:var(--fg);
 /* HUB */
 #hub{background:rgba(8,12,17,.96)}
 #hub .body{flex:1;display:flex;gap:12px;padding:14px 18px;min-height:0}
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex:1 1 55%;align-content:start;overflow:auto;min-height:0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px;cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;
+  flex:1 1 58%;align-content:start;overflow:auto;min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer}
 .card:hover{border-color:var(--cyan)}
 .card.sel{border-color:var(--cyan);background:rgba(47,227,208,.08)}
 .card .n{font-size:12.5px;letter-spacing:.1em;margin-bottom:2px}
@@ -59,7 +60,8 @@ body{background:var(--bg);color:var(--fg);
 .card.skill .n{color:var(--warn)}
 .card.locked{opacity:.75}
 #skillSel .sr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
-#skillSel .sr>span{min-width:34px}
+#skillSel .sr>span{min-width:22px;flex:0 0 auto}
+#skillSel .sr button{flex:1 1 auto;min-width:0;white-space:nowrap}
 #dbgTag{color:var(--warn);margin-left:8px}
 #debugBtns{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 #debugBtns button{padding:7px 11px;font:inherit;font-size:10.5px;background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:5px;cursor:pointer}
@@ -71,12 +73,14 @@ body{background:var(--bg);color:var(--fg);
 .pip{width:10px;height:10px;border-radius:50%;border:1px solid var(--line)}
 .pip.f{background:var(--cyan);border-color:var(--cyan)}
 .side{flex:1 1 45%;display:flex;flex-direction:column;gap:10px;min-width:0}
-.detail{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;flex:1;overflow:auto}
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;
+  flex:1 1 auto;overflow:auto;min-height:0;display:flex;flex-direction:column}
+.detail .eff{flex:1 1 auto}
 .detail h4{margin:0 0 7px;font-size:12.5px;letter-spacing:.1em}
 .detail .eff{font-size:11px;line-height:1.85;color:var(--dim)}
 .detail .eff b{color:var(--fg)}
 .detail .arrow{color:var(--cyan)}
-.buy{width:100%;margin-top:11px;padding:10px;font:inherit;font-size:11.5px;letter-spacing:.14em;
+.buy{width:100%;margin-top:11px;padding:10px;position:sticky;bottom:-13px;background:var(--panel);font:inherit;font-size:11.5px;letter-spacing:.14em;
   background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:6px;cursor:pointer}
 .buy:disabled{color:var(--dim);border-color:var(--line);cursor:not-allowed}
 .recs{font-size:10.5px;color:var(--dim);line-height:1.8;padding:0 2px}
@@ -149,6 +153,18 @@ body{background:var(--bg);color:var(--fg);
   background:var(--panel);color:var(--cyan);border:1px solid var(--cyan);border-radius:8px;
   cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 body:not(.in-game) .pads{display:none}
+/* v2.6 가로로 든 폰처럼 높이가 낮은 화면 — 여백과 글자를 줄이고 추천 문구는 감춘다 */
+@media (max-height:560px){
+  #hub .body{padding:10px 12px;gap:9px}
+  .card{padding:8px}
+  .card .n{font-size:11.5px}
+  .card .s{display:none}
+  .detail{padding:10px}
+  .detail .eff{font-size:10.5px;line-height:1.7}
+  .recs{display:none}
+  #hub .foot{padding:0 12px 10px}
+  .go,.ghost{padding:10px 14px}
+}
 /* v2.4 폰 세로 모드 안내 — 가로로 돌리면 사라진다 */
 #rotate{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;
   align-items:center;justify-content:center;gap:18px;text-align:center;padding:28px;
@@ -185,7 +201,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.5</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.6</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
