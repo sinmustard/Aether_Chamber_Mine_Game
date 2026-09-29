@@ -1,23 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 송신기 — 쏘지 않는 지원형. 안테나 + 신호파. 무기(포신) 없음 -->
+  <!-- 송신기 — 같은 암석+발광 코어 기법(옐로). 무기 없는 안테나 + 신호파, 쏘지 않는다는 걸 실루엣으로 표현 -->
   <defs>
-    <radialGradient id="core" cx="50%" cy="55%" r="55%">
+    <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#332e20"/>
+      <stop offset="55%" stop-color="#1c1810"/>
+      <stop offset="100%" stop-color="#0a0806"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="42%" cy="35%" r="65%">
       <stop offset="0%" stop-color="#fff6d8"/>
       <stop offset="40%" stop-color="#ffcc55"/>
+      <stop offset="80%" stop-color="#c98a12"/>
       <stop offset="100%" stop-color="#5c4a10"/>
     </radialGradient>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="5" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+    <filter id="crackGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <g fill="none" stroke="#ffcc55" opacity="0.35">
-    <circle cx="100" cy="110" r="55"/>
-    <circle cx="100" cy="110" r="78"/>
+  <g fill="none" stroke="#ffcc55" opacity="0.3">
+    <circle cx="100" cy="115" r="55"/>
+    <circle cx="100" cy="115" r="78"/>
   </g>
-  <polygon points="100,20 108,95 92,95" fill="#3a2f08"/>
-  <polygon points="60,60 96,100 88,108" fill="#3a2f08"/>
-  <polygon points="140,60 104,100 112,108" fill="#3a2f08"/>
-  <circle cx="100" cy="120" r="34" fill="url(#core)" filter="url(#glow)"/>
-  <circle cx="100" cy="120" r="34" fill="none" stroke="#2a1f06" stroke-width="2"/>
+  <circle cx="100" cy="115" r="38" fill="#ffcc55" opacity="0.5" filter="url(#halo)"/>
+  <g fill="url(#rock)" stroke="#000" stroke-opacity="0.4">
+    <polygon points="100,15 108,95 92,95"/>
+    <polygon points="58,58 96,100 86,110"/>
+    <polygon points="142,58 104,100 114,110"/>
+  </g>
+  <g fill="none" stroke="#ffcc55" stroke-width="2" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)">
+    <path d="M100,90 L100,30"/>
+    <path d="M90,95 L66,70"/>
+    <path d="M110,95 L134,70"/>
+  </g>
+  <circle cx="100" cy="118" r="32" fill="url(#gem)"/>
+  <circle cx="100" cy="118" r="32" fill="none" stroke="#5c4a10" stroke-width="2" opacity="0.7"/>
+  <path d="M78,102 A32,32 0 0 1 118,90" fill="none" stroke="#fff6d8" stroke-width="6" opacity="0.35" stroke-linecap="round"/>
 </svg>

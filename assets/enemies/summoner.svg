@@ -1,25 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 소환사 — 쏘지 않고 잡졸·분열형을 불러낸다. 중심 코어 + 주변을 도는 위성 3개 -->
+  <!-- 소환사 — 같은 암석+발광 코어 기법(보라). 암석 테두리에 박힌 코어 + 도는 위성 3개 -->
   <defs>
-    <radialGradient id="core" cx="50%" cy="45%" r="60%">
-      <stop offset="0%" stop-color="#f0d9ff"/>
-      <stop offset="40%" stop-color="#b06bff"/>
-      <stop offset="100%" stop-color="#2a1040"/>
+    <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#2c2035"/><stop offset="55%" stop-color="#17101f"/><stop offset="100%" stop-color="#090610"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#f0d9ff"/><stop offset="40%" stop-color="#b06bff"/><stop offset="80%" stop-color="#6a2fb0"/><stop offset="100%" stop-color="#2a1040"/>
     </radialGradient>
-    <radialGradient id="sat" cx="50%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#f0d9ff"/>
-      <stop offset="60%" stop-color="#b06bff"/>
-      <stop offset="100%" stop-color="#5a2a8a"/>
-    </radialGradient>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
     <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="5" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
   <circle cx="100" cy="100" r="70" fill="none" stroke="#b06bff" stroke-width="1.5" stroke-dasharray="4,6" opacity="0.5"/>
-  <circle cx="100" cy="100" r="48" fill="url(#core)" filter="url(#glow)"/>
-  <circle cx="100" cy="100" r="48" fill="none" stroke="#2a1040" stroke-width="2" opacity="0.8"/>
-  <circle cx="100" cy="26" r="14" fill="url(#sat)" filter="url(#glow)"/>
-  <circle cx="163" cy="138" r="14" fill="url(#sat)" filter="url(#glow)"/>
-  <circle cx="37" cy="138" r="14" fill="url(#sat)" filter="url(#glow)"/>
+  <circle cx="100" cy="100" r="48" fill="#b06bff" opacity="0.5" filter="url(#halo)"/>
+  <circle cx="100" cy="100" r="50" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <circle cx="100" cy="100" r="34" fill="url(#gem)"/>
+  <circle cx="100" cy="100" r="34" fill="none" stroke="#2a1040" stroke-width="2" opacity="0.7"/>
+  <ellipse cx="88" cy="86" rx="14" ry="8" fill="#f0d9ff" opacity="0.4"/>
+  <g filter="url(#glow)">
+    <circle cx="100" cy="26" r="11" fill="url(#gem)"/>
+    <circle cx="163" cy="138" r="11" fill="url(#gem)"/>
+    <circle cx="37" cy="138" r="11" fill="url(#gem)"/>
+  </g>
 </svg>

@@ -1,27 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 보스 알레테이아 — 잡몹 코어의 완성형. 다중 발사구를 암시하는 12각 만다라 -->
+  <!-- 보스 알레테이아 — 같은 암석+발광 코어 기법. 12각 가시(다중 발사구 암시) + 가장 큰 코어 -->
   <defs>
-    <radialGradient id="core" cx="50%" cy="45%" r="55%">
-      <stop offset="0%" stop-color="#ffe6c2"/>
+    <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#3a2530"/>
+      <stop offset="55%" stop-color="#1e1216"/>
+      <stop offset="100%" stop-color="#080508"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffe6c8"/>
       <stop offset="30%" stop-color="#ff8a63"/>
-      <stop offset="65%" stop-color="#c21f36"/>
-      <stop offset="100%" stop-color="#2a0810"/>
+      <stop offset="65%" stop-color="#ff3b52"/>
+      <stop offset="100%" stop-color="#7a0f1d"/>
     </radialGradient>
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="7" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="16" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+    <filter id="crackGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="dotGlow" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
   <circle cx="100" cy="100" r="96" fill="none" stroke="#3a1216" stroke-width="6"/>
-  <g fill="#5c1420">
-    <circle cx="100" cy="8" r="7"/><circle cx="146" cy="21" r="7"/><circle cx="179" cy="54" r="7"/>
-    <circle cx="192" cy="100" r="7"/><circle cx="179" cy="146" r="7"/><circle cx="146" cy="179" r="7"/>
-    <circle cx="100" cy="192" r="7"/><circle cx="54" cy="179" r="7"/><circle cx="21" cy="146" r="7"/>
-    <circle cx="8" cy="100" r="7"/><circle cx="21" cy="54" r="7"/><circle cx="54" cy="21" r="7"/>
+  <circle cx="100" cy="100" r="56" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
+  <polygon points="100,25 122,60 164,44 152,88 185,100 152,112 164,156 122,140 100,175 78,140 36,156 48,112 15,100 48,88 36,44 78,60"
+    fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <g fill="none" stroke="#ff3b52" stroke-width="2.4" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)">
+    <path d="M100,68 L100,28"/><path d="M132,100 L178,100"/>
+    <path d="M100,132 L100,172"/><path d="M68,100 L22,100"/>
+    <path d="M124,76 L150,52"/><path d="M124,124 L150,148"/>
+    <path d="M76,124 L50,148"/><path d="M76,76 L50,52"/>
   </g>
-  <polygon points="100,25 122,60 164,44 152,88 185,100 152,112 164,156 122,140 100,175 78,140 36,156 48,112 15,100 48,88 36,44 78,60"
-    fill="url(#core)" filter="url(#glow)"/>
-  <polygon points="100,25 122,60 164,44 152,88 185,100 152,112 164,156 122,140 100,175 78,140 36,156 48,112 15,100 48,88 36,44 78,60"
-    fill="none" stroke="#2a0810" stroke-width="2" opacity="0.7"/>
-  <circle cx="100" cy="100" r="26" fill="#ffe6c2" opacity="0.9"/>
+  <g fill="#ff8a63" opacity="0.9" filter="url(#dotGlow)">
+    <circle cx="100" cy="12" r="4"/><circle cx="150" cy="27" r="4"/><circle cx="185" cy="60" r="4"/>
+    <circle cx="192" cy="100" r="4"/><circle cx="185" cy="140" r="4"/><circle cx="150" cy="173" r="4"/>
+    <circle cx="100" cy="188" r="4"/><circle cx="50" cy="173" r="4"/><circle cx="15" cy="140" r="4"/>
+    <circle cx="8" cy="100" r="4"/><circle cx="15" cy="60" r="4"/><circle cx="50" cy="27" r="4"/>
+  </g>
+  <polygon points="100,50 150,100 100,150 50,100" fill="url(#gem)"/>
+  <polygon points="100,50 150,100 100,150 50,100" fill="none" stroke="#5c0e18" stroke-width="2" opacity="0.7"/>
+  <polygon points="100,50 125,100 100,100 75,100" fill="#fff3e6" opacity="0.35"/>
 </svg>

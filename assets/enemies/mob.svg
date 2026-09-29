@@ -1,18 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 잡몹 — 가장 기본형. 다른 적 이미지들과 같은 벡터 스타일로 통일. 6각 별, 장식 없음 -->
+  <!-- 잡몹 — 원본 mob.png(4방향 암석 가시 + 중앙 발광 다이아몬드) 구조를 벡터로 재현 -->
   <defs>
-    <radialGradient id="core" cx="50%" cy="45%" r="55%">
-      <stop offset="0%" stop-color="#ffd9b0"/>
-      <stop offset="40%" stop-color="#ff6a52"/>
-      <stop offset="100%" stop-color="#3a0d12"/>
+    <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#332a30"/>
+      <stop offset="55%" stop-color="#1c1418"/>
+      <stop offset="100%" stop-color="#0a0608"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffe6c8"/>
+      <stop offset="35%" stop-color="#ff8a63"/>
+      <stop offset="70%" stop-color="#ff3b52"/>
+      <stop offset="100%" stop-color="#8f1424"/>
     </radialGradient>
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="5" result="b"/>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+    <filter id="crackGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <polygon points="100,20 119,67 170,60 138,100 170,140 119,133 100,180 81,133 30,140 62,100 30,60 81,67"
-    fill="url(#core)" filter="url(#glow)"/>
-  <polygon points="100,20 119,67 170,60 138,100 170,140 119,133 100,180 81,133 30,140 62,100 30,60 81,67"
-    fill="none" stroke="#2a0810" stroke-width="2" opacity="0.75"/>
+
+  <!-- 중앙 발광 halo (암석 뒤로 번지는 빛) -->
+  <circle cx="100" cy="100" r="46" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
+
+  <!-- 4방향 암석 가시 -->
+  <g fill="url(#rock)" stroke="#000" stroke-width="1" stroke-opacity="0.4">
+    <polygon points="85,65 72,50 85,38 100,12 115,38 128,50 115,65"/>
+    <polygon points="135,82 150,72 162,85 188,100 162,115 150,128 135,118"/>
+    <polygon points="85,135 72,150 85,162 100,188 115,162 128,150 115,135"/>
+    <polygon points="65,82 50,72 38,85 12,100 38,115 50,128 65,118"/>
+  </g>
+
+  <!-- 가시를 타고 흐르는 붉은 균열 -->
+  <g fill="none" stroke="#ff3b52" stroke-width="2.2" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)">
+    <path d="M100,70 L94,45 L100,16"/>
+    <path d="M130,100 L155,94 L184,100"/>
+    <path d="M100,130 L106,155 L100,184"/>
+    <path d="M70,100 L45,106 L16,100"/>
+  </g>
+
+  <!-- 중앙 다이아몬드 -->
+  <polygon points="100,54 146,100 100,146 54,100" fill="url(#gem)"/>
+  <polygon points="100,54 146,100 100,146 54,100" fill="none" stroke="#5c0e18" stroke-width="2" opacity="0.7"/>
+  <polygon points="100,54 122,100 100,100 78,100" fill="#fff3e6" opacity="0.35"/>
+
+  <!-- 다이아몬드를 고정하는 작은 금속 클립 4개 -->
+  <g fill="#3f4a3f">
+    <polygon points="88,58 96,58 92,68"/>
+    <polygon points="112,58 120,58 116,68"/>
+    <polygon points="88,142 96,142 92,132"/>
+    <polygon points="112,142 120,142 116,132"/>
+  </g>
 </svg>

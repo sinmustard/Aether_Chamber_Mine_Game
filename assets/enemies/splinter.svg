@@ -1,19 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 분열체 — 분열형의 절반 조각. 부서진 단면이 그대로 보이는 작고 사나운 파편 -->
+  <!-- 분열체 — 같은 암석+발광 코어 기법. 분열형의 절반, 부서진 단면이 발광 -->
   <defs>
-    <radialGradient id="core" cx="55%" cy="45%" r="60%">
-      <stop offset="0%" stop-color="#ffd9b0"/>
-      <stop offset="40%" stop-color="#ff6a52"/>
-      <stop offset="100%" stop-color="#3a0d12"/>
-    </radialGradient>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="5" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <linearGradient id="rock" x1="30%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#332a30"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
+    </linearGradient>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+    <filter id="crackGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
+  <ellipse cx="95" cy="100" rx="14" ry="48" fill="#ff3b52" opacity="0.55" filter="url(#halo)"/>
   <path d="M150,100 C150,55 125,30 100,35 C82,55 78,80 90,100 C78,120 82,145 100,165 C125,170 150,145 150,100 Z"
-    fill="url(#core)" filter="url(#glow)"/>
-  <path d="M150,100 C150,55 125,30 100,35 C82,55 78,80 90,100 C78,120 82,145 100,165 C125,170 150,145 150,100 Z"
-    fill="none" stroke="#2a0810" stroke-width="2" opacity="0.8"/>
-  <path d="M100,35 L90,100 L100,165" fill="none" stroke="#ff3b52" stroke-width="3" stroke-dasharray="2,4" opacity="0.9"/>
+    fill="url(#rock)" stroke="#000" stroke-opacity="0.5"/>
+  <path d="M100,35 L90,100 L100,165" fill="none" stroke="#ff6a52" stroke-width="5" stroke-linecap="round" filter="url(#crackGlow)"/>
 </svg>

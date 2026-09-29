@@ -1,20 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 힐러 — 공격형과 다르게 뾰족한 부분 없이 둥글게. 회복을 상징하는 십자 문양 -->
+  <!-- 힐러 — 같은 암석+발광 코어 기법. 공격형과 달리 뾰족한 가시 없이 둥근 암석 + 십자 코어(빨강) -->
   <defs>
-    <radialGradient id="core" cx="50%" cy="42%" r="60%">
-      <stop offset="0%" stop-color="#ffd9b0"/>
-      <stop offset="45%" stop-color="#ff3b52"/>
-      <stop offset="100%" stop-color="#3a0d12"/>
+    <linearGradient id="rock" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#332a30"/><stop offset="55%" stop-color="#1c1418"/><stop offset="100%" stop-color="#0a0608"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="42%" cy="38%" r="65%">
+      <stop offset="0%" stop-color="#ffd9b0"/><stop offset="35%" stop-color="#ff8a63"/><stop offset="75%" stop-color="#ff3b52"/><stop offset="100%" stop-color="#8f1424"/>
     </radialGradient>
-    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
-      <feGaussianBlur stdDeviation="6" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
     </filter>
   </defs>
-  <circle cx="100" cy="100" r="70" fill="url(#core)" filter="url(#glow)"/>
-  <circle cx="100" cy="100" r="70" fill="none" stroke="#3a0d12" stroke-width="2" opacity="0.7"/>
+  <circle cx="100" cy="100" r="42" fill="#ff3b52" opacity="0.5" filter="url(#halo)"/>
+  <circle cx="100" cy="100" r="70" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <circle cx="100" cy="100" r="46" fill="url(#gem)"/>
+  <circle cx="100" cy="100" r="46" fill="none" stroke="#3a0d12" stroke-width="2" opacity="0.7"/>
+  <ellipse cx="86" cy="86" rx="16" ry="9" fill="#ffe6c8" opacity="0.4"/>
   <g fill="#ffd9b0" opacity="0.95">
-    <rect x="88" y="55" width="24" height="90" rx="6"/>
-    <rect x="55" y="88" width="90" height="24" rx="6"/>
+    <rect x="90" y="66" width="20" height="68" rx="6"/>
+    <rect x="66" y="90" width="68" height="20" rx="6"/>
   </g>
 </svg>

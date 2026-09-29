@@ -1,20 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- 추적자 — 탄환 없이 달려드는 근접 위협. 앞으로 기울어진 날카로운 쐐기 + 발톱 3개 -->
+  <!-- 추적자 — 같은 암석+발광 코어 기법. 앞으로 기운 쐐기 + 발톱, 뜨거운 오렌지 코어(공격적인 인상) -->
   <defs>
-    <radialGradient id="core" cx="65%" cy="50%" r="55%">
-      <stop offset="0%" stop-color="#ffe0b0"/>
-      <stop offset="35%" stop-color="#ff7a33"/>
-      <stop offset="80%" stop-color="#b3121f"/>
-      <stop offset="100%" stop-color="#2a0810"/>
+    <linearGradient id="rock" x1="70%" y1="30%" x2="10%" y2="80%">
+      <stop offset="0%" stop-color="#3a2418"/><stop offset="55%" stop-color="#1e130d"/><stop offset="100%" stop-color="#0a0605"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="60%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffe0b0"/><stop offset="35%" stop-color="#ff7a33"/><stop offset="75%" stop-color="#b3121f"/><stop offset="100%" stop-color="#3a0d12"/>
     </radialGradient>
-    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="5" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+    <filter id="crackGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <polygon points="185,100 95,55 70,75 60,100 70,125 95,145" fill="url(#core)" filter="url(#glow)"/>
-  <polygon points="185,100 95,55 70,75 60,100 70,125 95,145" fill="none" stroke="#2a0810" stroke-width="2" opacity="0.8"/>
-  <polygon points="60,100 20,70 45,95" fill="#7a1018"/>
-  <polygon points="60,100 15,100 45,100" fill="#7a1018"/>
-  <polygon points="60,100 20,130 45,105" fill="#7a1018"/>
+  <ellipse cx="140" cy="100" rx="30" ry="22" fill="#ff7a33" opacity="0.55" filter="url(#halo)"/>
+  <polygon points="185,100 95,55 70,75 60,100 70,125 95,145" fill="url(#rock)" stroke="#000" stroke-opacity="0.5"/>
+  <path d="M75,100 L130,100 L170,100" fill="none" stroke="#ff7a33" stroke-width="2.5" stroke-linecap="round" opacity="0.9" filter="url(#crackGlow)"/>
+  <polygon points="150,86 185,100 150,114 135,100" fill="url(#gem)"/>
+  <polygon points="60,100 20,70 45,95" fill="#160c08"/>
+  <polygon points="60,100 15,100 45,100" fill="#160c08"/>
+  <polygon points="60,100 20,130 45,105" fill="#160c08"/>
 </svg>
