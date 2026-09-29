@@ -246,7 +246,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.21</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.22</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -403,7 +403,10 @@ const UPG=[
   steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
  {k:'echo', n:'R · 복제', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
-  steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']}
+  steps:['잠김','충전 50','충전 50','충전 46','충전 42','충전 38']},
+ {k:'emp', n:'R · EMP', s:'R — 모든 적을 잠시 정지', skill:'r', lv:0, max:3, cost:[10000,20000,55000],
+  d:'R — 화면의 모든 적을 일정 시간 멈춥니다. 멈춘 적은 움직이지도, 쏘지도, 소환하지도 않습니다. 충전은 패링 +1, 적 처치 +2로 채웁니다.',
+  steps:['잠김','정지 0.4s','정지 0.8s','정지 2.0s']}
 ];
 const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
@@ -482,7 +485,7 @@ function sfx(k,n){
 function lv(k){ return UPG.find(u=>u.k===k).lv; }
 function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
-        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo');
+        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp');
   return {
     rangeM: 3.5+0.3*r, fov: 60+5*f, whiff: 1.20-0.10*pe,
     moveSpd: 230+15*m,
@@ -502,7 +505,8 @@ function statsFromUpgrades(){
     hookRange:[0,260,280,300,320,340][hk], hookCd:[0,9.0,8.0,7.0,6.0,5.0][hk],
     owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
-    rNeed: [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
+    empDur: [0,0.4,0.8,2.0][em],
+    rNeed: [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : META.skillR==='emp'?em : 0) ]
   };
 }
 
@@ -510,7 +514,7 @@ function statsFromUpgrades(){
 const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22, rNeed:50,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -720,7 +724,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,
     spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -1124,6 +1128,13 @@ function doR(){
   } else if(CFG.skillR==='echo'){
     P.echoT=ECHO_DUR; P.rChg=0;
     say('복제','cyan'); sfx('echo');
+  } else if(CFG.skillR==='emp'){
+    /* v2.22 EMP — 화면의 모든 적을 멈춘다 */
+    if(!ens.length){ say('적 없음','dim'); return; }
+    ens.forEach(e=>{ e.stunT=Math.max(e.stunT||0,CFG.empDur); });
+    P.rChg=0;
+    say('EMP  '+CFG.empDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=12; hitstop=0.05;
+    burst(P.x,P.y,'cyan',26,320);
   }
 }
 function doWall(){
@@ -1247,6 +1258,8 @@ function update(dt){
 
   // 적
   ens.forEach(e=>{
+    /* v2.22 EMP로 멈춘 동안에는 움직임·발사·소환이 전부 정지한다 */
+    if(e.stunT>0){ e.stunT-=dt; return; }
     e.drift+=dt*0.7;
     /* v2.1 앵커 이동 — 견인이 최우선, 그 다음 송신기 도주 / 분열체 접근 압박 */
     if(e.hookT>0){
@@ -1559,6 +1572,12 @@ loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 function drawEnemyBody(e){
   const img=SPRITES[e.grade];
+  if(e.stunT>0){   // v2.22 정지 표시
+    const q=proj(e.x,e.y);
+    ctx.save(); ctx.strokeStyle='#9fd8ff'; ctx.globalAlpha=.5+.3*Math.sin(performance.now()/70);
+    ctx.lineWidth=2; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+10,(e.r+10)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
+  }
   if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); return; }
   const p=proj(e.x,e.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
@@ -2089,7 +2108,7 @@ function renderSkillSel(){
   $('#skillSel').innerHTML=
     row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['','없음']],META.skill)+
     row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','견인'],['','없음']],META.skillQ)+
-    row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['','없음']],META.skillR);
+    row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['emp','EMP'],['','없음']],META.skillR);
 }
 $('#skillSel').addEventListener('click',e=>{
   const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
