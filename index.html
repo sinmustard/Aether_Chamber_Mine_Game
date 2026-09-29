@@ -214,7 +214,10 @@ body:not(.in-game) .pads{display:none}
   background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:7px;cursor:pointer}
 @media (max-width:900px) and (orientation:portrait){ body.in-game #rotate{display:flex} }
 @media (max-width:759px){ #gamecv{touch-action:none} }
-@media (min-width:760px){ .pads{display:none} }
+/* v2.31 마우스가 있는 큰 화면에서만 숨긴다. 가로로 든 폰은 폭이 760을 넘어도 버튼이 필요하다 */
+@media (min-width:760px) and (pointer:fine){ .pads{display:none} }
+body.touch.in-game .pads{display:flex}
+@media (max-height:560px){ .pads button{padding:11px;font-size:12px} }
 
 /* DEV */
 details.dev{display:none}
@@ -246,7 +249,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.30</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.31</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -333,10 +336,10 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <button id="goFs">전체화면으로 보기</button>
 </div>
 <div class="pads">
-  <button id="padParry">E · PARRY</button>
-  <button id="padSkill">F · SKILL</button>
-  <button id="padWall">Q · Q SKILL</button>
-  <button id="padR">R · R SKILL</button>
+  <button id="padParry">E · 패링</button>
+  <button id="padSkill">F · F 스킬</button>
+  <button id="padWall">Q · Q 스킬</button>
+  <button id="padR">R · R 스킬</button>
 </div>
 
 <details class="dev">
@@ -963,7 +966,7 @@ function setStick(st,x,y){
 }
 gcv.addEventListener('touchstart',e=>{
   if(screen!=='game')return;
-  e.preventDefault(); touchMode=true;
+  e.preventDefault(); touchMode=true; document.body.classList.add('touch');
   for(const t of e.changedTouches){
     const [x,y]=tPos(t);
     const side = x < W/2 ? 'move' : 'aim';
@@ -1073,7 +1076,8 @@ function doParry(){
 function refreshKeyLabels(){
   const P_=keyName(OPT.keyParry), S_=keyName(OPT.keySkill), Q_=keyName(OPT.keyWall), R_=keyName(OPT.keyR);
   $('#tKeys').textContent='WASD 이동 · 마우스 조준 · '+P_+' 패링 · '+S_+' 스킬 · '+Q_+' 스킬 · '+R_+' 스킬';
-  $('#padParry').textContent=P_+' · PARRY'; $('#padSkill').textContent=S_+' · SKILL'; $('#padWall').textContent=Q_+' · Q SKILL'; $('#padR').textContent=R_+' · R SKILL';
+  $('#padParry').textContent=P_+' · 패링'; $('#padSkill').textContent=S_+' · F 스킬';
+  $('#padWall').textContent=Q_+' · Q 스킬'; $('#padR').textContent=R_+' · R 스킬';
 }
 function doSkill(){
   if(paused||!CFG.skill||P.skillCd>0||P.hp<=0)return;
