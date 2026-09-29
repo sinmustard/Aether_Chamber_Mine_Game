@@ -197,6 +197,13 @@ body:not(.in-game) .pads{display:none}
 /* DEV */
 details.dev{display:none}
 body.debug details.dev{display:block}
+/* v2.5 몹 확인용 디버그 스폰 패널 — 캔버스 위에 겹치지 않도록 프레임 바깥, 화면 맨 아래에 둔다 */
+#debugSpawn{display:none;flex-wrap:wrap;gap:7px;width:100%;max-width:1000px;order:99}
+#debugSpawn span{font-size:9.5px;letter-spacing:.16em;color:var(--warn);align-self:center}
+#debugSpawn button{padding:7px 11px;font:inherit;font-size:10.5px;background:transparent;
+  color:var(--warn);border:1px solid var(--warn);border-radius:5px;cursor:pointer}
+#debugSpawn button:hover{background:rgba(255,204,85,.15)}
+body.debug.in-game #debugSpawn{display:flex}
 details.dev{width:100%;max-width:1000px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
 details.dev summary{font-size:11px;letter-spacing:.14em;color:var(--dim);cursor:pointer}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:9px 18px;margin-top:11px}
@@ -269,6 +276,17 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="own" id="rwOwn"></div>
   </div>
   <div id="modal"><div class="box" id="modalBox"></div></div>
+</div>
+
+<div id="debugSpawn">
+  <span>SPAWN</span>
+  <button data-spawn="mob">잡몹</button>
+  <button data-spawn="elite">엘리트</button>
+  <button data-spawn="bulwark">방패병</button>
+  <button data-spawn="relay">송신기</button>
+  <button data-spawn="splitter">분열형</button>
+  <button data-spawn="boss">보스</button>
+  <button data-spawn="clear">전부 제거</button>
 </div>
 
 <div id="rotate">
@@ -466,7 +484,7 @@ const SEIZE_R=50;
 const GRADES={
   mob:     {hits:2,  r:R_ENEMY, pool:'mob',     score:50,   seize:0.42},
   elite:   {hits:4,  r:R_ELITE, pool:'elite',   score:150,  seize:0.50},
-  bulwark: {hits:2,  r:34,      pool:'bulwark', score:110,  seize:0.46, shield:100},
+  bulwark: {hits:2,  r:50,      pool:'bulwark', score:110,  seize:0.46, shield:100},
   boss:    {hits:12, r:R_BOSS,  pool:'boss',    score:1000, seize:0.60},
   /* v2.1 송신기 — 쏘지 않는다. relay: 반경 RELAY_R 안의 다른 적에게 재탈취 확률을 더해준다 */
   relay:   {hits:1,  r:R_ENEMY, pool:'mob',     score:60,   seize:0.42, relay:0.20},
@@ -1690,6 +1708,14 @@ function toggleDebug(){
   $('#dbgTag').textContent=debug?'· DEBUG':'';
   sfx('ui');
 }
+/* v2.5 몹 확인 모드 — 디버그 중 웨이브 진행과 상관없이 적을 바로 소환해서 스프라이트·크기·패턴을 볼 수 있다 */
+$('#debugSpawn').addEventListener('click',e=>{
+  const b=e.target.closest('[data-spawn]'); if(!b||screen!=='game'||!run)return;
+  const k=b.dataset.spawn;
+  if(k==='clear'){ ens.length=0; bullets.length=0; queue.length=0; say('CLEARED','warn'); }
+  else{ spawnEnemy(k); say('SPAWN '+k.toUpperCase(),'warn'); }
+  sfx('ui');
+});
 $('#debugBtns').addEventListener('click',e=>{
   const b=e.target.closest('[data-dbg]'); if(!b)return;
   const k=b.dataset.dbg;
