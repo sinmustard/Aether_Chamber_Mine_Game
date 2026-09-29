@@ -235,7 +235,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.16</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.17</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -349,32 +349,38 @@ const UPG=[
   steps:['230','245','260','275','290','305']},
  {k:'bullet',n:'탄환', s:'왕복당 가속 · 점수 배율', lv:0, max:5, cost:[790,1190,1780,2670,4000],
   steps:['×1.20 / 점수 ×1.00','×1.24 / ×1.10','×1.28 / ×1.20','×1.32 / ×1.35','×1.36 / ×1.50','×1.40 / ×1.70']},
- {k:'vital', n:'생존', s:'최대 체력 · 피격 무적', lv:0, max:5, cost:[300,440,670,1000,1500],
+ {k:'vital', n:'생존', s:'최대 체력 · 피격 무적', grp:'life', lv:0, max:5, cost:[300,440,670,1000,1500],
   steps:['100 / 0.40s','115 / 0.45s','130 / 0.50s','145 / 0.55s','160 / 0.60s','175 / 0.70s']},
+ {k:'greed', n:'재화 획득', s:'한 판에서 버는 재화가 늘어남', grp:'life', lv:0, max:5, cost:[600,900,1350,2000,3000],
+  d:'전투가 끝나고 받는 재화가 늘어납니다. 점수·처치·웨이브·보스 보상 전부에 적용됩니다.',
+  steps:['+0%','+8%','+16%','+24%','+32%','+40%']},
+ {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', lv:0, max:2, cost:[2500,5000],
+  d:'출격 직후에 웨이브 보상을 미리 고릅니다. 1단계는 1회, 2단계는 2회입니다.',
+  steps:['없음','출격 시 1회','출격 시 2회']},
  {k:'homing',n:'유도 보정', s:'되돌린 탄환이 적을 따라감', lv:0, max:5, cost:[400,1600,2800,4400,6500],
   d:'패링으로 되돌린 탄환이 앞쪽의 가장 가까운 적 쪽으로 휘어집니다. 단계가 오를수록 더 강하게 꺾이고, 뒤쪽으로 급하게 돌지는 않습니다.',
   steps:['없음','약함','조금 약함','보통','강함','매우 강함']},
  {k:'multi', n:'다중 패링', s:'한 번에 빼앗는 탄환 수', lv:0, max:2, cost:[1500,3500],
   steps:['1발','2발','3발']},
- {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, lv:0, max:5, cost:[800,700,1050,1580,2400],
+ {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   steps:['잠김','회복 25 / 대기 18s','회복 30 / 대기 16s','회복 35 / 대기 14s','회복 40 / 대기 12s','회복 50 / 대기 10s']},
- {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, lv:0, max:5, cost:[800,700,1050,1580,2400],
+ {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   steps:['잠김','지속 1.5s / 대기 18s','지속 1.8s / 대기 16s','지속 2.1s / 대기 14s','지속 2.5s / 대기 12s','지속 3.0s / 대기 10s']},
- {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, lv:0, max:5, cost:[800,700,1050,1580,2400],
+ {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   steps:['잠김','거리 140 / 대기 8.0s','거리 155 / 대기 7.4s','거리 170 / 대기 6.8s','거리 185 / 대기 6.2s','거리 200 / 대기 5.5s']},
- {k:'phase', n:'Q · 위상 이동', s:'Q — 벽 통과 + 탄환 유도 무력화', skill:'q', lv:0, max:5, cost:[800,700,1050,1580,2400],
+ {k:'phase', n:'Q · 위상 이동', s:'Q — 벽 통과 + 탄환 유도 무력화', skill:'q', lv:0, max:5, cost:[800,1200,1800,2700,4000],
   d:'Q — 발동하는 동안 벽을 통과하고, 적 탄환이 더 이상 따라오지 않고 직진합니다. 끝날 때 벽 안에 있으면 밖으로 밀려납니다.',
   steps:['잠김','지속 2.0s / 대기 16s','지속 2.5s / 대기 15s','지속 3.0s / 대기 13s','지속 3.5s / 대기 12s','지속 4.0s / 대기 10s']},
- {k:'wall',  n:'Q · 벽 생성', s:'Q — 앞쪽에 벽 설치 (탄환 반사)', skill:'q', lv:0, max:4, cost:[1000,900,1400,2100],
+ {k:'wall',  n:'Q · 벽 생성', s:'Q — 앞쪽에 벽 설치 (탄환 반사)', skill:'q', lv:0, max:4, cost:[1000,1500,2200,3300],
   d:'Q — 바라보는 방향 앞에 벽을 세웁니다. 탄환은 벽에 튕깁니다. 벽끼리는 간격을 두어야 하고, 최대 개수를 넘기면 가장 오래된 벽이 사라집니다. 이 스킬을 장착하지 않으면 맵에 벽이 없습니다.',
   steps:['잠김','벽 1개','벽 2개','벽 3개','벽 4개']},
- {k:'hook',  n:'Q · 견인', s:'Q — 사거리 안 가장 가까운 적을 끌어당김', skill:'q', lv:0, max:5, cost:[800,700,1050,1580,2400],
+ {k:'hook',  n:'Q · 견인', s:'Q — 사거리 안 가장 가까운 적을 끌어당김', skill:'q', lv:0, max:5, cost:[800,1200,1800,2700,4000],
   d:'Q — 사거리 안의 가장 가까운 적을 순간적으로 끌어당깁니다. 도망 다니는 적을 붙잡거나 각을 강제로 열 때 씁니다.',
   steps:['잠김','사거리 260 / 대기 9.0s','사거리 280 / 대기 8.0s','사거리 300 / 대기 7.0s','사거리 320 / 대기 6.0s','사거리 340 / 대기 5.0s']},
- {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
+ {k:'overwrite', n:'R · 덮어쓰기', s:'R — 화면의 적 탄환을 전부 내 것으로', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 화면에 있는 모든 적 탄환을 사거리·시야 제한 없이 즉시 왕복 탄환으로 바꿉니다.',
   steps:['잠김','대기 26s','대기 23s','대기 20s','대기 17s','대기 14s']},
- {k:'echo', n:'R · 메아리', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1100,1650,2450,3700],
+ {k:'echo', n:'R · 메아리', s:'R — 4초 동안 패링마다 탄환 복제', skill:'r', lv:0, max:5, cost:[1200,1800,2700,4000,6000],
   d:'R — 발동 후 4초 동안 패링에 성공할 때마다 탄환을 하나 더 복제합니다.',
   steps:['잠김','대기 22s','대기 19s','대기 16s','대기 13s','대기 10s']}
 ];
@@ -453,7 +459,7 @@ function sfx(k,n){
 
 function lv(k){ return UPG.find(u=>u.k===k).lv; }
 function statsFromUpgrades(){
-  const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'),
+  const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
         h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo');
   return {
     rangeM: 3.5+0.3*r, fov: 60+5*f, whiff: 1.20-0.10*pe,
@@ -462,6 +468,7 @@ function statsFromUpgrades(){
     hpMax: 100+15*v, iframe: [0.40,0.45,0.50,0.55,0.60,0.70][v],
     multi: 1+mu,
     homing: [0,0.8,1.4,2.0,2.8,3.6][hm],
+    gainMul: 1+0.08*gr, startRewards: sp,
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
     skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
@@ -476,7 +483,7 @@ function statsFromUpgrades(){
 }
 
 /* ================= 전투 설정 ================= */
-const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0,
+const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
             skillR:'', owCd:26, echoCd:22,
@@ -665,7 +672,7 @@ let touchMode=false;
 function newRun(){
   const st=statsFromUpgrades();
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
-    accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
+    accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
     skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,
     spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
@@ -676,6 +683,7 @@ function newRun(){
   run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
   rerollMap();   // v3.2
+  run.startRewards=CFG.startRewards;   // v2.17 선행 보급
   if(CFG.qSkill==='wall'){ run.phase='build'; run.phaseT=BUILD_T; }   // v1.6 벽 설치 준비 시간
 }
 
@@ -1068,7 +1076,7 @@ function openReward(afterBoss){
     rwPicks.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);
   run.phase='reward';
   $('#rwHd').innerHTML=(afterBoss?'ALETHEIA 격파 · <b>사이클 '+run.cycle+'</b>'
-                                 :'WAVE '+run.wave+' 완료')+' &nbsp;—&nbsp; 하나를 고르세요  <b>1 2 3</b>';
+                                 :(run.wave===0?'선행 보급':'WAVE '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요  <b>1 2 3</b>';
   $('#rwRow').innerHTML=rwPicks.map((b,i)=>
     '<div class="bc" data-i="'+i+'">'+
     '<div class="num">'+(i+1)+'</div>'+
@@ -1091,6 +1099,7 @@ function takeReward(i){
   $('#reward').classList.remove('on');
   run.phase='break'; run.phaseT=Math.max(run.phaseT,0.9);   // v2.2 보스 직후 CYCLE 연출 시간 유지
   say(b.n,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',14,150);
+  if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 선행 보급 2단계
 }
 $('#rwRow').addEventListener('click',e=>{
   const c=e.target.closest('.bc'); if(!c) return;
@@ -1834,12 +1843,14 @@ function go(id){
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
   if(isPhone()) goLandscape();   // v2.5 어느 화면이든 전체화면 유지
 }
-function startRun(){ newRun(); go('game'); }
+function startRun(){ newRun(); go('game');
+  if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
+}
 function endRun(){
   /* v1.7 재화: 점수÷3 + 처치×5 + 도달 웨이브×6 + 보스 격파×150 (점수 비중 상향) */
   const gScore=Math.round(run.score/3), gKill=run.kills*5,
         gWave=((run.cycle-1)*(BOSS_WAVE+1)+run.wave)*6, gBoss=run.bossKills*150;
-  const gain=gScore+gKill+gWave+gBoss;
+  const gain=Math.round((gScore+gKill+gWave+gBoss)*CFG.gainMul);   // v2.17 재화 획득 강화
   META.cur+=gain;
   const isNew=run.score>META.best;
   if(isNew)META.best=run.score;
@@ -1908,7 +1919,8 @@ function cardHTML(u,i){
 /* v2.14 강화와 능력을 나눠서 보여준다 */
 function renderCards(){
   const idx=UPG.map((u,i)=>[u,i]);
-  const groups=[['강화', idx.filter(([u])=>!u.skill)],
+  const groups=[['강화', idx.filter(([u])=>!u.skill&&!u.grp)],
+                ['생존 / 보급', idx.filter(([u])=>u.grp==='life')],
                 ['능력 해방 / 강화', idx.filter(([u])=>u.skill)]];
   $('#cards').innerHTML=groups.map(([title,list])=>
     list.length? '<div class="grp">'+title+'</div>'+list.map(([u,i])=>cardHTML(u,i)).join('') : ''
