@@ -1250,13 +1250,13 @@ function drawShield(e){
   const exposed=angDiff(facing,Math.atan2(P.y-e.y,P.x-e.x))>half;   // 플레이어가 사각에 있음
   const img=SPRITES.bulwark_shield;
   if(img){
-    /* v2.2 방패 스프라이트 — 이미지는 오른쪽(0rad)이 정면이 되도록 그려져 있어 facing만큼 회전시킨다.
-       w=뻗는 길이, h=좌우 폭. 너무 길쭉해 보여서 폭을 넓히고 길이를 줄였다 */
-    const w=e.r*1.2, h=e.r*2.7;
+    /* v2.3 에너지 실드 스프라이트 — 뷰박스 중심(100,100)이 본체 피벗과 겹치도록 그려져 있어서
+       정사각형으로 그대로 회전시키면 된다. 길쭉해지는 문제가 없다 */
+    const s=e.r*3.4;
     ctx.save(); ctx.translate(q[0],q[1]); ctx.scale(1,SQUASH); ctx.rotate(facing);
     ctx.globalAlpha=exposed?0.45:1;
     if(e.shieldFx>0) ctx.filter='brightness('+(1.6+e.shieldFx*3)+')';
-    ctx.drawImage(img,-0.15*w,-h/2,w,h);
+    ctx.drawImage(img,-s/2,-s/2,s,s);
     ctx.restore();
     return;
   }
