@@ -235,7 +235,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.19</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.20</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -248,6 +248,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="menu">
       <button class="primary" data-go="hub">START</button>
       <button data-modal="opt">OPTIONS</button>
+      <button data-modal="tutorial">튜토리얼</button>
     </div>
     <div class="ver" id="tKeys">WASD 이동 · 마우스 조준 · E 패링 · F 스킬 · Q 스킬</div>
     <div class="best">최고 기록 <b id="tBest">0</b></div>
@@ -388,7 +389,7 @@ const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, shake:1, cb:0, lockMouse:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, shake:1, cb:0, lockMouse:1, tutSeen:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -407,6 +408,7 @@ function load(){
       d.upg.forEach((v,i)=>{ if(old[i]==='parry') ['range','fov','penalty'].forEach(k=>setLv(k,v)); else setLv(old[i],v); });
     } else if(d.upg) Object.keys(d.upg).forEach(k=>setLv(k,d.upg[k]));
     Object.assign(OPT,d.opt||{});
+    if(OPT.tutSeen===undefined) OPT.tutSeen=1;   // v3.4 이미 저장 데이터가 있던 기존 플레이어는 튜토리얼을 건너뛴다
     if(META.skill==='phase'){ if(!META.skillQ) META.skillQ='phase'; META.skill=''; }
   }catch(e){}
 }
@@ -1913,7 +1915,8 @@ function go(id){
   $('#bgcv').style.display = id==='game'?'none':'block';
   $('#modal').classList.remove('on'); paused=false;
   if(id!=='game') unlockMouse();   // v2.12
-  if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
+  if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs();
+    if(!OPT.tutSeen) openModal('tutorial'); }   // v3.4 처음 HUB에 들어오면 튜토리얼
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
   if(isPhone()) goLandscape();   // v2.5 어느 화면이든 전체화면 유지
 }
@@ -1941,14 +1944,35 @@ function endRun(){
     '점수 '+gScore+' · 처치 '+gKill+' · 웨이브 '+gWave+(gBoss?' · 보스 '+gBoss:'')+'</div>';
   go('result');
 }
-function togglePause(){ paused=!paused; if(paused) unlockMouse(); else lockMouse(); }
+/* v3.4 일시정지하면 설정 화면이 같이 뜬다. 재개할 땐(ESC·상단 버튼·설정 닫기) 같이 닫힌다 */
+function togglePause(){
+  paused=!paused;
+  if(paused){ unlockMouse(); openModal('opt'); }
+  else{ lockMouse(); binding=null; bindMsg=''; $('#modal').classList.remove('on'); }
+}
 document.addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go);return;}
   const m=e.target.closest('[data-modal]'); if(m){openModal(m.dataset.modal);}
 });
 $('#launch').onclick=startRun;
 $('#again').onclick=startRun;
+/* v3.4 튜토리얼 — 처음 HUB에 들어오면 자동으로 한 번, 이후엔 타이틀 버튼으로 언제든 다시 볼 수 있다 */
+function openTutorial(){
+  $('#modalBox').innerHTML='<h4>튜토리얼</h4>'+
+    '<div style="font-size:12px;line-height:1.9;color:var(--fg)">'+
+    '<b>WASD</b> 이동 · <b>마우스</b> 조준<br>'+
+    '적 탄환이 사거리·시야 안에서 빛나면 <b>'+keyName(OPT.keyParry)+'</b>(또는 좌클릭)로 빼앗아 되돌립니다. '+
+    '이걸 빼앗아 되돌리는 게 유일한 공격입니다.<br>'+
+    'HUB에서 재화(◆)로 영구 강화를 사고, F·Q·R 스킬을 해금·장착한 뒤 출격하세요.<br>'+
+    '판 안에서는 몇 웨이브마다 3개 중 하나를 골라 그 판에서만 유지되는 보상도 받습니다.<br>'+
+    '10웨이브마다 보스가 나오고, 사이클이 오를수록 더 어려워집니다.<br>'+
+    'ESC로 언제든 일시정지하고 설정을 열 수 있습니다.'+
+    '</div>'+
+    '<button class="buy" id="tutClose">시작하기</button>';
+  $('#modal').classList.add('on');
+}
 function openModal(kind){
+  if(kind==='tutorial'){ openTutorial(); return; }
   const rows=[['마스터 볼륨','vol',OPT.vol?OPT.vol+'':'끔'],
               ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
@@ -1979,7 +2003,11 @@ $('#modalBox').addEventListener('click',e=>{
     if(k==='vol') OPT.vol=OPT.vol>=100?0:OPT.vol+20; else OPT[k]=OPT[k]?0:1;
     if(k==='lockMouse'&&!OPT.lockMouse) unlockMouse();
     save(); openModal(); sfx('ui'); return; }
-  if(e.target.id==='optClose'){ binding=null; bindMsg=''; $('#modal').classList.remove('on'); }
+  if(e.target.id==='tutClose'){ OPT.tutSeen=1; save(); $('#modal').classList.remove('on'); return; }
+  if(e.target.id==='optClose'){
+    binding=null; bindMsg=''; $('#modal').classList.remove('on');
+    if(screen==='game'&&paused) togglePause();   // v3.4 일시정지 중 열린 설정이면 닫을 때 같이 재개한다
+  }
   if(e.target.id==='optReset' && confirm('강화 · 재화 · 기록을 모두 초기화할까요?')){ wipe(); go('title'); }
 });
 
