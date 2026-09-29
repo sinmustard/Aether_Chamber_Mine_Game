@@ -249,7 +249,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.31</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.32</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -995,10 +995,23 @@ function endTouch(e){
 }
 gcv.addEventListener('touchend',endTouch,{passive:false});
 gcv.addEventListener('touchcancel',endTouch,{passive:false});
-$('#padParry').onclick=()=>{ if(screen==='game')doParry(); };
-$('#padSkill').onclick=()=>{ if(screen==='game')doSkill(); };
-$('#padWall').onclick=()=>{ if(screen==='game')doQ(); };
-$('#padR').onclick=()=>{ if(screen==='game')doR(); };
+/* v2.32 버튼은 손가락이 닿는 순간 반응한다.
+   click만 쓰면 다른 손가락으로 이동·조준 중일 때 눌러도 스킬이 나가지 않았다 */
+function padBind(id,fn){
+  const el=$('#'+id); if(!el)return;
+  let last=0;
+  const fire=e=>{
+    e.preventDefault(); e.stopPropagation();
+    const now=performance.now(); if(now-last<120) return; last=now;   // 같은 입력이 두 번 잡히는 것 방지
+    if(screen==='game') fn();
+  };
+  el.addEventListener('touchstart',fire,{passive:false});
+  el.addEventListener('mousedown',fire);
+}
+padBind('padParry',doParry);
+padBind('padSkill',doSkill);
+padBind('padWall',doQ);
+padBind('padR',doR);
 $('#topPause').onclick=()=>{ if(screen==='game')togglePause(); };
 
 function doParry(){
