@@ -286,6 +286,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <button data-spawn="bulwark">방패병</button>
   <button data-spawn="relay">송신기</button>
   <button data-spawn="splitter">분열형</button>
+  <button data-spawn="tracker">추적자</button>
   <button data-spawn="boss">보스</button>
   <button data-spawn="clear">전부 제거</button>
 </div>
@@ -491,7 +492,9 @@ const GRADES={
   relay:   {hits:1,  r:R_ENEMY, pool:'mob',     score:60,   seize:0.42, relay:0.20},
   /* v2.1 분열형 — 처치되면 1칸짜리 분열체(splinter) 2기로 갈라진다 */
   splitter:{hits:2,  r:R_ENEMY, pool:'splitter',score:45,   seize:0.42},
-  splinter:{hits:1,  r:20,      pool:'splinter',score:15,   seize:0.38}
+  splinter:{hits:1,  r:20,      pool:'splinter',score:15,   seize:0.38},
+  /* v2.7 추적자 — 탄환을 쏘지 않는다. 계속 쫓아오다 사거리 안에 들면 예비 동작 후 돌진(LUNGE)해 접촉 피해를 준다 */
+  tracker: {hits:2,  r:28,      pool:'tracker', score:70,   seize:0.42, noFire:true}
 };
 const G=e=>GRADES[e.grade]||GRADES.mob;
 const RELAY_R=240;   // 송신기 지원 반경
@@ -530,6 +533,8 @@ function seizeChance(e,b){
 const WALL_HG=28, WALL_L=130, WALL_T=30, WALL_GAP=50, WALL_CD=1.0, BUILD_T=12;
 /* v2.1 R 슬롯 · 신규 F/Q 옵션 상수 */
 const DASH_DUR=0.16, ECHO_DUR=4, HOOK_DUR=0.4, HOOK_SPD=900;
+/* v2.7 추적자 — 접근(chase) -> 예비 동작(wind) -> 돌진(dash) -> 재사용 대기(cd) 상태를 순환한다 */
+const TRACK_SPD=110, LUNGE_RANGE=130, LUNGE_WIND=0.45, LUNGE_DUR=0.22, LUNGE_SPD=900, LUNGE_CD=1.8, CONTACT_DMG=18;
 const colOf=o=>({x:o.x, y:o.y-WALL_HG/SQUASH, w:o.w, h:o.h+WALL_HG/SQUASH});
 function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가 (Liang–Barsky)
   let t0=0,t1=1; const dx=x2-x1, dy=y2-y1;
@@ -648,7 +653,8 @@ function enemyPool(){
     {g:'splitter', from:2, w:2, cap:run.cycle>=2?2:1},
     {g:'elite',    from:3, w:2, cap:2},
     {g:'bulwark',  from:5, w:2, cap:run.cycle>=2?2:1},
-    {g:'relay',    from:7, w:1, cap:run.cycle>=3?2:1}
+    {g:'relay',    from:7, w:1, cap:run.cycle>=3?2:1},
+    {g:'tracker',  from:8, w:1, cap:1}
   ];
 }
 function rollWave(n){
@@ -1080,9 +1086,41 @@ function update(dt){
         e.ax=clamp(e.ax+Math.cos(toward)*APPROACH_SPD*dt,40,WORLD.w-40);
         e.ay=clamp(e.ay+Math.sin(toward)*APPROACH_SPD*dt,40,WORLD.h-40);
       }
+    } else if(e.grade==='tracker'){
+      /* v2.7 추적자 — chase(추격) -> wind(예비 동작) -> dash(돌진) -> cd(대기) 순환 */
+      if(!e.lungePhase) e.lungePhase='chase';
+      if(e.lungePhase==='chase'){
+        const d=dist(e.ax,e.ay,P.x,P.y);
+        if(d>4){
+          const toward=Math.atan2(P.y-e.ay,P.x-e.ax);
+          e.ax=clamp(e.ax+Math.cos(toward)*TRACK_SPD*dt,40,WORLD.w-40);
+          e.ay=clamp(e.ay+Math.sin(toward)*TRACK_SPD*dt,40,WORLD.h-40);
+        }
+        if(d<=LUNGE_RANGE && run.phase==='fight'){ e.lungePhase='wind'; e.lungeT=LUNGE_WIND; }
+      } else if(e.lungePhase==='wind'){
+        e.lungeT-=dt;
+        if(e.lungeT<=0){ e.lungePhase='dash'; e.lungeT=LUNGE_DUR; e.lungeHit=false;
+          e.lungeDir=Math.atan2(P.y-e.ay,P.x-e.ax); }
+      } else if(e.lungePhase==='dash'){
+        e.lungeT-=dt;
+        e.ax=clamp(e.ax+Math.cos(e.lungeDir)*LUNGE_SPD*dt,40,WORLD.w-40);
+        e.ay=clamp(e.ay+Math.sin(e.lungeDir)*LUNGE_SPD*dt,40,WORLD.h-40);
+        if(e.lungeT<=0){ e.lungePhase='cd'; e.lungeT=LUNGE_CD; }
+      } else if(e.lungePhase==='cd'){
+        e.lungeT-=dt;
+        if(e.lungeT<=0) e.lungePhase='chase';
+      }
     }
     e.x=e.ax+Math.cos(e.drift*0.8)*36;
     e.y=e.ay+Math.sin(e.drift)*54;
+    /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
+    if(e.grade==='tracker' && e.lungePhase==='dash' && !e.lungeHit && dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER){
+      e.lungeHit=true;
+      if(P.guard>0){ say('BLOCKED','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
+      else if(P.inv<=0&&!CFG.god){
+        P.hp-=CONTACT_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=14; say('IMPACT','red'); sfx('breach'); burst(P.x,P.y,'red',14);
+      }
+    }
     if(e.hurt>0)e.hurt-=dt; if(e.seizeFx>0)e.seizeFx-=dt;
     if(e.shieldFx>0)e.shieldFx-=dt; if(e.inv>0)e.inv-=dt;
     if(e.sa!=null){                                  // v1.8.1 방패 회전
@@ -1093,7 +1131,7 @@ function update(dt){
       }
     }
     if(run.phase!=='fight')return;
-    if(G(e).relay)return;                            // v2.1 송신기는 쏘지 않는다
+    if(G(e).relay||G(e).noFire)return;                // v2.1 송신기 / v2.7 추적자는 쏘지 않는다
     e.fireT-=dt;
     if(e.fireT<=0){
       const room=CFG.maxB-(bullets.length+queue.length);
@@ -1422,6 +1460,18 @@ function drawRelayLinks(){
     });
   });
 }
+/* v2.7 추적자 — 예비 동작(wind) 중에는 곧 돌진한다는 걸 커지는 붉은 경고 링으로 알려준다 */
+function drawLungeWarning(){
+  ens.forEach(e=>{
+    if(e.grade!=='tracker'||e.lungePhase!=='wind') return;
+    const p=proj(e.x,e.y), k=1-clamp(e.lungeT/LUNGE_WIND,0,1), R=e.r+14+k*26;
+    ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH);
+    ctx.globalAlpha=.55+.35*Math.sin(performance.now()/40);
+    ctx.strokeStyle=C.red; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,R,0,TAU); ctx.stroke();
+    ctx.restore();
+  });
+}
 function drawLock(){
   const p=proj(P.x,P.y);
   if(P.lock<=0) return;      // v1.9.1 평상시에는 아무것도 그리지 않는다
@@ -1575,7 +1625,7 @@ function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
-  drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();drawLungeWarning();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
