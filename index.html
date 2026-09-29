@@ -256,7 +256,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.34</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.35</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1067,7 +1067,7 @@ function doParry(){
   let ts=bullets.filter(b=>b.owner==='enemy'&&b.ready)
     .sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y)).slice(0,Math.max(1,CFG.multi|0));
   /* v2.34 장갑탄 — 첫 패링은 장갑만 깎고, 두 번째 패링에서 그대로 빼앗는다 */
-  ts.forEach(b=>{ if(b.armor>0){ b.armor--; b.glow=1; burst(b.x,b.y,'warn',8,150); } });
+  ts.forEach(b=>{ if(b.armor>0){ b.armor--; b.shell=1; b.glow=1; burst(b.x,b.y,'warn',8,150); } });
   const blocked=ts.filter(b=>b.armor>0);
   ts=ts.filter(b=>!b.armor);
   if(blocked.length && !ts.length){
@@ -1105,7 +1105,8 @@ function doParry(){
     });
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
-    P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1
+    /* v2.35 대포병 장갑탄은 손이 더 가는 만큼 충전을 3 준다 (장갑 깎기 1 + 빼앗기 3) */
+    P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1));
     say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     hitstop=0.045+0.02*(ts.length-1);
@@ -1658,7 +1659,7 @@ function drawBody(x,y,r,color,hurt){
    assets/enemies/<grade>.png 하나만 넣어도 그 적만 이미지로 바뀐다 */
 const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
-loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 복귀
+loadSprite('mob','assets/enemies/mob.svg');   // v3.9 나머지 적들과 스타일 통일 — 벡터로 교체
 // v3.8 플레이어 회전 스프라이트 — 코드(drawPlayerBody)는 준비됐지만, 이미지가 없으면 자동으로 기존 원으로 나온다.
 // 실제로 쓸 이미지가 생기면 아래 줄 주석만 풀면 된다.
 // loadSprite('player','assets/player/player.svg');
@@ -1667,9 +1668,8 @@ loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방�
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
 ['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer']
   .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
-/* v3.10 방향이 있는 적 — 이미지가 오른쪽(0rad)을 정면으로 그려져 있다면 여기서 실제 이동/공격 방향으로 돌려준다 */
+/* v3.10.1 분열체는 항상 플레이어 쪽을 보고 회전한다(계속 다가붙는 적이라 방향이 보이는 게 자연스럽다) */
 function enemyFacing(e){
-  // v3.10.1 추적자는 예비 동작(wind) 중 lungeDir가 아직 안 정해져서 엉뚱한 방향을 보던 문제로 회전 원복
   if(e.grade==='splinter') return Math.atan2(P.y-e.y,P.x-e.x);
   return null;
 }
