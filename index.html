@@ -170,6 +170,14 @@ body.in-game #topPause{display:block}
 #pause .pm:hover{background:rgba(47,227,208,.08)}
 #pause .hint{font-size:10px;color:var(--dim);letter-spacing:.1em;margin-top:6px}
 @media (max-height:560px){ #pause .box{padding:11px} #pause .pm{padding:8px;margin-bottom:6px} }
+/* v2.39 스크롤바 — 기본 흰색 막대 대신 얇은 청록 막대 */
+*{scrollbar-width:thin;scrollbar-color:rgba(47,227,208,.45) transparent}
+*::-webkit-scrollbar{width:6px;height:6px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(47,227,208,.35);border-radius:6px}
+*::-webkit-scrollbar-thumb:hover{background:rgba(47,227,208,.6)}
+*::-webkit-scrollbar-button{display:none;width:0;height:0}
+*::-webkit-scrollbar-corner{background:transparent}
 /* v2.38 업데이트 알림 · 업데이트 내역 */
 #updBar{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:80;
   display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
@@ -179,7 +187,7 @@ body.in-game #topPause{display:block}
   background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
 #updBar #updX{border-color:var(--line);color:var(--dim);padding:6px 9px}
 #logNew{display:inline-block;margin-left:6px;font-size:9.5px;color:var(--warn);letter-spacing:.1em}
-.log{max-height:min(60vh,420px);overflow:auto;padding-right:4px}
+.log{padding-right:2px}
 .log .lv{margin:0 0 10px}
 .log .lv b{color:var(--cyan);font-size:12px;letter-spacing:.08em}
 .log .lv.cur b::after{content:'  현재';color:var(--warn);font-size:10px}
@@ -273,7 +281,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.38</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.39</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2222,6 +2230,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.39',['스크롤바를 얇은 청록색으로 변경','업데이트 내역에 스크롤바가 두 개 겹치던 문제 수정']],
  ['2.38',['새 버전이 올라오면 화면 위에 새로고침 안내가 뜬다','타이틀에 업데이트 내역 화면 추가']],
  ['2.37',['생존 트리에 부활 추가 — 쓰러지면 체력 40%로 다시 일어남','생존 트리에 특수 특전 추가 — 웨이브 보상에 30~45% 확률로 섞임','특수 특전: 재기동(부활 +1) · 추적 회로(유도 +2.0) · 패링 집중']],
  ['2.36',['디버그 패널에 유도·R 충전·해킹·스킬 수치 슬라이더 추가']],
