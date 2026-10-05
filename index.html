@@ -136,7 +136,9 @@ body.in-game #topPause{display:block}
 #reward .own b{color:var(--fg)}
 /* v2.1 — 화면을 세로 3분할. 한 칸 전체가 선택 버튼이다 */
 #reward .row{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr)}
-#reward .bc{position:relative;min-width:0;cursor:pointer;
+#reward .bc.sp{border-color:var(--warn)!important;box-shadow:0 0 0 1px var(--warn) inset}
+.bc.sp .k{color:var(--warn)}
+.bc{position:relative;min-width:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:10px;padding:64px 18px;text-align:center;
   border-right:1px solid var(--line);
@@ -256,7 +258,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.36</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.37</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -395,6 +397,13 @@ const UPG=[
  {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', pos:{x:230,y:760}, lv:0, max:2, cost:[2500,5000],
   d:'출격 직후에 웨이브 보상을 미리 고릅니다. 1단계는 1회, 2단계는 2회입니다.',
   req:[{k:'vital',lv:3}], steps:['없음','출격 시 1회','출격 시 2회']},
+ /* v2.37 생존 — 부활 · 특수 특전 */
+ {k:'revive',n:'부활', s:'쓰러지면 다시 일어남', grp:'life', pos:{x:410,y:690}, lv:0, max:2, cost:[4000,9000],
+  d:'체력이 0이 되면 체력 40%로 다시 일어나고 2초간 무적이 됩니다. 주변 적 탄환은 사라집니다. 1단계 1회, 2단계 2회.',
+  req:[{k:'vital',lv:3}], steps:['없음','부활 1회','부활 2회']},
+ {k:'special',n:'특수 특전', s:'웨이브 보상에 특수 특전이 섞임', grp:'life', pos:{x:410,y:760}, lv:0, max:3, cost:[3000,6000,10000],
+  d:'웨이브 보상을 고를 때 확률적으로 특수 특전 하나가 섞여 나옵니다. 특수 특전은 부활 +1, 유도 대폭 강화, 패링 집중(성공 후 3초간 빗나감 페널티 대폭 감소)입니다.',
+  req:[{k:'supply',lv:1}], steps:['없음','등장 30%','등장 37%','등장 45%']},
  {k:'homing',n:'유도 보정', s:'되돌린 탄환이 적을 따라감', pos:{x:230,y:480}, lv:0, max:5, cost:[400,1600,2800,4400,6500],
   d:'패링으로 되돌린 탄환이 앞쪽의 가장 가까운 적 쪽으로 휘어집니다. 단계가 오를수록 더 강하게 꺾이고, 뒤쪽으로 급하게 돌지는 않습니다.',
   req:[{k:'bullet',lv:2}], steps:['없음','약함','조금 약함','보통','강함','매우 강함']},
@@ -528,6 +537,7 @@ function statsFromUpgrades(){
     owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.5,0.8,1.5][em],
+    revives: lv('revive'), specialChance: [0,0.30,0.37,0.45][lv('special')],
     rNeed: META.skillR==='emp' ? EMP_NEED
          : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
   };
@@ -537,7 +547,7 @@ function statsFromUpgrades(){
 const CFG={ rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -735,6 +745,13 @@ const BOONS=[
  {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
  {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}}
 ];
+/* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
+const SPECIALS=[
+ {k:'s_revive', n:'재기동',      d:'이번 판 부활 횟수 +1',                               max:3, tag:'특수 특전', sp:1, fn:()=>{run.revives++;}},
+ {k:'s_homing', n:'추적 회로',   d:'되돌린 탄환의 유도가 크게 강해진다 (유도 +2.0)',        max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.homing+=2.0;}},
+ {k:'s_focus',  n:'패링 집중',   d:'패링에 성공하면 3초 동안 빗나감 페널티가 75% 줄어든다', max:1, tag:'특수 특전', sp:1, fn:()=>{}}
+];
+const boonDef=k=>BOONS.find(x=>x.k===k)||SPECIALS.find(x=>x.k===k);
 const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
 
 /* ================= 게임 상태 ================= */
@@ -755,7 +772,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,
     spd:240,fire:1.8,seizeMul:1});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -765,6 +782,7 @@ function newRun(){
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
   rerollMap();   // v3.2
   run.startRewards=CFG.startRewards;   // v2.17 선행 보급
+  run.revives=CFG.revives;             // v2.37 부활 횟수
   if(CFG.qSkill==='wall'){ run.phase='build'; run.phaseT=BUILD_T; }   // v1.6 벽 설치 준비 시간
 }
 
@@ -1111,9 +1129,10 @@ function doParry(){
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     hitstop=0.045+0.02*(ts.length-1);
     /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
+    if(boonLv('s_focus')) P.focusT=3;   // v2.37 패링 집중
     P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1));
     P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
-  } else { P.lock=CFG.whiff; P.lockMax=Math.max(0.01,CFG.whiff); P.lockKind='miss';
+  } else { P.lock=CFG.whiff*((boonLv('s_focus')&&P.focusT>0)?0.25:1); P.lockMax=Math.max(0.01,P.lock); P.lockKind='miss';
            if(CFG.whiff>0){ say('빗나감','red'); shake=4; sfx('miss'); } }
 }
 function refreshKeyLabels(){
@@ -1220,11 +1239,16 @@ function openReward(afterBoss){
   const bag=pool.slice();
   while(rwPicks.length<3 && bag.length)
     rwPicks.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);
+  /* v2.37 특수 특전 — 확률로 마지막 칸을 특수 특전으로 바꾼다 */
+  if(CFG.specialChance>0 && Math.random()<CFG.specialChance){
+    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max);
+    if(sp.length) rwPicks[Math.min(2,rwPicks.length)]=sp[Math.floor(Math.random()*sp.length)];
+  }
   run.phase='reward';
   $('#rwHd').innerHTML=(afterBoss?'알레테이아 격파 · <b>사이클 '+run.cycle+'</b>'
                                  :(run.wave===0?'선행 보급':'웨이브 '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요  <b>1 2 3</b>';
   $('#rwRow').innerHTML=rwPicks.map((b,i)=>
-    '<div class="bc" data-i="'+i+'">'+
+    '<div class="bc'+(b.sp?' sp':'')+'" data-i="'+i+'">'+
     '<div class="num">'+(i+1)+'</div>'+
     '<div class="k">'+b.tag+'</div>'+
     '<div class="n">'+b.n+'</div>'+
@@ -1233,7 +1257,7 @@ function openReward(afterBoss){
     '</div>').join('');
   const own=Object.keys(run.boons);
   $('#rwOwn').innerHTML=own.length
-    ? '보유 — '+own.map(k=>{const b=BOONS.find(x=>x.k===k);return '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join(' · ')
+    ? '보유 — '+own.map(k=>{const b=boonDef(k);return '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join(' · ')
     : '';
   $('#reward').classList.add('on');
   sfx('wave');
@@ -1293,6 +1317,7 @@ function update(dt){
   if(as&&(as.dx||as.dy)) P.face=Math.atan2(as.dy,as.dx);
   else if(!touchMode)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
+  if(P.focusT>0)P.focusT-=dt;   // v2.37
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
 
@@ -1582,7 +1607,17 @@ function update(dt){
   parts=parts.filter(q=>{q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx*=0.9;q.vy*=0.9;return (q.t-=dt)>0;});
   msgs=msgs.filter(m=>(m.t-=dt)>0);
   if(shake>0)shake=Math.max(0,shake-dt*30);
-  if(P.hp<=0) endRun();
+  /* v2.37 부활 — 남은 횟수가 있으면 쓰러지지 않고 다시 일어난다 */
+  if(P.hp<=0){
+    if(run.revives>0){
+      run.revives--;
+      P.hp=Math.round(CFG.hpMax*0.4); P.inv=2.0; P.hurt=0;
+      for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i];
+        if(b.owner==='enemy'&&dist(b.x,b.y,P.x,P.y)<240) bullets.splice(i,1); }
+      announce('부활'+(run.revives?'  ·  남은 '+run.revives+'회':''),'cyan');
+      sfx('heal'); burst(P.x,P.y,'cyan',40,300); shake=14; hitstop=0.12;
+    } else endRun();
+  }
 }
 function spawnBullet(q){
   const s0=q.spec.fast?Math.max(CFG.spd,cap()*q.spec.fast):CFG.spd*(q.boss?1.15:1);
@@ -1972,6 +2007,8 @@ function drawCrosshair(){
 }
 function drawHUD(){
   drawHpBarPlayer();                       // v1.9 플레이어 체력 바
+  if(run.revives>0){ ctx.textAlign='left';ctx.font='700 11px ui-monospace,monospace';ctx.fillStyle=C.cyan;
+    ctx.fillText('부활 ×'+run.revives,18,58); }   // v2.37
   ctx.textAlign='right';ctx.font='700 17px ui-monospace,monospace';
   ctx.fillStyle=C.warn;ctx.fillText('점수 '+run.score.toLocaleString(),W-18,30);
   const mx=bullets.reduce((m,b)=>Math.max(m,b.returns),0);
