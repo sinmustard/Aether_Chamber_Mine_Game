@@ -188,6 +188,13 @@ body.in-game #topPause{display:block}
 #updBar #updX{border-color:var(--line);color:var(--dim);padding:6px 9px}
 #logNew{display:inline-block;margin-left:6px;font-size:9.5px;color:var(--warn);letter-spacing:.1em}
 .log{padding-right:2px}
+/* v2.40 업데이트 내역 — 오른쪽 위 ✕로 닫는다. 제목줄은 스크롤해도 위에 붙어 있다 */
+.logHd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  position:sticky;top:-16px;margin:-16px -16px 10px;padding:14px 14px 10px 16px;background:var(--panel);z-index:1}
+.logHd h4{margin:0}
+.xBtn{flex:0 0 auto;width:30px;height:30px;padding:0;font:inherit;font-size:14px;line-height:1;
+  background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:7px;cursor:pointer}
+.xBtn:hover{color:var(--cyan);border-color:var(--cyan)}
 .log .lv{margin:0 0 10px}
 .log .lv b{color:var(--cyan);font-size:12px;letter-spacing:.08em}
 .log .lv.cur b::after{content:'  현재';color:var(--warn);font-size:10px}
@@ -281,7 +288,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.39</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.40</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2230,6 +2237,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.40',['업데이트 내역을 오른쪽 위 ✕ 버튼으로 닫기']],
  ['2.39',['스크롤바를 얇은 청록색으로 변경','업데이트 내역에 스크롤바가 두 개 겹치던 문제 수정']],
  ['2.38',['새 버전이 올라오면 화면 위에 새로고침 안내가 뜬다','타이틀에 업데이트 내역 화면 추가']],
  ['2.37',['생존 트리에 부활 추가 — 쓰러지면 체력 40%로 다시 일어남','생존 트리에 특수 특전 추가 — 웨이브 보상에 30~45% 확률로 섞임','특수 특전: 재기동(부활 +1) · 추적 회로(유도 +2.0) · 패링 집중']],
@@ -2251,10 +2259,10 @@ const BUILD=((document.querySelector('.caption')||{}).textContent||'').match(/v(
 const verNum=v=>String(v).split(/[~.]/).slice(0,2).map(Number);   // '2.31~2.33' → [2,31]
 const verGt=(a,b)=>{ const x=verNum(a), y=verNum(b); return x[0]!==y[0]? x[0]>y[0] : (x[1]||0)>(y[1]||0); };
 function openLog(){
-  $('#modalBox').innerHTML='<h4>업데이트 내역</h4><div class="log">'+
+  $('#modalBox').innerHTML='<div class="logHd"><h4>업데이트 내역</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div><div class="log">'+
     CHANGELOG.map(([v,items])=>'<div class="lv'+(v===BUILD?' cur':'')+'"><b>v'+v+'</b><ul>'+
       items.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>').join('')+
-    '</div><button class="buy" id="optClose">닫기</button>';
+    '</div>';
   $('#modal').classList.add('on');
   try{ localStorage.setItem('aether_seen_ver',BUILD); }catch(e){}
   $('#logNew').textContent='';
