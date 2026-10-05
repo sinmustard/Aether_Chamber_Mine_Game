@@ -170,6 +170,20 @@ body.in-game #topPause{display:block}
 #pause .pm:hover{background:rgba(47,227,208,.08)}
 #pause .hint{font-size:10px;color:var(--dim);letter-spacing:.1em;margin-top:6px}
 @media (max-height:560px){ #pause .box{padding:11px} #pause .pm{padding:8px;margin-bottom:6px} }
+/* v2.38 업데이트 알림 · 업데이트 내역 */
+#updBar{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:80;
+  display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+  background:rgba(8,12,17,.94);border:1px solid var(--cyan);color:var(--fg);font-size:12px;max-width:94vw}
+#updBar.on{display:flex}
+#updBar button{font:inherit;font-size:11.5px;padding:6px 11px;border-radius:6px;cursor:pointer;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+#updBar #updX{border-color:var(--line);color:var(--dim);padding:6px 9px}
+#logNew{display:inline-block;margin-left:6px;font-size:9.5px;color:var(--warn);letter-spacing:.1em}
+.log{max-height:min(60vh,420px);overflow:auto;padding-right:4px}
+.log .lv{margin:0 0 10px}
+.log .lv b{color:var(--cyan);font-size:12px;letter-spacing:.08em}
+.log .lv.cur b::after{content:'  현재';color:var(--warn);font-size:10px}
+.log .lv ul{margin:4px 0 0;padding-left:16px;color:var(--dim);font-size:11px;line-height:1.7}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -258,7 +272,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.37</div>
+<div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.38</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -272,6 +287,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
       <button class="primary" data-go="hub">시작</button>
       <button data-modal="opt">설정</button>
       <button data-modal="tutorial">튜토리얼</button>
+      <button data-modal="log" id="logBtn">업데이트<span id="logNew"></span></button>
     </div>
     <div class="ver" id="tKeys">WASD 이동 · 마우스 조준 · E 패링 · F 스킬 · Q 스킬</div>
     <div class="best">최고 기록 <b id="tBest">0</b></div>
@@ -2204,8 +2220,60 @@ function openTutorial(){
     '<button class="buy" id="tutClose">시작하기</button>';
   $('#modal').classList.add('on');
 }
+/* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
+const CHANGELOG=[
+ ['2.38',['새 버전이 올라오면 화면 위에 새로고침 안내가 뜬다','타이틀에 업데이트 내역 화면 추가']],
+ ['2.37',['생존 트리에 부활 추가 — 쓰러지면 체력 40%로 다시 일어남','생존 트리에 특수 특전 추가 — 웨이브 보상에 30~45% 확률로 섞임','특수 특전: 재기동(부활 +1) · 추적 회로(유도 +2.0) · 패링 집중']],
+ ['2.36',['디버그 패널에 유도·R 충전·해킹·스킬 수치 슬라이더 추가']],
+ ['2.35',['대포병 장갑탄을 빼앗으면 R 충전 +3']],
+ ['2.34',['대포병 추가 — 직선 장갑탄, 패링 2번에 빼앗음','대포병 웨이브는 힐러 2마리, 나머지 종류는 1마리까지']],
+ ['2.31~2.33',['폰에서 스킬 버튼이 항상 보이고 이동 중에도 바로 반응','버튼 이름 한국어로']],
+ ['2.30',['폰에서도 디버그 모드 — HUB 제목을 5번 두드리기']],
+ ['2.29',['R 스킬 EMP를 해킹으로 변경 — 해킹된 적이 내 편 탄환을 쏨']],
+ ['2.27~2.28',['힐러 추가 — 주변 적을 초당 0.2칸 회복','디버그 소환에 힐러·소환사·잡졸·분열체 추가']],
+ ['2.21~2.26',['ESC 일시정지 메뉴(계속하기 · 설정 · HUB)','R 스킬 EMP 추가','남아 있던 영문 문구 한국어화']],
+ ['2.18~2.20',['R 스킬 충전식으로 변경 (패링 +1, 처치 +2)','소환사 추가, 보스가 추적자 소환','탄환·견인·적이 벽을 뚫던 문제 수정','보스 패턴 2종, 웨이브마다 적 체력 증가']],
+ ['2.14~2.17',['유도 보정 강화 추가','HUB를 강화 / 생존·보급 / 능력으로 분리','재화 획득 · 선행 보급 추가','송신기가 다른 적 곁에 나옴']],
+ ['2.11~2.12',['적 스폰을 맵 전체로','벽 너머 재탈취 차단','마우스 가두기와 조준점']],
+ ['2.5~2.9',['폰 조작 — 왼쪽 이동, 오른쪽 조준 후 떼면 패링','전체화면 · 가로 전환','HUB · 결과 · 옵션 화면이 작은 화면에서 잘리던 문제 수정']],
+ ['2.2',['파편으로 죽인 적이 죽지 않던 버그 수정','파편이 방패를 무시하던 문제 수정']]
+];
+const BUILD=((document.querySelector('.caption')||{}).textContent||'').match(/v([0-9.]+)/)?.[1]||'0';
+const verNum=v=>String(v).split(/[~.]/).slice(0,2).map(Number);   // '2.31~2.33' → [2,31]
+const verGt=(a,b)=>{ const x=verNum(a), y=verNum(b); return x[0]!==y[0]? x[0]>y[0] : (x[1]||0)>(y[1]||0); };
+function openLog(){
+  $('#modalBox').innerHTML='<h4>업데이트 내역</h4><div class="log">'+
+    CHANGELOG.map(([v,items])=>'<div class="lv'+(v===BUILD?' cur':'')+'"><b>v'+v+'</b><ul>'+
+      items.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>').join('')+
+    '</div><button class="buy" id="optClose">닫기</button>';
+  $('#modal').classList.add('on');
+  try{ localStorage.setItem('aether_seen_ver',BUILD); }catch(e){}
+  $('#logNew').textContent='';
+}
+/* 마지막으로 본 버전보다 새 버전이면 타이틀의 업데이트 버튼에 NEW 표시 */
+(function(){ try{ const seen=localStorage.getItem('aether_seen_ver');
+  if(!seen||verGt(BUILD,seen)) $('#logNew').textContent='NEW'; }catch(e){} })();
+/* 배포된 파일의 버전을 확인해서, 지금 실행 중인 것보다 새것이면 새로고침 안내를 띄운다 */
+async function checkUpdate(){
+  if(!/^https?:/.test(location.protocol)) return;
+  try{
+    const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});
+    const t=await r.text();
+    const m=t.match(/통합 빌드 v([0-9.]+)/);
+    if(m && verGt(m[1],BUILD)){
+      $('#updMsg').textContent='새 버전 v'+m[1]+'이(가) 나왔어요. 새로고침하면 적용돼요.';
+      $('#updBar').classList.add('on');
+    }
+  }catch(e){}
+}
+$('#updGo').onclick=()=>location.reload();
+$('#updX').onclick=()=>$('#updBar').classList.remove('on');
+setTimeout(checkUpdate,3000);
+setInterval(checkUpdate,90000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
 function openModal(kind){
   if(kind==='tutorial'){ openTutorial(); return; }
+  if(kind==='log'){ openLog(); return; }   // v2.38
   const rows=[['마스터 볼륨','vol',OPT.vol?OPT.vol+'':'끔'],
               ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
