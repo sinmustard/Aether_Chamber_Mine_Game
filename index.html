@@ -311,7 +311,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.49</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.50</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2335,6 +2335,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.50',['랭킹에서 같은 이름은 한 줄만 — 더 높은 점수로 등록하면 덮어쓰고, 낮으면 기존 기록 유지']],
  ['2.49',['랭킹 창 제목·글자가 잘리던 문제 수정','폰 전용 홀드 패링 — 폰으로 접속하면 자동 해금, 손을 떼지 않아도 자동 패링','설정에 패링 방식(누르고 있으면 자동 / 손 떼면 패링)과 설명 추가']],
  ['2.48',['온라인 랭킹 추가 — 결과 화면에서 닉네임으로 등록, 타이틀의 랭킹에서 상위 50명 보기','디버그 기능을 쓴 판은 랭킹 등록 불가']],
  ['2.47',['보스 처치 후 특수 특전 확률을 단계별 38 / 47 / 50%로 조정']],
@@ -2374,15 +2375,18 @@ async function rankFetch(limit){
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }
+/* v2.50 같은 이름은 한 줄만 — 서버 함수가 더 높은 점수일 때만 덮어쓴다 */
 async function rankSend(row){
-  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table,{method:'POST',
-    headers:{apikey:RANK.key,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});
+  const r=await fetch(RANK.url+'/rest/v1/rpc/submit_aether_normal',{method:'POST',
+    headers:{apikey:RANK.key,'Content-Type':'application/json'},
+    body:JSON.stringify({p_name:row.name,p_score:row.score,p_cycle:row.cycle,p_wave:row.wave,p_kills:row.kills,p_build:row.build})});
   if(!r.ok) throw new Error('HTTP '+r.status);
+  const d=await r.json(); return Array.isArray(d)?d[0]:d;   // {rank, best, updated}
 }
 const myName=()=>{ try{ return localStorage.getItem('aether_rank_name')||''; }catch(e){ return ''; } };
 async function openRanking(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
-    '<div class="rkNote">상위 50명 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
+    '<div class="rkNote">상위 50명 · 이름당 최고 기록 하나만 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
   $('#modal').classList.add('on');
   try{
     const rows=await rankFetch(50), me=myName();
@@ -2408,11 +2412,11 @@ $('#rkSend').onclick=async()=>{
   if(name.length<1||name.length>12){ msg.textContent='닉네임은 1~12자로 써 주세요.'; return; }
   btn.disabled=true; msg.textContent='등록 중…';
   try{
-    await rankSend({name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD});
+    const res=await rankSend({name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD});
     run.rankSent=true; try{ localStorage.setItem('aether_rank_name',name); }catch(e){}
-    let place='';
-    try{ const rows=await rankFetch(100); const i=rows.findIndex(r=>r.name===name&&Number(r.score)===Math.round(run.score)); if(i>=0) place=' 현재 '+(i+1)+'위예요.'; }catch(e){}
-    msg.textContent='등록했어요!'+place;
+    const place=res&&res.rank?' 현재 '+res.rank+'위예요.':'';
+    msg.textContent=(!res||res.updated)? '등록했어요!'+place
+      : '"'+name+'"의 기존 기록 '+Number(res.best).toLocaleString()+'점이 더 높아서 그대로 뒀어요.'+place;
   }catch(e){ btn.disabled=false; msg.textContent='등록하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; }
 };
 $('#rkName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') $('#rkSend').click(); });
