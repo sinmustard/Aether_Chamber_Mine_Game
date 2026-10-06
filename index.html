@@ -288,7 +288,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.46</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.47</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -433,8 +433,8 @@ const UPG=[
   d:'체력이 0이 되면 체력 40%로 다시 일어나고 2초간 무적이 됩니다. 주변 적 탄환은 사라집니다. 1단계 1회, 2단계 2회.',
   req:[{k:'vital',lv:3}], steps:['없음','부활 1회','부활 2회']},
  {k:'special',n:'특수 특전', s:'웨이브 보상에 특수 특전이 섞임', grp:'life', pos:{x:410,y:760}, lv:0, max:3, cost:[3000,6000,10000],
-  d:'웨이브 보상을 고를 때 확률적으로 특수 특전 하나가 섞여 나옵니다. 보스를 잡은 직후 보상에서는 확률이 50%까지 오릅니다. 특수 특전은 부활 +1, 유도 대폭 강화, 패링 집중(성공 후 3초간 빗나감 페널티 대폭 감소), 점수 배율 ×1.35, 패링 사거리 +20%, 패링 시야각 +25°입니다.',
-  steps:['없음','등장 25% · 보스 후 50%','등장 30% · 보스 후 50%','등장 35% · 보스 후 50%']},   // v2.41 선행 조건 없음
+  d:'웨이브 보상을 고를 때 확률적으로 특수 특전 하나가 섞여 나옵니다. 보스를 잡은 직후 보상에서는 확률이 38 / 47 / 50%로 오릅니다. 특수 특전은 부활 +1, 유도 대폭 강화, 패링 집중(성공 후 3초간 빗나감 페널티 대폭 감소), 점수 배율 ×1.35, 패링 사거리 +20%, 패링 시야각 +25°입니다.',
+  steps:['없음','등장 25% · 보스 후 38%','등장 30% · 보스 후 47%','등장 35% · 보스 후 50%']},   // v2.41 선행 조건 없음
  {k:'homing',n:'유도 보정', s:'되돌린 탄환이 적을 따라감', pos:{x:230,y:480}, lv:0, max:5, cost:[400,1600,2800,4400,6500],
   d:'패링으로 되돌린 탄환이 앞쪽의 가장 가까운 적 쪽으로 휘어집니다. 단계가 오를수록 더 강하게 꺾이고, 뒤쪽으로 급하게 돌지는 않습니다.',
   req:[{k:'bullet',lv:2}], steps:['없음','약함','조금 약함','보통','강함','매우 강함']},
@@ -584,6 +584,7 @@ function statsFromUpgrades(){
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.5,0.8,1.5][em],
     revives: lv('revive'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
+    specialBoss: [0,0.38,0.47,0.50][lv('special')],   // v2.47 보스 처치 후 확률
     rNeed: META.skillR==='emp' ? EMP_NEED
          : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
   };
@@ -593,7 +594,7 @@ function statsFromUpgrades(){
 const CFG={ homeTime:1.4, rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0, specialBoss:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -823,7 +824,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,specialBoss:st.specialBoss,
     spd:240,fire:1.8,seizeMul:1,homeTime:1.4});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -1307,7 +1308,7 @@ function openReward(afterBoss){
     rwPicks.push(bag.splice(Math.floor(Math.random()*bag.length),1)[0]);
   /* v2.37 특수 특전 — 확률로 마지막 칸을 특수 특전으로 바꾼다 */
   /* v2.41 보스를 잡은 직후 보상은 특수 특전 확률 +30%p (최대 90%) */
-  const spChance=afterBoss? Math.min(0.5,CFG.specialChance+0.3) : CFG.specialChance;   // v2.43 보스 후 최대 50%
+  const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(CFG.specialChance>0 && Math.random()<spChance){
     const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max);
     if(sp.length) rwPicks[Math.min(2,rwPicks.length)]=sp[Math.floor(Math.random()*sp.length)];
@@ -2291,6 +2292,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.47',['보스 처치 후 특수 특전 확률을 단계별 38 / 47 / 50%로 조정']],
  ['2.46',['유도가 강할 때 탄환이 적 주위를 계속 돌던 버그 수정 — 유도는 1.4초만, 가까울수록 더 세게','추적 회로가 유도 시간도 3초로 늘림','탭을 두 개 열었을 때 번 재화가 사라지던 문제 수정']],
  ['2.45',['특수 특전 추가 — 장거리 감응(패링 사거리 +20%) · 광역 감응(패링 시야각 +25°), 각각 한 번만']],
  ['2.44',['일반 웨이브 보상의 특수 특전 확률을 25 / 30 / 35%로 낮춤 (보스 후는 50% 유지)']],
