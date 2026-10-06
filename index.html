@@ -128,11 +128,12 @@ body.in-game #topPause{display:block}
 #rankBox button:disabled{opacity:.45;cursor:default}
 #rkMsg{flex:1 0 100%;font-size:11px;color:var(--dim);min-height:14px}
 .rkList{list-style:none;margin:0;padding:0;font-size:12px}
-.rkList li{display:flex;gap:8px;align-items:baseline;padding:6px 2px;border-bottom:1px solid var(--line)}
+.rkList li{display:flex;gap:8px;align-items:baseline;padding:7px 6px;border-bottom:1px solid var(--line)}
 .rkList li .no{width:26px;color:var(--dim);text-align:right}
 .rkList li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rkList li .sc{color:var(--warn);font-weight:700}
-.rkList li .cw{width:52px;text-align:right;color:var(--dim);font-size:10.5px}
+.rkList li .cw{flex:0 0 auto;white-space:nowrap;text-align:right;color:var(--dim);font-size:10.5px}
+.rkList li .sc{flex:0 0 auto;white-space:nowrap}
 .rkList li.top .no{color:var(--warn)}
 .rkList li.me{background:rgba(47,227,208,.08)}
 .rkList li.me .nm{color:var(--cyan)}
@@ -209,7 +210,8 @@ body.in-game #topPause{display:block}
 .log{padding-right:2px}
 /* v2.40 업데이트 내역 — 오른쪽 위 ✕로 닫는다. 제목줄은 스크롤해도 위에 붙어 있다 */
 .logHd{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  position:sticky;top:-16px;margin:-16px -16px 10px;padding:14px 14px 10px 16px;background:var(--panel);z-index:1}
+  position:sticky;top:0;margin:0 0 10px;padding:2px 0 8px;background:var(--panel);z-index:1;
+  box-shadow:0 -16px 0 var(--panel)}   /* v2.49 창 여백이 줄어드는 작은 화면에서 제목이 잘리던 문제 */
 .logHd h4{margin:0}
 .xBtn{flex:0 0 auto;width:30px;height:30px;padding:0;font:inherit;font-size:14px;line-height:1;
   background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:7px;cursor:pointer}
@@ -218,6 +220,8 @@ body.in-game #topPause{display:block}
 .log .lv b{color:var(--cyan);font-size:12px;letter-spacing:.08em}
 .log .lv.cur b::after{content:'  현재';color:var(--warn);font-size:10px}
 .log .lv ul{margin:4px 0 0;padding-left:16px;color:var(--dim);font-size:11px;line-height:1.7}
+.opt-desc{font-size:10.5px;line-height:1.6;color:var(--dim);padding:5px 0 8px;border-bottom:1px solid var(--line)}
+.opt-desc b{color:var(--fg);font-weight:600}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -307,7 +311,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.48</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.49</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -453,6 +457,10 @@ const UPG=[
  {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', pos:{x:230,y:760}, lv:0, max:2, cost:[2500,5000],
   d:'출격 직후에 웨이브 보상을 미리 고릅니다. 1단계는 1회, 2단계는 2회입니다.',
   req:[{k:'vital',lv:3}], steps:['없음','출격 시 1회','출격 시 2회']},
+ /* v2.49 폰 전용 — 터치 기기에서는 자동으로 해금된다. 설정에서 방식을 바꿀 수 있다 */
+ {k:'mparry',n:'홀드 패링', s:'폰 전용 · 손을 떼지 않아도 패링', grp:'life', phoneOnly:1, lv:0, max:1, cost:[0],
+  d:'폰(터치)에서만 쓰는 조작이에요. 오른쪽 손가락으로 조준하고 있는 동안, 패링할 수 있는 탄환이 들어오면 손을 떼지 않아도 자동으로 패링해요. 폰으로 접속하면 자동으로 해금돼요. 설정 → 패링 방식에서 "손 떼면 패링"(예전 방식)으로 바꿀 수 있어요.',
+  steps:['잠김','해금됨 · 설정에서 켜고 끔']},
  /* v2.37 생존 — 부활 · 특수 특전 */
  {k:'revive',n:'부활', s:'쓰러지면 다시 일어남', grp:'life', pos:{x:410,y:690}, lv:0, max:2, cost:[4000,9000],
   d:'체력이 0이 되면 체력 40%로 다시 일어나고 2초간 무적이 됩니다. 주변 적 탄환은 사라집니다. 1단계 1회, 2단계 2회.',
@@ -495,7 +503,7 @@ const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -535,6 +543,9 @@ function load(){
 }
 function wipe(){ META.cur=0;META.best=0;META.bestCycle=1;META.skill='';META.skillQ='';META.skillR=''; UPG.forEach(u=>u.lv=0); save(); }
 load();
+/* v2.49 터치 기기면 홀드 패링을 무료로 해금 */
+const isTouchDev=()=>(navigator.maxTouchPoints||0)>0||!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+if(isTouchDev()){ const u=UPG.find(x=>x.k==='mparry'); if(u&&u.lv<1){ u.lv=1; save(); } }
 
 /* ================= 사운드 (WebAudio 합성, 외부 파일 없음) ================= */
 let AC=null;
@@ -1098,13 +1109,16 @@ gcv.addEventListener('touchmove',e=>{
     }
   }
 },{passive:false});
+/* v2.49 홀드 패링 — 터치로 조작 중 + 해금 + 설정이 켜져 있을 때 */
+const holdParryOn=()=>touchMode&&lv('mparry')>0&&OPT.holdParry;
 function endTouch(e){
   for(const t of e.changedTouches)
     for(const k of ['move','aim'])
       if(stick[k]&&stick[k].id===t.identifier){
         stick[k]=null;
-        /* v2.5 오른쪽에서 손을 떼는 순간 패링. 조준 → 떼기 한 동작으로 이어진다 */
-        if(k==='aim'&&screen==='game') doParry();
+        /* v2.5 오른쪽에서 손을 떼는 순간 패링. 조준 → 떼기 한 동작으로 이어진다
+           v2.49 홀드 패링을 쓰면 떼는 순간에는 패링하지 않는다 (누르고 있는 동안 자동) */
+        if(k==='aim'&&screen==='game'&&!holdParryOn()) doParry();
       }
 }
 gcv.addEventListener('touchend',endTouch,{passive:false});
@@ -1413,6 +1427,8 @@ function update(dt){
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.focusT>0)P.focusT-=dt;   // v2.37
   if(debug||CFG.god) run.cheat=1;   // v2.48 디버그를 쓴 판은 랭킹 등록 불가
+  /* v2.49 홀드 패링 — 오른쪽 손가락이 닿아 있는 동안 패링할 탄환이 들어오면 자동 패링 */
+  if(holdParryOn()&&stick.aim&&P.lock<=0&&!paused&&parryReady()) doParry(true);
   /* v2.42 미리 누른 패링 — 기다리는 동안 탄환이 들어오면 패링, 끝까지 없으면 그때 빗나감 */
   if(P.pbuf>0){
     if(parryReady()) doParry(true);
@@ -2319,6 +2335,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.49',['랭킹 창 제목·글자가 잘리던 문제 수정','폰 전용 홀드 패링 — 폰으로 접속하면 자동 해금, 손을 떼지 않아도 자동 패링','설정에 패링 방식(누르고 있으면 자동 / 손 떼면 패링)과 설명 추가']],
  ['2.48',['온라인 랭킹 추가 — 결과 화면에서 닉네임으로 등록, 타이틀의 랭킹에서 상위 50명 보기','디버그 기능을 쓴 판은 랭킹 등록 불가']],
  ['2.47',['보스 처치 후 특수 특전 확률을 단계별 38 / 47 / 50%로 조정']],
  ['2.46',['유도가 강할 때 탄환이 적 주위를 계속 돌던 버그 수정 — 유도는 1.4초만, 가까울수록 더 세게','추적 회로가 유도 시간도 3초로 늘림','탭을 두 개 열었을 때 번 재화가 사라지던 문제 수정']],
@@ -2437,9 +2454,12 @@ function openModal(kind){
               ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
-              ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통']];   // v2.42
+              ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통']]
+              .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링']]:[]);   // v2.42 · v2.49
   $('#modalBox').innerHTML='<h4>설정</h4>'+
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
+    (isTouchDev()?'<div class="opt-desc">패링 방식 — <b>누르고 있으면 자동</b>: 오른쪽 손가락으로 조준하고 있으면 탄환이 들어올 때 알아서 패링해요. '+
+      '<b>손 떼면 패링</b>: 조준한 뒤 손을 떼는 순간 패링해요(예전 방식). 누를 때마다 바뀌어요.</div>':'')+
     /* v3.3 전체화면 — 폰이 아니어도 언제든 켜고 끌 수 있게 별도 행으로 둔다 (지속 저장값이 아니라 그때그때 상태를 보여줌) */
     '<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
     [['패링 키','keyParry',' / 좌클릭'],['F 스킬 키','keySkill',''],['Q 스킬 키','keyWall',''],['R 스킬 키','keyR','']].map(([a,k,suf])=>
@@ -2501,12 +2521,12 @@ function renderDetail(){
     '<div class="eff">'+(u.d||u.s)+'<br><br>현재 <b>'+u.steps[u.lv]+'</b>'+
     (maxed?'':'<br><span class="arrow">↓ 다음</span><br><b>'+u.steps[u.lv+1]+'</b>')+
     (rMet?'':'<br><br><span style="color:var(--red)">🔒 선행 조건: '+reqLabel(u)+'</span>')+'</div>'+
-    '<button class="buy" id="buy"'+(maxed||!rMet||cost>META.cur?' disabled':'')+'>'+
-    (maxed?'MAX':!rMet?'선행 조건 필요':((u.skill&&u.lv===0)?'해금':'강화')+'  ◆ '+cost.toLocaleString())+'</button>';
+    '<button class="buy" id="buy"'+(maxed||!rMet||cost>META.cur||(u.phoneOnly&&!isTouchDev())?' disabled':'')+'>'+
+    (maxed?'MAX':(u.phoneOnly&&!isTouchDev())?'폰 전용':!rMet?'선행 조건 필요':((u.skill&&u.lv===0)?'해금':'강화')+'  ◆ '+cost.toLocaleString())+'</button>';
   const b=$('#buy');
   if(b)b.onclick=()=>{
     syncMeta();   // v2.46
-    if(u.lv>=u.max||!reqMet(u)||u.cost[u.lv]>META.cur)return;
+    if(u.lv>=u.max||!reqMet(u)||u.cost[u.lv]>META.cur||(u.phoneOnly&&!isTouchDev()))return;
     META.cur-=u.cost[u.lv];u.lv++;
     if(u.skill===1&&u.lv===1&&!META.skill) META.skill=u.k;      // 처음 해금한 스킬은 자동 장착
     if(u.skill==='q'&&u.lv===1&&!META.skillQ) META.skillQ=u.k;
