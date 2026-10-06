@@ -118,6 +118,25 @@ body.in-game #topPause{display:block}
   font-size:11px;color:var(--dim)}
 #result .stats b{display:block;color:var(--fg);font-size:14px;margin-top:2px}
 #result .gain{font-size:clamp(13px,1.8vw,16px);color:var(--warn);letter-spacing:.1em;margin-bottom:clamp(8px,2vw,18px)}
+/* v2.48 온라인 랭킹 */
+#rankBox{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:7px;margin:0 0 clamp(8px,2vw,14px);max-width:360px}
+#rankBox input{flex:1 1 150px;min-width:0;padding:8px 10px;font:inherit;font-size:12px;color:var(--fg);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
+#rankBox input:focus{outline:none;border-color:var(--cyan)}
+#rankBox button{padding:8px 13px;font:inherit;font-size:11.5px;letter-spacing:.1em;cursor:pointer;
+  background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:7px}
+#rankBox button:disabled{opacity:.45;cursor:default}
+#rkMsg{flex:1 0 100%;font-size:11px;color:var(--dim);min-height:14px}
+.rkList{list-style:none;margin:0;padding:0;font-size:12px}
+.rkList li{display:flex;gap:8px;align-items:baseline;padding:6px 2px;border-bottom:1px solid var(--line)}
+.rkList li .no{width:26px;color:var(--dim);text-align:right}
+.rkList li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rkList li .sc{color:var(--warn);font-weight:700}
+.rkList li .cw{width:52px;text-align:right;color:var(--dim);font-size:10.5px}
+.rkList li.top .no{color:var(--warn)}
+.rkList li.me{background:rgba(47,227,208,.08)}
+.rkList li.me .nm{color:var(--cyan)}
+.rkNote{font-size:10.5px;color:var(--dim);margin:6px 0 10px}
 #result .btns{display:flex;gap:9px}
 #result .btns button{padding:clamp(8px,1.6vw,11px) clamp(16px,3vw,26px);font:inherit;font-size:11.5px;letter-spacing:.18em;
   background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;cursor:pointer}
@@ -288,7 +307,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.47</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.48</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -302,6 +321,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
       <button class="primary" data-go="hub">시작</button>
       <button data-modal="opt">설정</button>
       <button data-modal="tutorial">튜토리얼</button>
+      <button data-modal="rank" id="rankBtn">랭킹</button>
       <button data-modal="log" id="logBtn">업데이트<span id="logNew"></span></button>
     </div>
     <div class="ver" id="tKeys">WASD 이동 · 마우스 조준 · E 패링 · F 스킬 · Q 스킬</div>
@@ -330,6 +350,11 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="new" id="rNew"></div>
     <div class="stats" id="rStats"></div>
     <div class="gain" id="rGain">◆ +0</div>
+    <div id="rankBox">
+      <input id="rkName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="off">
+      <button id="rkSend">랭킹 등록</button>
+      <div id="rkMsg"></div>
+    </div>
     <div class="btns">
       <button class="primary" id="again">다시</button>
       <button data-go="hub">HUB</button>
@@ -1387,6 +1412,7 @@ function update(dt){
   else if(!touchMode)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.focusT>0)P.focusT-=dt;   // v2.37
+  if(debug||CFG.god) run.cheat=1;   // v2.48 디버그를 쓴 판은 랭킹 등록 불가
   /* v2.42 미리 누른 패링 — 기다리는 동안 탄환이 들어오면 패링, 끝까지 없으면 그때 빗나감 */
   if(P.pbuf>0){
     if(parryReady()) doParry(true);
@@ -2251,6 +2277,7 @@ function endRun(){
   $('#rGain').innerHTML='◆ +'+gain.toLocaleString()+
     '<div style="font-size:10.5px;color:var(--dim);letter-spacing:.06em;margin-top:6px">'+
     '점수 '+gScore+' · 처치 '+gKill+' · 웨이브 '+gWave+(gBoss?' · 보스 '+gBoss:'')+'</div>';
+  setupRankBox();   // v2.48
   go('result');
 }
 /* v3.4 일시정지하면 설정 화면이 같이 뜬다. 재개할 땐(ESC·상단 버튼·설정 닫기) 같이 닫힌다 */
@@ -2292,6 +2319,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.48',['온라인 랭킹 추가 — 결과 화면에서 닉네임으로 등록, 타이틀의 랭킹에서 상위 50명 보기','디버그 기능을 쓴 판은 랭킹 등록 불가']],
  ['2.47',['보스 처치 후 특수 특전 확률을 단계별 38 / 47 / 50%로 조정']],
  ['2.46',['유도가 강할 때 탄환이 적 주위를 계속 돌던 버그 수정 — 유도는 1.4초만, 가까울수록 더 세게','추적 회로가 유도 시간도 3초로 늘림','탭을 두 개 열었을 때 번 재화가 사라지던 문제 수정']],
  ['2.45',['특수 특전 추가 — 장거리 감응(패링 사거리 +20%) · 광역 감응(패링 시야각 +25°), 각각 한 번만']],
@@ -2320,6 +2348,57 @@ const CHANGELOG=[
 const BUILD=((document.querySelector('.caption')||{}).textContent||'').match(/v([0-9.]+)/)?.[1]||'0';
 const verNum=v=>String(v).split(/[~.]/).slice(0,2).map(Number);   // '2.31~2.33' → [2,31]
 const verGt=(a,b)=>{ const x=verNum(a), y=verNum(b); return x[0]!==y[0]? x[0]>y[0] : (x[1]||0)>(y[1]||0); };
+/* v2.48 온라인 랭킹 — Supabase 'game lanking' 프로젝트의 aether_normal 테이블 (공개용 키) */
+const RANK={url:'https://oijsrlbzxowlaxzmsxpt.supabase.co', key:'sb_publishable_m57hm2tIzHx_7GpppTBesg_BL4kNd26', table:'aether_normal'};
+const escH=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function rankFetch(limit){
+  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table+'?select=name,score,cycle,wave,created_at&order=score.desc,created_at.asc&limit='+(limit||50),
+    {headers:{apikey:RANK.key}});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function rankSend(row){
+  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table,{method:'POST',
+    headers:{apikey:RANK.key,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+}
+const myName=()=>{ try{ return localStorage.getItem('aether_rank_name')||''; }catch(e){ return ''; } };
+async function openRanking(){
+  $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div class="rkNote">상위 50명 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
+  $('#modal').classList.add('on');
+  try{
+    const rows=await rankFetch(50), me=myName();
+    $('#rkList').innerHTML=rows.length? rows.map((r,i)=>
+      '<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span>'+
+      '<span class="nm">'+escH(r.name)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span>'+
+      '<span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
+      : '<li>아직 등록된 기록이 없어요. 첫 번째 주인공이 되어 보세요.</li>';
+  }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
+}
+/* 결과 화면 — 디버그를 쓴 판은 등록하지 않는다 */
+function setupRankBox(){
+  const box=$('#rankBox'), btn=$('#rkSend'), msg=$('#rkMsg'), inp=$('#rkName');
+  inp.value=myName(); btn.disabled=false; msg.textContent='';
+  if(run.score<=0){ box.style.display='none'; return; }
+  box.style.display='flex';
+  if(run.cheat){ btn.disabled=true; inp.disabled=true; msg.textContent='디버그 기능을 쓴 판은 랭킹에 등록할 수 없어요.'; return; }
+  inp.disabled=false;
+}
+$('#rkSend').onclick=async()=>{
+  const btn=$('#rkSend'), msg=$('#rkMsg'), name=$('#rkName').value.trim();
+  if(!run||run.rankSent||run.cheat) return;
+  if(name.length<1||name.length>12){ msg.textContent='닉네임은 1~12자로 써 주세요.'; return; }
+  btn.disabled=true; msg.textContent='등록 중…';
+  try{
+    await rankSend({name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD});
+    run.rankSent=true; try{ localStorage.setItem('aether_rank_name',name); }catch(e){}
+    let place='';
+    try{ const rows=await rankFetch(100); const i=rows.findIndex(r=>r.name===name&&Number(r.score)===Math.round(run.score)); if(i>=0) place=' 현재 '+(i+1)+'위예요.'; }catch(e){}
+    msg.textContent='등록했어요!'+place;
+  }catch(e){ btn.disabled=false; msg.textContent='등록하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; }
+};
+$('#rkName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') $('#rkSend').click(); });
 function openLog(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>업데이트 내역</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div><div class="log">'+
     CHANGELOG.map(([v,items])=>'<div class="lv'+(v===BUILD?' cur':'')+'"><b>v'+v+'</b><ul>'+
@@ -2353,6 +2432,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpd
 function openModal(kind){
   if(kind==='tutorial'){ openTutorial(); return; }
   if(kind==='log'){ openLog(); return; }   // v2.38
+  if(kind==='rank'){ openRanking(); return; }   // v2.48
   const rows=[['마스터 볼륨','vol',OPT.vol?OPT.vol+'':'끔'],
               ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
