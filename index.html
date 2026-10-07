@@ -347,7 +347,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.56</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.57</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -507,7 +507,7 @@ const UPG=[
   req:[{k:'vital',lv:3}], steps:['없음','출격 시 1회','출격 시 2회']},
  /* v2.49 폰 전용 — 터치 기기에서는 자동으로 해금된다. 설정에서 방식을 바꿀 수 있다 */
  {k:'mparry',n:'홀드 패링', s:'폰 전용 · 손을 떼지 않아도 패링', grp:'life', phoneOnly:1, lv:0, max:1, cost:[0],
-  d:'폰(터치)에서만 쓰는 조작이에요. 오른쪽 손가락으로 조준하고 있는 동안, 패링할 수 있는 탄환이 들어오면 손을 떼지 않아도 자동으로 패링해요. 폰으로 접속하면 자동으로 해금돼요. 설정 → 패링 방식에서 "손 떼면 패링"(예전 방식)으로 바꿀 수 있어요.',
+  d:'폰(터치)에서만 쓰는 조작이에요. 오른쪽 손가락으로 조준하고 있는 동안, 패링할 수 있는 탄환이 들어오면 손을 떼지 않아도 자동으로 패링해요. 단, 너무 오래 누르고 있으면 패링 과부하가 걸려 잠깐 경직되고 자동 패링이 멈춰요. 손을 떼면 식어요. 폰으로 접속하면 자동으로 해금돼요. 설정 → 패링 방식에서 "손 떼면 패링"(예전 방식)으로 바꿀 수 있어요.',
   steps:['잠김','해금됨 · 설정에서 켜고 끔']},
  /* v2.52 보급 — 보상 새로고침 (선행 조건 없음, 싸게) */
  {k:'reroll',n:'새로고침', s:'웨이브 보상을 다시 뽑기', grp:'life', lv:0, max:5, cost:[20,25,30,35,40],
@@ -974,7 +974,7 @@ function newRun(){
     skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,
     spd:240,fire:1.8,seizeMul:1,homeTime:1.4});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
-  P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
+  P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,heat:0,ovl:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
      dashT:0,dashDir:0,rCd:0,rCdMax:1,rChg:0,echoT:0};
   ens=[];bullets=[];queue=[];msgs=[];shake=0;parts=[];hitstop=0;
   run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
@@ -1556,7 +1556,23 @@ function update(dt){
   if(P.focusT>0)P.focusT-=dt;   // v2.37
   if(debug||CFG.god) run.cheat=1;   // v2.48 디버그를 쓴 판은 랭킹 등록 불가
   /* v2.49 홀드 패링 — 오른쪽 손가락이 닿아 있는 동안 패링할 탄환이 들어오면 자동 패링 */
-  if(holdParryOn()&&stick.aim&&P.lock<=0&&!paused&&parryReady()) doParry(true);
+  /* v2.57 패링 과부하 — 홀드 패링(폰)은 손을 계속 대고만 있으면 너무 쉬워서, 오래 누르고 있을수록 과부하가 쌓인다.
+     · 누르고 있는 동안 초당 1, 자동 패링 한 번에 +0.15 / 떼면 초당 1.4씩 식는다
+     · 4가 차면 '패링 과부하' — 1.4초 경직, 다 식을 때까지 자동 패링 정지 (누르고 있으면 천천히 식는다) */
+  if(holdParryOn()&&!paused){
+    const holding=!!stick.aim;
+    if(P.ovl){
+      P.heat=Math.max(0,P.heat-dt*(holding?0.4:1.4));
+      if(P.heat<=0){ P.ovl=0; say('과부하 해제','cyan'); }
+    } else {
+      P.heat=holding? Math.min(HEAT_MAX,P.heat+dt) : Math.max(0,P.heat-dt*1.4);
+      if(P.heat>=HEAT_MAX){
+        P.ovl=1; P.lock=Math.max(P.lock,1.4); P.lockMax=P.lock; P.lockKind='miss';
+        say('패링 과부하','red'); sfx('hit'); shake=Math.max(shake,8);
+      }
+    }
+  } else if(P.heat>0 && !paused){ P.heat=Math.max(0,P.heat-dt*1.4); if(P.heat<=0) P.ovl=0; }
+  if(holdParryOn()&&!P.ovl&&stick.aim&&P.lock<=0&&!paused&&parryReady()){ doParry(true); P.heat=Math.min(HEAT_MAX,P.heat+0.15); }
   /* v2.42 미리 누른 패링 — 기다리는 동안 탄환이 들어오면 패링, 끝까지 없으면 그때 빗나감 */
   if(P.pbuf>0){
     if(parryReady()) doParry(true);
@@ -2236,6 +2252,20 @@ function drawBullet(b){
 function fmtTime(s){const m=Math.floor(s/60),x=Math.floor(s%60);return String(m).padStart(2,'0')+':'+String(x).padStart(2,'0');}
 
 /* v2.3 조이스틱 표시 — 손가락이 닿은 자리에 그린다 */
+/* v2.57 패링 과부하 게이지 — 캐릭터 아래 작은 막대. 쌓이기 시작하면 보이고, 과부하 중엔 빨갛게 깜빡인다 */
+const HEAT_MAX=4;
+function drawHeat(){
+  if(!P||!(P.heat>0.25||P.ovl)) return;
+  const p=proj(P.x,P.y), w=46, h=5, x=p[0]-w/2, y=p[1]+R_PLAYER*SQUASH+14;
+  const k=Math.min(1,P.heat/HEAT_MAX);
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(x-1,y-1,w+2,h+2);
+  ctx.fillStyle=P.ovl? (Math.sin(performance.now()/90)>0?C.red:'#7a2a33') : (k>0.75?C.warn:C.cyan);
+  ctx.fillRect(x,y,w*k,h);
+  if(P.ovl||k>0.75){ ctx.font='700 9px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillStyle=P.ovl?C.red:C.warn; ctx.fillText(P.ovl?'과부하 · 손을 떼세요':'과부하 주의',p[0],y+15); }
+  ctx.restore();
+}
 function drawSticks(){
   [['move',C.cyan],['aim',C.warn]].forEach(([k,col])=>{
     const st=stick[k]; if(!st)return;
@@ -2328,7 +2358,7 @@ function render(){
   parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
     ctx.fillRect(pp[0]-2,pp[1]-2,4,4);});ctx.globalAlpha=1;
   ctx.restore();
-  drawSticks(); drawCrosshair(); drawHUD();
+  drawSticks(); drawHeat(); drawCrosshair(); drawHUD();
 }
 
 /* ================= 화면 전환 ================= */
@@ -2538,6 +2568,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.57',['폰 홀드 패링에 패링 과부하 — 오래 누르고 있으면 경직 + 자동 패링 정지, 손을 떼면 식음','캐릭터 아래 과부하 게이지 표시']],
  ['2.56',['전체화면에서 ESC를 짧게 누르면 설정 창만 닫힘 (전체화면은 ESC 길게 눌러 끄기, PC 크롬·엣지)']],
  ['2.55',['특수 특전을 가진 채로 일시정지하면 오류가 나던 원인 수정 (일시정지 화면 보상 이름 표시)']],
  ['2.54',['일시정지 화면에서 굳어 버리던 문제 대응 — 한 프레임에 오류가 나도 게임이 멈추지 않음','멈춰 있는데 메뉴가 안 보이면 자동으로 다시 표시','오류가 나면 화면 아래에 내용을 띄워 줌']],
@@ -2724,7 +2755,8 @@ function openModal(kind){
   $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+   // v2.51
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
     (isTouchDev()?'<div class="opt-desc">패링 방식 — <b>누르고 있으면 자동</b>: 오른쪽 손가락으로 조준하고 있으면 탄환이 들어올 때 알아서 패링해요. '+
-      '<b>손 떼면 패링</b>: 조준한 뒤 손을 떼는 순간 패링해요(예전 방식). 누를 때마다 바뀌어요.</div>':'')+
+      '<b>손 떼면 패링</b>: 조준한 뒤 손을 떼는 순간 패링해요(예전 방식). 누를 때마다 바뀌어요. '+
+      '자동 방식은 4초 넘게 계속 누르고 있으면 <b>패링 과부하</b>로 잠깐 경직돼요.</div>':'')+
     /* v3.3 전체화면 — 폰이 아니어도 언제든 켜고 끌 수 있게 별도 행으로 둔다 (지속 저장값이 아니라 그때그때 상태를 보여줌) */
     '<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
     (escLockable()?'<div class="opt-desc">전체화면에서 ESC를 <b>짧게</b> 누르면 창만 닫히고, <b>길게</b> 누르면 전체화면이 꺼져요.</div>':'')+   // v2.56
