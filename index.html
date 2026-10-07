@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- v2.59 아이폰 · 안드로이드 홈 화면에 추가하면 주소창 없이 앱처럼 열린다 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="에테르 챔버">
+<meta name="theme-color" content="#0b0f14">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%EC%97%90%ED%85%8C%EB%A5%B4%20%EC%B1%94%EB%B2%84%22%2C%22short_name%22%3A%22%EC%97%90%ED%85%8C%EB%A5%B4%20%EC%B1%94%EB%B2%84%22%2C%22display%22%3A%22fullscreen%22%2C%22orientation%22%3A%22landscape%22%2C%22background_color%22%3A%22%230b0f14%22%2C%22theme_color%22%3A%22%230b0f14%22%2C%22start_url%22%3A%22https%3A%2F%2Fsinmustard.github.io%2FAether_Chamber_Mine_Game%2F%22%7D">
 <title>에테르 챔버</title>
 <style>
 :root{
@@ -24,11 +31,22 @@ body{background:var(--bg);color:var(--fg);
   background:#080c11;border:1px solid var(--line);border-radius:12px;overflow:hidden}
 /* v3.3 전체화면 — 프레임이 화면 전체를 비율 유지한 채 최대한 채우도록. 브라우저 전체화면만으로는
    프레임이 가운데 작게 남고 캡션·여백이 그대로 보여서, 전체화면 상태를 body.fullscreen으로 감지해 별도 스타일을 준다 */
-body.fullscreen{padding:0;gap:0;background:#000}
-body.fullscreen #frame{max-width:none;border-radius:0;border:0;
+body.fullscreen,body.fsfake{padding:0;gap:0;background:#000}
+body.fullscreen #frame,body.fsfake #frame{max-width:none;border-radius:0;border:0;
   width:min(100vw, calc(100vh * 1000 / 560));
   height:min(100vh, calc(100vw * 560 / 1000));}
 body.fullscreen .caption,body.fullscreen #debugSpawn,body.fullscreen details.dev{display:none}
+/* v2.59 아이폰은 전체화면 API가 없어서, 주소창을 뺀 실제 보이는 높이(dvh)에 맞춰 꽉 채우고 바깥 글은 숨긴다 */
+body.fsfake{min-height:100dvh;justify-content:center;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+body.fsfake #frame{width:min(100vw, calc(100dvh * 1000 / 560));height:min(100dvh, calc(100vw * 560 / 1000))}
+body.fsfake .caption,body.fsfake #debugSpawn,body.fsfake details.dev,body.fsfake > .note{display:none}
+#iosTip{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:85;display:none;
+  max-width:92vw;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;background:rgba(8,12,17,.95);
+  border:1px solid var(--cyan);color:var(--fg);font-size:11.5px;line-height:1.55}
+#iosTip.on{display:flex}
+#iosTip button{flex:0 0 auto;font:inherit;font-size:11px;padding:6px 10px;border-radius:6px;cursor:pointer;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
 #gamecv,#bgcv{position:absolute;inset:0;width:100%;height:100%}
 #bgcv{z-index:1}
 #gamecv{z-index:1;display:none}
@@ -357,8 +375,9 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 </head>
 <body>
 
+<div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.58</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.59</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2377,6 +2396,17 @@ function render(){
 /* v2.4 폰에서 전체화면 + 가로 고정.
    안드로이드 크롬은 전체화면 상태에서만 회전 고정이 되고, 아이폰 사파리는 고정을 지원하지 않는다.
    그래서 실패해도 조용히 넘어가고, 세로면 안내를 띄운다 */
+/* v2.59 아이폰·아이패드 — 사파리는 일반 화면에서 전체화면을 막아 두어서 CSS로 꽉 채운다 */
+const isIOS=()=>/iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&(navigator.maxTouchPoints||0)>1)||/iPad/.test(navigator.userAgent);
+const isStandalone=()=>!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||(window.matchMedia&&matchMedia('(display-mode: fullscreen)').matches));
+if(isIOS()){
+  document.body.classList.add('fsfake');
+  queueMicrotask(()=>{ try{
+    const tip=document.getElementById('iosTip');
+    if(tip&&!isStandalone()&&!localStorage.getItem('aether_ios_tip')){ tip.classList.add('on');
+      document.getElementById('iosTipOk').onclick=()=>{ tip.classList.remove('on'); localStorage.setItem('aether_ios_tip','1'); }; }
+  }catch(e){} });
+}
 const isPhone=()=>{ const m=window.matchMedia; if(!m)return false;
   return m('(max-width:900px)').matches||m('(pointer:coarse)').matches; };
 async function goLandscape(){
@@ -2583,6 +2613,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.59',['아이폰: 전체화면 대신 보이는 화면을 꽉 채우도록 (주소창 높이 반영)','아이폰 첫 접속 때 "홈 화면에 추가" 안내 — 홈 화면에서 열면 주소창 없이 실행','홈 화면 앱 설정(아이콘 이름 · 가로 고정 · 전체화면) 추가']],
  ['2.58',['시작할 때 닉네임 + 비밀번호로 로그인 (처음이면 계정 생성, 다른 기기에서 이어하기)','판이 끝날 때 · 출격할 때 자동 저장','설정의 클라우드 저장을 계정(로그아웃)으로 변경','서버에 연결이 안 되면 오프라인으로 하기 가능']],
  ['2.57',['폰 홀드 패링에 패링 과부하 — 오래 누르고 있으면 경직 + 자동 패링 정지, 손을 떼면 식음','캐릭터 아래 과부하 게이지 표시']],
  ['2.56',['전체화면에서 ESC를 짧게 누르면 설정 창만 닫힘 (전체화면은 ESC 길게 눌러 끄기, PC 크롬·엣지)']],
