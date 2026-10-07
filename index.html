@@ -255,6 +255,9 @@ body.in-game #topPause{display:block}
   color:var(--cyan);border:1px solid var(--cyan)}
 .cloud .row2 button.ld{color:var(--warn);border-color:var(--warn)}
 .cloud .msg{min-height:16px;font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6}
+#errBox{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;
+  max-width:92vw;padding:9px 12px;border-radius:8px;background:rgba(40,8,12,.95);border:1px solid var(--red);color:#ffd6d9;
+  font-size:11.5px;line-height:1.5;cursor:pointer}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -344,7 +347,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.53</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.54</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -657,6 +660,7 @@ function bgmApply(){
   BGM.out.gain.setTargetAtTime(target,a.currentTime,0.5);
 }
 addEventListener('pointerdown',()=>bgmStart(),{once:true});
+addEventListener('error',e=>{ if(e&&e.message) reportErr('page',e.error||e.message); });   // v2.54
 addEventListener('keydown',()=>bgmStart(),{once:true});
 function tone(f0,f1,dur,type,gain,delay){
   const a=ac(); if(!a||OPT.vol<=0)return;
@@ -2522,6 +2526,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.54',['일시정지 화면에서 굳어 버리던 문제 대응 — 한 프레임에 오류가 나도 게임이 멈추지 않음','멈춰 있는데 메뉴가 안 보이면 자동으로 다시 표시','오류가 나면 화면 아래에 내용을 띄워 줌']],
  ['2.53',['ESC가 보상 화면 · 전체화면에서 안 먹던 문제 수정 — ESC 한 번에 팝업 → 창 → 일시정지 순서로 한 단계씩','멈춘 동안에는 보상 선택 · 스킬 키 입력 무시']],
  ['2.52',['일시정지 후 ESC로 재개가 안 되던 버그 수정','일시정지 메뉴에 다시 시작 · 이번 판 보상 보기','결과 화면에 받은 보상 목록과 결과 이미지 저장/공유','HUB에 강화 되돌리기(재화 40% 환급)','효과음 · 배경음 볼륨 분리(배경음 새로 추가), 저사양 모드, 화면 흔들림 단계','랭킹에서 50위 밖이어도 내 순위 표시','클라우드 저장 — 이름 + 비밀번호로 폰 ↔ PC 이어하기','보상 카드 · 특수 특전 위치 무작위','보상 새로고침 — 보급 "새로고침"(20~40) · 보상 "새로고침 +1"(최대 3번)']],
  ['2.51',['설정 창도 오른쪽 위 ✕로 닫기','저장 데이터 초기화를 누르면 "정말로 지우시겠습니까?" 확인 팝업']],
@@ -2948,10 +2953,28 @@ function bgFrame(ts){
 }
 
 /* ================= 루프 ================= */
+/* v2.54 게임 루프가 절대 멈추지 않게 — 예전엔 한 프레임에서 오류가 나면 다음 프레임을 예약하지 못해
+   마지막 화면(예: 일시정지 화면)에 그대로 굳어 버렸다. 다음 프레임을 먼저 예약하고, 오류는 화면 아래에 띄운다 */
+function reportErr(where,e){
+  const errSeen=(window.__aeErrSeen=window.__aeErrSeen||{});
+  const msg=(e&&e.message)||String(e); const key=where+':'+msg;
+  try{ console.error('[에테르 챔버 오류]',where,e); }catch(_){}
+  if(errSeen[key]) return; errSeen[key]=1;
+  let box=document.getElementById('errBox');
+  if(!box){ box=document.createElement('div'); box.id='errBox'; document.body.appendChild(box);
+    box.onclick=()=>box.remove(); }
+  box.textContent='오류가 났어요 ('+where+'): '+msg+' — 이 화면을 캡처해서 알려주세요. (누르면 닫혀요)';
+}
 function loop(ts){
-  const dt=Math.min(.033,(ts-t0)/1000||0);t0=ts;
-  if(screen==='game'&&run){update(dt);render();}
   raf=requestAnimationFrame(loop);
+  const dt=Math.min(.033,(ts-t0)/1000||0);t0=ts;
+  if(screen==='game'&&run){
+    try{ update(dt); }catch(e){ reportErr('update',e); }
+    try{ render(); }catch(e){ reportErr('render',e); }
+    /* 멈춰 있는데 메뉴도 창도 안 보이면 일시정지 메뉴를 다시 띄운다 */
+    if(paused&&!$('#pause').classList.contains('on')&&!$('#modal').classList.contains('on')&&!$('#confirm').classList.contains('on'))
+      $('#pause').classList.add('on');
+  }
 }
 refreshColors();syncUI();refreshKeyLabels();armFullscreen();go('title');bresize();
 requestAnimationFrame(bgFrame);t0=performance.now();requestAnimationFrame(loop);
