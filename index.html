@@ -347,7 +347,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.54</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.55</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2299,8 +2299,9 @@ function drawHUD(){
     const own=Object.keys(run.boons||{});
     if(own.length){
       ctx.fillStyle=C.cyan;ctx.font='600 11px ui-monospace,monospace';
-      ctx.fillText(own.map(k=>{const b=BOONS.find(x=>x.k===k);
-        return b.n+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join('  ·  '),W/2,H/2+58);
+      /* v2.55 특수 특전도 이름을 찾도록 boonDef 사용 — 예전엔 일반 보상에서만 찾아서 특수 특전이 있으면 여기서 오류가 났다 */
+      ctx.fillText(own.map(k=>{const b=boonDef(k); if(!b) return '';
+        return b.n+(run.boons[k]>1?' ×'+run.boons[k]:'');}).filter(Boolean).join('  ·  '),W/2,H/2+58);
     }
   }
 }
@@ -2526,6 +2527,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.55',['특수 특전을 가진 채로 일시정지하면 오류가 나던 원인 수정 (일시정지 화면 보상 이름 표시)']],
  ['2.54',['일시정지 화면에서 굳어 버리던 문제 대응 — 한 프레임에 오류가 나도 게임이 멈추지 않음','멈춰 있는데 메뉴가 안 보이면 자동으로 다시 표시','오류가 나면 화면 아래에 내용을 띄워 줌']],
  ['2.53',['ESC가 보상 화면 · 전체화면에서 안 먹던 문제 수정 — ESC 한 번에 팝업 → 창 → 일시정지 순서로 한 단계씩','멈춘 동안에는 보상 선택 · 스킬 키 입력 무시']],
  ['2.52',['일시정지 후 ESC로 재개가 안 되던 버그 수정','일시정지 메뉴에 다시 시작 · 이번 판 보상 보기','결과 화면에 받은 보상 목록과 결과 이미지 저장/공유','HUB에 강화 되돌리기(재화 40% 환급)','효과음 · 배경음 볼륨 분리(배경음 새로 추가), 저사양 모드, 화면 흔들림 단계','랭킹에서 50위 밖이어도 내 순위 표시','클라우드 저장 — 이름 + 비밀번호로 폰 ↔ PC 이어하기','보상 카드 · 특수 특전 위치 무작위','보상 새로고침 — 보급 "새로고침"(20~40) · 보상 "새로고침 +1"(최대 3번)']],
