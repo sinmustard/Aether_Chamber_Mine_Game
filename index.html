@@ -287,6 +287,21 @@ body.in-game #topPause{display:block}
 .login .off{width:100%;margin-top:8px;padding:9px;font:inherit;font-size:11.5px;cursor:pointer;border-radius:7px;
   background:transparent;color:var(--dim);border:1px solid var(--line);display:none}
 .login .msg{min-height:16px;font-size:11px;color:var(--dim);margin-top:9px;line-height:1.6}
+/* v2.60 체험판 튜토리얼 안내 바 */
+#tutBar{position:absolute;top:46px;left:50%;transform:translateX(-50%);z-index:6;display:none;
+  width:min(440px,calc(100% - 24px));padding:10px 14px 11px;border-radius:10px;text-align:center;
+  background:rgba(8,12,17,.86);border:1px solid var(--cyan);box-shadow:0 6px 24px rgba(0,0,0,.4)}
+#tutBar.on{display:block}
+#tutBar .tb-step{font-size:10px;letter-spacing:.2em;color:var(--dim)}
+#tutBar .tb-t{font-size:15px;font-weight:700;color:var(--cyan);margin:3px 0 4px}
+#tutBar .tb-d{font-size:11.5px;line-height:1.6;color:var(--fg)}
+#tutBar .tb-d b{color:var(--warn)}
+#tutBar .tb-p{font-size:12px;color:var(--warn);margin-top:5px;min-height:15px;font-weight:700}
+#tutBar .tb-btns{display:flex;gap:7px;justify-content:center;margin-top:7px}
+#tutBar .tb-btns button{padding:6px 12px;font:inherit;font-size:11px;cursor:pointer;border-radius:6px;background:transparent;
+  color:var(--dim);border:1px solid var(--line)}
+#tutBar .tb-btns button.go{color:var(--cyan);border-color:var(--cyan)}
+@media (max-height:420px){ #tutBar{top:40px;padding:7px 10px} #tutBar .tb-t{font-size:13px} #tutBar .tb-d{font-size:10.5px} }
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -377,7 +392,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.59</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.60</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -434,6 +449,13 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     </div>
   </section>
 
+  <div id="tutBar">
+    <div class="tb-step" id="tbStep"></div>
+    <div class="tb-t" id="tbT"></div>
+    <div class="tb-d" id="tbD"></div>
+    <div class="tb-p" id="tbP"></div>
+    <div class="tb-btns" id="tbBtns"></div>
+  </div>
   <div id="reward">
     <div class="hd" id="rwHd"></div>
     <div class="row" id="rwRow"></div>
@@ -1380,6 +1402,7 @@ function doParry(force){
     run.bestRet=Math.max(run.bestRet,maxRet);
     /* v2.35 대포병 장갑탄은 손이 더 가는 만큼 충전을 3 준다 (장갑 깎기 1 + 빼앗기 3) */
     P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1));
+    if(run.tut) run.tut.parried=(run.tut.parried||0)+1;   // v2.60
     say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     hitstop=0.045+0.02*(ts.length-1);
@@ -1612,6 +1635,7 @@ function update(dt){
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
 
+  if(run.tut) tutTick(dt);   // v2.60 체험판
   // 웨이브
   if(run.phase==='build'){
     run.phaseT-=dt;
@@ -1633,7 +1657,7 @@ function update(dt){
          매 웨이브마다 주면 한 사이클에 10개가 쌓여 성장이 너무 빠르다 */
       if(wasBoss || run.wave%2===0) openReward(wasBoss);
     }
-  } else if(!ens.length && !queue.length){
+  } else if(run.phase!=='tut' && !ens.length && !queue.length){   // v2.60 체험판은 웨이브 진행 안 함
     run.phase='clear'; run.phaseT=3; say('웨이브 클리어','cyan');
   }
 
@@ -1737,7 +1761,7 @@ function update(dt){
         o.healFx=0.25;
       });
     }
-    if(run.phase!=='fight')return;
+    if(run.phase!=='fight'&&!(run.tut&&run.tut.fire))return;   // v2.60 체험판에선 단계에 따라 쏜다
     /* v2.8 송신기·추적자는 평소엔 안 쏘지만, 남은 적이 전부 안 쏘는 부류뿐이면 패링할 탄환 자체가
        없어 못 잡게 되므로(예: 송신기 2기만 남는 경우) 그럴 땐 다른 적처럼 쏘게 한다.
        "혼자 남았는지"가 아니라 "나 말고 쏠 수 있는 적이 남아있는지"로 판정해야 안전하다 */
@@ -1909,6 +1933,7 @@ function update(dt){
   msgs=msgs.filter(m=>(m.t-=dt)>0);
   if(shake>0)shake=Math.max(0,shake-dt*30);
   /* v2.37 부활 — 남은 횟수가 있으면 쓰러지지 않고 다시 일어난다 */
+  if(P.hp<=0&&run.tut){ P.hp=CFG.hpMax; P.inv=1.5; say('체험판에선 쓰러지지 않아요','dim'); }   // v2.60
   if(P.hp<=0){
     if(run.revives>0){
       run.revives--;
@@ -2475,12 +2500,87 @@ function go(id){
   $('#bgcv').style.display = id==='game'?'none':'block';
   $('#modal').classList.remove('on'); $('#pause').classList.remove('on'); paused=false;
   if(id!=='game') unlockMouse();   // v2.12
+  if(id!=='game') $('#tutBar').classList.remove('on');   // v2.60
   if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs();
     if(!OPT.tutSeen) openModal('tutorial'); }   // v3.4 처음 HUB에 들어오면 튜토리얼
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
   if(isPhone()) goLandscape();   // v2.5 어느 화면이든 전체화면 유지
   bgmApply();   // v2.52
 }
+/* v2.60 체험판 튜토리얼 — 실제 전투 화면에서 한 단계씩 직접 해 본다. 죽지 않고, 재화·랭킹·저장에는 영향 없음 */
+const TUT_STEPS=6;
+function tutText(step){
+  const touch=touchMode||isTouchDev(), hold=touch&&lv('mparry')>0&&OPT.holdParry;
+  const PK=keyName(OPT.keyParry), FK=keyName(OPT.keySkill), QK=keyName(OPT.keyWall), RK=keyName(OPT.keyR);
+  return [
+    ['이동', touch?'화면 <b>왼쪽</b>을 드래그해서 움직여 보세요.':'<b>W A S D</b>로 움직여 보세요.'],
+    ['패링', (hold?'화면 <b>오른쪽</b>을 드래그해 적 쪽을 조준하고 있으면, 탄환이 들어올 때 <b>자동으로 패링</b>돼요.'
+              :touch?'화면 <b>오른쪽</b>을 드래그해 조준하고, 탄환이 빛날 때 <b>손을 떼면</b> 패링돼요.'
+              :'마우스로 조준하고, 탄환이 범위 안에서 빛날 때 <b>'+PK+'</b> 또는 <b>좌클릭</b>으로 패링해요.')+' 빗나가면 잠깐 굳어요.'],
+    ['반격', '패링한 탄환은 내 것이 돼서 적에게 날아가요. 계속 받아쳐서 <b>적을 쓰러뜨려</b> 보세요.'],
+    ['F 스킬 · 회복', '체력이 줄어 있어요. '+(touch?'아래 <b>F 스킬</b> 버튼':'<b>'+FK+'</b> 키')+'로 회복해 보세요. 실제 게임에선 HUB에서 해금하고 장착해요.'],
+    ['Q 스킬 · 벽', (touch?'아래 <b>Q 스킬</b> 버튼':'<b>'+QK+'</b> 키')+'으로 조준한 방향에 벽을 세워 보세요. 벽은 적 탄환을 막아 줘요.'],
+    ['R 스킬 · 덮어쓰기', 'R 게이지가 가득 찼어요. '+(touch?'아래 <b>R 스킬</b> 버튼':'<b>'+RK+'</b> 키')+'으로 화면의 적 탄환을 한꺼번에 빼앗아 보세요. 평소엔 패링 +1, 처치 +2로 채워요.'],
+    ['체험 완료!', '판마다 2웨이브씩 보상을 고르고, 10웨이브마다 보스가 나와요. HUB에서 재화로 강화하고 스킬을 해금하세요.']
+  ][step];
+}
+function tutShow(){
+  const T=run&&run.tut; if(!T) return;
+  const [t,d]=tutText(T.step);
+  $('#tbStep').textContent=T.step<TUT_STEPS?'튜토리얼 '+(T.step+1)+' / '+TUT_STEPS:'튜토리얼';
+  $('#tbT').textContent=t; $('#tbD').innerHTML=d; $('#tbP').textContent='';
+  $('#tbBtns').innerHTML=T.step<TUT_STEPS
+    ? '<button id="tbSkip">튜토리얼 끝내기</button>'
+    : '<button id="tbMore">계속 연습</button><button id="tbTitle">타이틀로</button><button class="go" id="tbGo">출격하기</button>';
+  $('#tutBar').classList.add('on');
+}
+function tutSpawnDummy(x,y,hits){
+  const e=spawnEnemyAt('mob',x,y); const hp=HIT_UNIT*(hits||999); e.hp=e.hpMax=hp; e.fireT=1.2; e.tut=1; return e;
+}
+function tutEnter(step){
+  const T=run.tut; T.step=step; T.t=0;
+  if(step===0){ T.fire=false; T.dist=0; T.px=P.x; T.py=P.y; }
+  else if(step===1){ T.parried=0; T.fire=true; CFG.fire=2.0; CFG.spd=170;
+    ens.length=0; tutSpawnDummy(760,380); }
+  else if(step===2){ T.fire=true; if(!ens.length) tutSpawnDummy(760,380,2);
+    ens.forEach(e=>{ e.hp=e.hpMax=HIT_UNIT*2; }); }
+  else if(step===3){ T.fire=false; bullets.length=0; queue.length=0;
+    CFG.skill='heal'; CFG.healAmt=40; CFG.healCd=6; P.skillCd=0; P.hp=Math.round(CFG.hpMax*0.5); }
+  else if(step===4){ CFG.qSkill='wall'; CFG.wallMax=2; P.wallCd=0; run.walls=[]; }
+  else if(step===5){ CFG.skillR='overwrite'; CFG.rNeed=10; P.rChg=10; T.fire=true; CFG.fire=1.1;
+    ens.length=0; tutSpawnDummy(760,250); tutSpawnDummy(780,520); }
+  else { T.fire=false; ens.length=0; bullets.length=0; queue.length=0; OPT.tutSeen=1; save(); sfx('wave'); announce('튜토리얼 완료','cyan'); }
+  tutShow(); if(step>0&&step<TUT_STEPS){ sfx('heal'); burst(P.x,P.y,'cyan',16,180); }
+}
+function tutTick(dt){
+  const T=run.tut; T.t+=dt;
+  if(T.step===0){ T.dist+=Math.hypot(P.x-T.px,P.y-T.py); T.px=P.x; T.py=P.y;
+    $('#tbP').textContent=Math.min(100,Math.round(T.dist/300*100))+'%'; if(T.dist>=300) tutEnter(1); }
+  else if(T.step===1){ $('#tbP').textContent='패링 '+Math.min(3,T.parried||0)+' / 3'; if((T.parried||0)>=3) tutEnter(2); }
+  else if(T.step===2){ if(!ens.length) tutEnter(3); }
+  else if(T.step===3){ if(P.skillCd>0) tutEnter(4); }
+  else if(T.step===4){ if(run.walls.length>0) tutEnter(5); }
+  else if(T.step===6){ if(T.free&&!ens.length){ tutSpawnDummy(760,300,3); tutSpawnDummy(800,480,3); } }
+  else if(T.step===5){ if(P.rChg<CFG.rNeed-0.5) tutEnter(6);
+    else if(!ens.length){ tutSpawnDummy(760,250); tutSpawnDummy(780,520); } }
+}
+function startTutorial(){
+  newRun();
+  Object.assign(run,{tut:{step:0,t:0},phase:'tut',startRewards:0,revives:0,walls:[]});
+  ens.length=0; bullets.length=0; queue.length=0;
+  CFG.skill=''; CFG.qSkill=''; CFG.skillR='';
+  go('game'); tutEnter(0);
+}
+function endTutorial(to){ $('#tutBar').classList.remove('on'); OPT.tutSeen=1; save();
+  if(to==='run') startRun(); else go(to||'title'); }
+document.addEventListener('click',e=>{
+  const id=e.target&&e.target.id;
+  if(id==='tbSkip') askConfirm('튜토리얼을 끝낼까요?','언제든 타이틀의 튜토리얼에서 다시 할 수 있어요.','끝내기',()=>endTutorial('title'));
+  else if(id==='tbTitle') endTutorial('title');
+  else if(id==='tbGo') endTutorial('run');
+  else if(id==='tbMore'){ const T=run&&run.tut; if(T){ T.fire=true; CFG.fire=1.4; ens.length=0; tutSpawnDummy(760,300,3); tutSpawnDummy(800,480,3);
+    $('#tbD').innerHTML='자유롭게 연습해 보세요. 적을 다 쓰러뜨리면 다시 나와요.'; T.free=true; } }
+});
 function startRun(){ newRun(); go('game');
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
 }
@@ -2608,11 +2708,13 @@ function openTutorial(){
     '10웨이브마다 보스가 나오고, 사이클이 오를수록 더 어려워집니다.<br>'+
     'ESC로 언제든 일시정지하고 설정을 열 수 있습니다.'+
     '</div>'+
-    '<button class="buy" id="tutClose">시작하기</button>';
+    '<button class="buy" id="tutPlay" style="color:var(--warn);border-color:var(--warn)">직접 해 보기 (체험판)</button>'+   // v2.60
+    '<button class="buy" id="tutClose">설명 닫기</button>';
   $('#modal').classList.add('on');
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.60',['체험판 튜토리얼 — 이동 · 패링 · 반격 · F/Q/R 스킬을 실제 전투 화면에서 직접 해 보기','튜토리얼 창에 "직접 해 보기" 버튼, 체험판에선 쓰러지지 않고 재화·랭킹에 영향 없음']],
  ['2.59',['아이폰: 전체화면 대신 보이는 화면을 꽉 채우도록 (주소창 높이 반영)','아이폰 첫 접속 때 "홈 화면에 추가" 안내 — 홈 화면에서 열면 주소창 없이 실행','홈 화면 앱 설정(아이콘 이름 · 가로 고정 · 전체화면) 추가']],
  ['2.58',['시작할 때 닉네임 + 비밀번호로 로그인 (처음이면 계정 생성, 다른 기기에서 이어하기)','판이 끝날 때 · 출격할 때 자동 저장','설정의 클라우드 저장을 계정(로그아웃)으로 변경','서버에 연결이 안 되면 오프라인으로 하기 가능']],
  ['2.57',['폰 홀드 패링에 패링 과부하 — 오래 누르고 있으면 경직 + 자동 패링 정지, 손을 떼면 식음','캐릭터 아래 과부하 게이지 표시']],
@@ -2896,6 +2998,7 @@ $('#modalBox').addEventListener('click',e=>{
     if(k==='lockMouse'&&!OPT.lockMouse) unlockMouse();
     save(); openModal(); sfx('ui'); return; }
   if(e.target.id==='tutClose'){ OPT.tutSeen=1; save(); $('#modal').classList.remove('on'); return; }
+  if(e.target.id==='tutPlay'){ OPT.tutSeen=1; save(); $('#modal').classList.remove('on'); startTutorial(); return; }   // v2.60
   if(e.target.id==='optClose'){
     binding=null; bindMsg=''; $('#modal').classList.remove('on');
     if(screen==='game'&&paused&&!$('#pause').classList.contains('on')) togglePause();   // v3.4 · v2.52 일시정지 메뉴에서 연 창은 닫아도 메뉴로 돌아간다
