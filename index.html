@@ -234,6 +234,27 @@ body.in-game #topPause{display:block}
 #cfNo{color:var(--dim);border:1px solid var(--line)}
 #cfYes{color:var(--red);border:1px solid var(--red)}
 #cfYes:hover{background:rgba(255,80,90,.08)}
+/* v2.52 */
+#respec{margin-right:10px;padding:4px 9px;font:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;
+  background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:6px}
+#respec:hover{color:var(--warn);border-color:var(--warn)}
+#rwReroll{position:absolute;right:14px;top:12px;z-index:3;padding:8px 13px;font:inherit;font-size:11.5px;letter-spacing:.06em;
+  cursor:pointer;background:rgba(8,12,17,.8);color:var(--cyan);border:1px solid var(--cyan);border-radius:7px}
+#rwReroll:disabled{opacity:.35;cursor:default;color:var(--dim);border-color:var(--line)}
+#rBoons{max-width:520px;font-size:10.5px;line-height:1.7;color:var(--dim);text-align:center;margin:0 0 8px;padding:0 10px}
+#rBoons b{color:var(--fg);font-weight:600}
+.bnList{list-style:none;margin:0;padding:0}
+.bnList li{padding:7px 2px;border-bottom:1px solid var(--line);font-size:11.5px}
+.bnList li b{color:var(--cyan)} .bnList li.sp b{color:var(--warn)}
+.bnList li span{display:block;color:var(--dim);font-size:10.5px;margin-top:2px}
+.cloud input{width:100%;box-sizing:border-box;margin:0 0 7px;padding:9px 10px;font:inherit;font-size:12px;color:var(--fg);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
+.cloud input:focus{outline:none;border-color:var(--cyan)}
+.cloud .row2{display:flex;gap:8px;margin-top:3px}
+.cloud .row2 button{flex:1;padding:10px;font:inherit;font-size:12px;cursor:pointer;border-radius:7px;background:transparent;
+  color:var(--cyan);border:1px solid var(--cyan)}
+.cloud .row2 button.ld{color:var(--warn);border-color:var(--warn)}
+.cloud .msg{min-height:16px;font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -323,7 +344,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.51</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.52</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -345,7 +366,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   </section>
 
   <section id="hub" class="screen">
-    <div class="bar"><div class="t" id="hubTitle">HUB · 강화 / 해금<span id="dbgTag"></span></div><div class="cur">◆ <span id="cur">0</span></div></div>
+    <div class="bar"><div class="t" id="hubTitle">HUB · 강화 / 해금<span id="dbgTag"></span></div><div class="cur"><button id="respec" title="찍은 강화를 되돌리고 재화 40% 돌려받기">되돌리기</button>◆ <span id="cur">0</span></div></div>
     <div class="body">
       <div class="cards" id="cards"></div>
       <div class="side">
@@ -365,6 +386,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="score" id="rScore">0</div>
     <div class="new" id="rNew"></div>
     <div class="stats" id="rStats"></div>
+    <div id="rBoons"></div>
     <div class="gain" id="rGain">◆ +0</div>
     <div id="rankBox">
       <input id="rkName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="off">
@@ -373,6 +395,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     </div>
     <div class="btns">
       <button class="primary" id="again">다시</button>
+      <button id="rShare">결과 이미지</button>
       <button data-go="hub">HUB</button>
     </div>
   </section>
@@ -381,6 +404,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="hd" id="rwHd"></div>
     <div class="row" id="rwRow"></div>
     <div class="own" id="rwOwn"></div>
+    <button id="rwReroll">새로고침</button>
   </div>
   <div id="modal"><div class="box" id="modalBox"></div></div>
   <div id="confirm">
@@ -394,6 +418,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="box">
       <h4>일시정지</h4>
       <button class="pm" id="pmResume">계속하기</button>
+      <button class="pm" id="pmBoons">이번 판 보상 보기</button>
+      <button class="pm" id="pmRestart">다시 시작</button>
       <button class="pm" id="pmOpt">설정</button>
       <button class="pm" id="pmHub">HUB로 나가기</button>
       <div class="hint">ESC — 계속하기</div>
@@ -480,6 +506,10 @@ const UPG=[
  {k:'mparry',n:'홀드 패링', s:'폰 전용 · 손을 떼지 않아도 패링', grp:'life', phoneOnly:1, lv:0, max:1, cost:[0],
   d:'폰(터치)에서만 쓰는 조작이에요. 오른쪽 손가락으로 조준하고 있는 동안, 패링할 수 있는 탄환이 들어오면 손을 떼지 않아도 자동으로 패링해요. 폰으로 접속하면 자동으로 해금돼요. 설정 → 패링 방식에서 "손 떼면 패링"(예전 방식)으로 바꿀 수 있어요.',
   steps:['잠김','해금됨 · 설정에서 켜고 끔']},
+ /* v2.52 보급 — 보상 새로고침 (선행 조건 없음, 싸게) */
+ {k:'reroll',n:'새로고침', s:'웨이브 보상을 다시 뽑기', grp:'life', lv:0, max:5, cost:[20,25,30,35,40],
+  d:'웨이브 보상 화면에서 새로고침(R)으로 카드를 다시 뽑을 수 있어요. 단계마다 판당 횟수가 1회씩 늘어요. 보상 "새로고침 +1"로 더 얻을 수도 있어요.',
+  steps:['없음','판마다 1회','판마다 2회','판마다 3회','판마다 4회','판마다 5회']},
  /* v2.37 생존 — 부활 · 특수 특전 */
  {k:'revive',n:'부활', s:'쓰러지면 다시 일어남', grp:'life', pos:{x:410,y:690}, lv:0, max:2, cost:[4000,9000],
   d:'체력이 0이 되면 체력 40%로 다시 일어나고 2초간 무적이 됩니다. 주변 적 탄환은 사라집니다. 1단계 1회, 2단계 2회.',
@@ -522,7 +552,7 @@ const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -562,6 +592,11 @@ function load(){
 }
 /* v2.51 확인 팝업 */
 let cfOk=null;
+queueMicrotask(()=>{ const rb=$('#respec'); if(!rb) return;
+  rb.onclick=()=>{ const back=respecRefund();
+    if(back<=0){ askConfirm('되돌릴 강화가 없어요','아직 찍은 강화가 없어요.','확인',()=>{}); return; }
+    askConfirm('강화를 되돌릴까요?','찍은 강화가 모두 0단계로 돌아가고, 쓴 재화의 40%인 ◆ '+back.toLocaleString()+'을 돌려받아요. 장착한 스킬도 해제돼요.','되돌리기',doRespec); };
+});
 queueMicrotask(()=>{
   $('#cfNo').onclick=closeConfirm;
   $('#cfYes').onclick=()=>{ const f=cfOk; closeConfirm(); if(f) f(); };
@@ -572,6 +607,15 @@ function askConfirm(title,desc,okLabel,onOk){
   cfOk=onOk; $('#confirm').classList.add('on'); sfx('ui');
 }
 function closeConfirm(){ $('#confirm').classList.remove('on'); cfOk=null; }
+/* v2.52 강화 되돌리기 — 쓴 재화의 40%를 돌려받고 강화를 0으로. 폰 전용 홀드 패링은 유지 */
+function respecRefund(){ let t=0; UPG.forEach(u=>{ if(u.phoneOnly) return; for(let i=0;i<u.lv;i++) t+=u.cost[i]||0; }); return Math.floor(t*0.4); }
+function doRespec(){
+  syncMeta(); const back=respecRefund();
+  UPG.forEach(u=>{ if(!u.phoneOnly) u.lv=0; });
+  META.skill=''; META.skillQ=''; META.skillR=''; META.cur+=back; save();
+  $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs();
+  sfx('heal');
+}
 function wipe(){ META.cur=0;META.best=0;META.bestCycle=1;META.skill='';META.skillQ='';META.skillR=''; UPG.forEach(u=>u.lv=0); save(); }
 load();
 /* v2.49 터치 기기면 홀드 패링을 무료로 해금 */
@@ -585,6 +629,35 @@ function ac(){
   if(AC.state==='suspended')AC.resume();
   return AC;
 }
+/* v2.52 배경음 — 외부 파일 없이 합성한 잔잔한 패드 + 느린 아르페지오. 효과음과 볼륨을 따로 쓴다 */
+let BGM=null, bgmTimer=null, bgmStep=0;
+function bgmStart(){
+  const a=ac(); if(!a||BGM) return;
+  const out=a.createGain(); out.gain.value=0; out.connect(a.destination);
+  const filt=a.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=520; filt.Q.value=3; filt.connect(out);
+  [[55,'triangle',.16],[82.41,'sawtooth',.045],[110,'sawtooth',.035]].forEach(([f,ty,gv],i)=>{
+    const o=a.createOscillator(); o.type=ty; o.frequency.value=f; o.detune.value=(i-1)*6;
+    const g=a.createGain(); g.gain.value=gv; o.connect(g).connect(filt); o.start(); });
+  const lfo=a.createOscillator(); lfo.frequency.value=0.06; const lg=a.createGain(); lg.gain.value=280;
+  lfo.connect(lg).connect(filt.frequency); lfo.start();
+  BGM={out};
+  const notes=[220,261.63,329.63,392,329.63,261.63,196,246.94];
+  bgmTimer=setInterval(()=>{
+    if(!BGM||OPT.bgm<=0||screen!=='game'||paused) return;
+    const t=a.currentTime, f=notes[bgmStep++%notes.length];
+    const o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.05*OPT.bgm/100,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.9); o.connect(g).connect(a.destination); o.start(t); o.stop(t+1);
+  },460);
+  bgmApply();
+}
+function bgmApply(){
+  if(!BGM) return; const a=ac(); if(!a) return;
+  const target=(OPT.bgm/100)*0.45*(screen==='game'&&!paused?1:0.45);
+  BGM.out.gain.setTargetAtTime(target,a.currentTime,0.5);
+}
+addEventListener('pointerdown',()=>bgmStart(),{once:true});
+addEventListener('keydown',()=>bgmStart(),{once:true});
 function tone(f0,f1,dur,type,gain,delay){
   const a=ac(); if(!a||OPT.vol<=0)return;
   const t=a.currentTime+(delay||0), o=a.createOscillator(), g=a.createGain();
@@ -650,6 +723,7 @@ function statsFromUpgrades(){
     owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.5,0.8,1.5][em],
+    rerolls: lv('reroll'),   // v2.52
     revives: lv('revive'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
     specialBoss: [0,0.38,0.47,0.50][lv('special')],   // v2.47 보스 처치 후 확률
     rNeed: META.skillR==='emp' ? EMP_NEED
@@ -661,7 +735,7 @@ function statsFromUpgrades(){
 const CFG={ homeTime:1.4, rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0, specialBoss:0,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0, specialBoss:0, rerolls:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -857,7 +931,8 @@ const BOONS=[
  {k:'overload', n:'회로 과부하', d:'장착한 스킬(F·Q·R)의 재사용 대기시간 −10%', max:3, tag:'스킬',
   fn:()=>['healCd','guardCd','dashCd','phaseCd','hookCd','owCd','echoCd'].forEach(k=>CFG[k]*=0.9)},
  {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
- {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}}
+ {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}},
+ {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}}   // v2.52
 ];
 /* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
 const SPECIALS=[
@@ -877,7 +952,8 @@ const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
 let P,ens,bullets,queue,msgs,shake,run,paused=false,screen='title';
 let t0=0,raf=0;
 let parts=[],hitstop=0;
-function burst(x,y,col,n,sp){ for(let i=0;i<n;i++){const a=Math.random()*TAU,v=(sp||160)*(0.4+Math.random()*0.8);
+function burst(x,y,col,n,sp){ if(OPT.lowfx) n=Math.ceil(n*0.3);   // v2.52 저사양 모드
+  for(let i=0;i<n;i++){const a=Math.random()*TAU,v=(sp||160)*(0.4+Math.random()*0.8);
   parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0.35+Math.random()*0.25,col});} }
 const keys={}; let mouse={x:600,y:380};
 /* v2.3 모바일 — 왼쪽 절반 드래그: 이동 / 오른쪽 절반 드래그: 조준.
@@ -891,7 +967,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,specialBoss:st.specialBoss,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,
     spd:240,fire:1.8,seizeMul:1,homeTime:1.4});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -902,6 +978,7 @@ function newRun(){
   rerollMap();   // v3.2
   run.startRewards=CFG.startRewards;   // v2.17 선행 보급
   run.revives=CFG.revives;             // v2.37 부활 횟수
+  run.rerolls=CFG.rerolls;             // v2.52 보상 새로고침 횟수
   if(CFG.qSkill==='wall'){ run.phase='build'; run.phaseT=BUILD_T; }   // v1.6 벽 설치 준비 시간
 }
 
@@ -1077,6 +1154,7 @@ addEventListener('keydown',e=>{
   if(screen!=='game')return;
   if(run&&run.phase==='reward'){                 // v2.0 보상 선택
     if('123'.includes(k)){ e.preventDefault(); takeReward(+k-1); }
+    else if(k==='r'||k===OPT.keyR){ e.preventDefault(); rerollReward(); }   // v2.52
     return;
   }
   if(k==='enter'&&run&&run.phase==='build'){ e.preventDefault(); run.phaseT=0; return; }
@@ -1086,7 +1164,7 @@ addEventListener('keydown',e=>{
   else if(k===OPT.keyR){e.preventDefault();doR();}
   if(k==='escape'){
     if($('#modal').classList.contains('on')){ binding=null; bindMsg=''; $('#modal').classList.remove('on'); }
-    else togglePause();
+    else togglePause(true);   // v2.52 키보드로 재개
   }
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
@@ -1384,8 +1462,12 @@ function openReward(afterBoss){
   const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(CFG.specialChance>0 && Math.random()<spChance){
     const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max);
-    if(sp.length) rwPicks[Math.min(2,rwPicks.length)]=sp[Math.floor(Math.random()*sp.length)];
+    if(sp.length){ const pick=sp[Math.floor(Math.random()*sp.length)];   // v2.52 특수 특전이 들어가는 칸도 무작위
+      if(rwPicks.length<3) rwPicks.splice(Math.floor(Math.random()*(rwPicks.length+1)),0,pick);
+      else rwPicks[Math.floor(Math.random()*rwPicks.length)]=pick; }
   }
+  run.rwBoss=afterBoss;
+  const rr=$('#rwReroll'); rr.textContent='새로고침 R · 남은 '+(run.rerolls||0); rr.disabled=!(run.rerolls>0);
   run.phase='reward';
   $('#rwHd').innerHTML=(afterBoss?'알레테이아 격파 · <b>사이클 '+run.cycle+'</b>'
                                  :(run.wave===0?'선행 보급':'웨이브 '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요  <b>1 2 3</b>';
@@ -1404,6 +1486,12 @@ function openReward(afterBoss){
   $('#reward').classList.add('on');
   sfx('wave');
 }
+/* v2.52 보상 새로고침 — 생존/보급의 '새로고침' 강화와 보상 '새로고침 +1'로 횟수를 얻는다 */
+function rerollReward(){
+  if(!run||run.phase!=='reward'||!(run.rerolls>0)) return;
+  run.rerolls--; sfx('ui'); openReward(run.rwBoss);
+}
+$('#rwReroll').onclick=rerollReward;
 function takeReward(i){
   const b=rwPicks[i]; if(!b) return;
   run.boons[b.k]=(run.boons[b.k]||0)+1;
@@ -1624,7 +1712,7 @@ function update(dt){
     b.age+=dt; b.glow=Math.max(0,b.glow-dt*2);
     b.trail.push([b.x,b.y]);
     const ratio=clamp((b.spd-CFG.spd)/Math.max(1,cap()-CFG.spd),0,1);
-    const TL=Math.max(4,Math.round(10+16*ratio));
+    const TL=OPT.lowfx? 3 : Math.max(4,Math.round(10+16*ratio));   // v2.52 저사양 모드는 꼬리를 짧게
     while(b.trail.length>TL)b.trail.shift();
     run.maxSpd=Math.max(run.maxSpd,b.spd);
 
@@ -2215,7 +2303,7 @@ function drawHUD(){
 function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.save();
-  if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
   drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();drawHealLinks();drawLungeWarning();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
@@ -2302,6 +2390,7 @@ function go(id){
     if(!OPT.tutSeen) openModal('tutorial'); }   // v3.4 처음 HUB에 들어오면 튜토리얼
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
   if(isPhone()) goLandscape();   // v2.5 어느 화면이든 전체화면 유지
+  bgmApply();   // v2.52
 }
 function startRun(){ newRun(); go('game');
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
@@ -2327,19 +2416,46 @@ function endRun(){
   $('#rGain').innerHTML='◆ +'+gain.toLocaleString()+
     '<div style="font-size:10.5px;color:var(--dim);letter-spacing:.06em;margin-top:6px">'+
     '점수 '+gScore+' · 처치 '+gKill+' · 웨이브 '+gWave+(gBoss?' · 보스 '+gBoss:'')+'</div>';
+  $('#rBoons').innerHTML=Object.keys(run.boons).length? '받은 보상 — '+Object.keys(run.boons).map(k=>{ const b=boonDef(k);
+      return b? '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'') : ''; }).join(' · ') : '';   // v2.52
   setupRankBox();   // v2.48
   go('result');
 }
 /* v3.4 일시정지하면 설정 화면이 같이 뜬다. 재개할 땐(ESC·상단 버튼·설정 닫기) 같이 닫힌다 */
 /* v2.21 ESC — 일시정지 메뉴(계속하기 · 설정 · HUB). 전체화면이 풀리거나 창을 벗어나면 자동으로 멈춘다 */
-function setPause(on){
-  paused=on;
+/* v2.52 ESC로 일시정지 → ESC로 재개가 안 되던 문제
+   · 크롬은 마우스가 잠겨 있을 때 첫 ESC를 '잠금 풀기'에 써 버려서 키 입력이 안 들어오거나,
+     잠금 해제·전체화면 해제로 멈춘 직후 같은 ESC가 한 번 더 들어와 바로 다시 풀려 버렸다.
+   · 그래서 ① 잠금이 풀리면 바로 일시정지 ② 멈춘 직후 0.3초 안의 전환은 무시
+     ③ ESC로 재개할 때는 마우스 잠금·전체화면을 다시 요청하지 않는다(키보드로는 브라우저가 거절) — 화면을 클릭하면 다시 잠긴다 */
+let pauseAt=0;
+function setPause(on,viaKey){
+  paused=on; pauseAt=performance.now();
   $('#pause').classList.toggle('on',on);
   if(on){ unlockMouse(); }
-  else { $('#modal').classList.remove('on'); lockMouse(); if(isPhone()) goLandscape(); }
+  else { $('#modal').classList.remove('on'); if(!viaKey){ lockMouse(); if(isPhone()) goLandscape(); } }
+  bgmApply();
 }
-function togglePause(){ if(screen!=='game')return; setPause(!paused); }
+function togglePause(viaKey){ if(screen!=='game')return; if(performance.now()-pauseAt<300) return; setPause(!paused,viaKey); }
+document.addEventListener('pointerlockchange',()=>{
+  if(!locked()&&screen==='game'&&!paused&&run&&run.phase!=='reward') setPause(true);
+});
 $('#pmResume').onclick=()=>setPause(false);
+/* v2.52 일시정지 메뉴 — 다시 시작 · 이번 판 보상 보기 */
+$('#pmRestart').onclick=()=>askConfirm('다시 시작할까요?','지금 판은 재화와 기록 없이 끝나고 처음부터 다시 시작해요.','다시 시작',
+  ()=>{ $('#pause').classList.remove('on'); paused=false; startRun(); });
+$('#pmBoons').onclick=()=>openBoons();
+function boonListHTML(){
+  const own=Object.keys(run&&run.boons||{});
+  return own.length? '<ul class="bnList">'+own.map(k=>{ const b=boonDef(k); if(!b) return '';
+      return '<li class="'+(b.sp?'sp':'')+'"><b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'')+(b.sp?' · 특수 특전':'')+'<span>'+b.d+'</span></li>'; }).join('')+'</ul>'
+    : '<div class="rkNote">아직 받은 보상이 없어요.</div>';
+}
+function openBoons(){
+  $('#modalBox').innerHTML='<div class="logHd"><h4>이번 판 보상</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+boonListHTML()+
+    (run&&run.rerolls!==undefined?'<div class="rkNote">남은 새로고침 '+run.rerolls+'회</div>':'');
+  $('#modal').classList.add('on');
+}
 $('#pmOpt').onclick=()=>openModal('opt');
 $('#pmHub').onclick=()=>{ setPause(false); go('hub'); };
 document.addEventListener('fullscreenchange',()=>{
@@ -2352,6 +2468,29 @@ document.addEventListener('click',e=>{
 });
 $('#launch').onclick=startRun;
 $('#again').onclick=startRun;
+/* v2.52 결과 이미지 — 점수 카드를 그려서 공유(폰) 또는 내려받기(PC) */
+$('#rShare').onclick=async()=>{
+  if(!run) return;
+  const c=document.createElement('canvas'); c.width=720; c.height=400; const g=c.getContext('2d');
+  const gr=g.createLinearGradient(0,0,720,400); gr.addColorStop(0,'#0b1118'); gr.addColorStop(1,'#13202a');
+  g.fillStyle=gr; g.fillRect(0,0,720,400);
+  g.strokeStyle='rgba(47,227,208,.55)'; g.lineWidth=2; g.strokeRect(14,14,692,372);
+  g.fillStyle='#2fe3d0'; g.font='700 22px sans-serif'; g.fillText('ÆTHER CHAMBER  ·  에테르 챔버',38,62);
+  g.fillStyle='#8aa0b0'; g.font='15px sans-serif'; g.fillText('노멀 · 통합 빌드 v'+BUILD,38,88);
+  g.fillStyle='#ffd25a'; g.font='800 68px sans-serif'; g.fillText(Math.round(run.score).toLocaleString(),38,182);
+  g.fillStyle='#8aa0b0'; g.font='16px sans-serif'; g.fillText('점수',40,208);
+  const st=[['사이클',run.cycle],['웨이브',run.wave],['처치',run.kills],['최장 왕복','×'+run.bestRet],['생존',fmtTime(run.time)]];
+  st.forEach(([a,b],i)=>{ const x=40+i*132; g.fillStyle='#8aa0b0'; g.font='14px sans-serif'; g.fillText(a,x,262);
+    g.fillStyle='#e6eef4'; g.font='700 24px sans-serif'; g.fillText(String(b),x,292); });
+  const nm=myName(); g.fillStyle='#8aa0b0'; g.font='14px sans-serif';
+  g.fillText((nm?nm+'  ·  ':'')+new Date().toLocaleDateString('ko-KR'),40,352);
+  g.textAlign='right'; g.fillStyle='#2fe3d0'; g.fillText('sinmustard.github.io/Aether_Chamber_Mine_Game',680,352);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  const file=new File([blob],'aether_chamber_'+Math.round(run.score)+'.png',{type:'image/png'});
+  try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'에테르 챔버 결과'}); return; } }catch(e){ return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+};
 /* v3.4 튜토리얼 — 처음 HUB에 들어오면 자동으로 한 번, 이후엔 타이틀 버튼으로 언제든 다시 볼 수 있다 */
 function openTutorial(){
   $('#modalBox').innerHTML='<h4>튜토리얼</h4>'+
@@ -2369,6 +2508,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.52',['일시정지 후 ESC로 재개가 안 되던 버그 수정','일시정지 메뉴에 다시 시작 · 이번 판 보상 보기','결과 화면에 받은 보상 목록과 결과 이미지 저장/공유','HUB에 강화 되돌리기(재화 40% 환급)','효과음 · 배경음 볼륨 분리(배경음 새로 추가), 저사양 모드, 화면 흔들림 단계','랭킹에서 50위 밖이어도 내 순위 표시','클라우드 저장 — 이름 + 비밀번호로 폰 ↔ PC 이어하기','보상 카드 · 특수 특전 위치 무작위','보상 새로고침 — 보급 "새로고침"(20~40) · 보상 "새로고침 +1"(최대 3번)']],
  ['2.51',['설정 창도 오른쪽 위 ✕로 닫기','저장 데이터 초기화를 누르면 "정말로 지우시겠습니까?" 확인 팝업']],
  ['2.50',['랭킹에서 같은 이름은 한 줄만 — 더 높은 점수로 등록하면 덮어쓰고, 낮으면 기존 기록 유지']],
  ['2.49',['랭킹 창 제목·글자가 잘리던 문제 수정','폰 전용 홀드 패링 — 폰으로 접속하면 자동 해금, 손을 떼지 않아도 자동 패링','설정에 패링 방식(누르고 있으면 자동 / 손 떼면 패링)과 설명 추가']],
@@ -2419,6 +2559,48 @@ async function rankSend(row){
   const d=await r.json(); return Array.isArray(d)?d[0]:d;   // {rank, best, updated}
 }
 const myName=()=>{ try{ return localStorage.getItem('aether_rank_name')||''; }catch(e){ return ''; } };
+/* v2.52 클라우드 저장 — 이름 + 비밀번호로 서버에 저장하고, 다른 기기에서 불러온다 */
+async function cloudCall(fn,body){
+  const r=await fetch(RANK.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const txt=await r.text(); let d=null; try{ d=JSON.parse(txt); }catch(e){}
+  if(!r.ok) throw new Error((d&&d.message)||('HTTP '+r.status));
+  return d;
+}
+function openCloud(){
+  $('#modalBox').innerHTML='<div class="logHd"><h4>클라우드 저장</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div class="cloud"><div class="rkNote">같은 이름과 비밀번호를 쓰면 폰과 PC에서 이어서 할 수 있어요. 비밀번호는 잊으면 찾을 수 없어요.</div>'+
+    '<input id="cdName" maxlength="12" placeholder="이름 (1~12자)" autocomplete="off" value="'+escH(myName())+'">'+
+    '<input id="cdPin" type="password" maxlength="20" placeholder="비밀번호 (4~20자)" autocomplete="off">'+
+    '<div class="row2"><button id="cdSave">이 기기 → 저장</button><button id="cdLoad" class="ld">불러와서 덮어쓰기</button></div>'+
+    '<div class="msg" id="cdMsg"></div></div>';
+  $('#modal').classList.add('on');
+  const msg=t=>$('#cdMsg').textContent=t;
+  ['#cdName','#cdPin'].forEach(s=>$(s).addEventListener('keydown',e=>e.stopPropagation()));
+  $('#cdSave').onclick=async()=>{
+    const name=$('#cdName').value.trim(), pin=$('#cdPin').value;
+    if(name.length<1||name.length>12) return msg('이름은 1~12자로 써 주세요.');
+    if(pin.length<4) return msg('비밀번호는 4자 이상이에요.');
+    msg('저장 중…');
+    try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+      await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
+      try{ localStorage.setItem('aether_rank_name',name); }catch(e){}
+      msg('저장했어요. 다른 기기에서 같은 이름·비밀번호로 불러오세요.');
+    }catch(e){ msg(/비밀번호/.test(e.message)?'이미 있는 이름이에요. 비밀번호가 달라요.':'저장하지 못했어요. 잠시 뒤 다시 해 주세요.'); }
+  };
+  $('#cdLoad').onclick=()=>{
+    const name=$('#cdName').value.trim(), pin=$('#cdPin').value;
+    if(!name||pin.length<4) return msg('이름과 비밀번호를 써 주세요.');
+    askConfirm('불러올까요?','지금 이 기기의 강화·재화·기록이 서버에 저장된 내용으로 바뀌어요.','불러오기',async()=>{
+      msg('불러오는 중…');
+      try{ const d=await cloudCall('aether_cloud_load',{p_name:name,p_pin:pin}); const row=Array.isArray(d)?d[0]:d;
+        if(!row||!row.data) throw new Error('없음');
+        localStorage.setItem(SAVE_KEY,JSON.stringify(row.data));
+        try{ localStorage.setItem('aether_rank_name',name); }catch(e){}
+        msg('불러왔어요. 잠시 뒤 새로고침돼요.'); setTimeout(()=>location.reload(),700);
+      }catch(e){ msg(/비밀번호/.test(e.message)?'비밀번호가 달라요.':/없어요|없음/.test(e.message)?'그 이름으로 저장된 데이터가 없어요.':'불러오지 못했어요. 잠시 뒤 다시 해 주세요.'); }
+    });
+  };
+}
 async function openRanking(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
     '<div class="rkNote">상위 50명 · 이름당 최고 기록 하나만 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
@@ -2430,6 +2612,14 @@ async function openRanking(){
       '<span class="nm">'+escH(r.name)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span>'+
       '<span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
       : '<li>아직 등록된 기록이 없어요. 첫 번째 주인공이 되어 보세요.</li>';
+    /* v2.52 50위 밖이어도 내 순위를 아래에 붙인다 */
+    if(me && !rows.some(r=>r.name===me)){
+      try{ const r=await fetch(RANK.url+'/rest/v1/rpc/aether_my_rank',{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify({p_name:me})});
+        const d=r.ok? await r.json():[]; const m=Array.isArray(d)?d[0]:d;
+        if(m&&m.rank) $('#rkList').insertAdjacentHTML('beforeend','<li class="me"><span class="no">'+m.rank+'</span><span class="nm">'+escH(me)+'</span>'+
+          '<span class="sc">'+Number(m.score).toLocaleString()+'</span><span class="cw">C'+m.cycle+' · W'+m.wave+'</span></li>');
+      }catch(e){}
+    }
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
 /* 결과 화면 — 디버그를 쓴 판은 등록하지 않는다 */
@@ -2489,8 +2679,10 @@ function openModal(kind){
   if(kind==='tutorial'){ openTutorial(); return; }
   if(kind==='log'){ openLog(); return; }   // v2.38
   if(kind==='rank'){ openRanking(); return; }   // v2.48
-  const rows=[['마스터 볼륨','vol',OPT.vol?OPT.vol+'':'끔'],
-              ['화면 흔들림','shake',OPT.shake?'켬':'끔'],
+  const rows=[['효과음','vol',OPT.vol?OPT.vol+'':'끔'],
+              ['배경음','bgm',OPT.bgm?OPT.bgm+'':'끔'],                                        // v2.52
+              ['화면 흔들림','shake',({0:'끔',0.5:'약하게',1:'보통',1.6:'강하게'})[OPT.shake]||'보통'],   // v2.52
+              ['저사양 모드','lowfx',OPT.lowfx?'켬 · 효과 줄임':'끔'],                          // v2.52
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
               ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통']]
@@ -2506,6 +2698,7 @@ function openModal(kind){
       (binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
     '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+
     (bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'')+
+    '<div class="opt-row opt-tg" data-cloud="1"><span>클라우드 저장</span><i>폰 ↔ PC 이어하기</i></div>'+   // v2.52
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
   $('#modal').classList.add('on');
 }
@@ -2513,13 +2706,16 @@ $('#modalBox').addEventListener('click',e=>{
   const r=e.target.closest('[data-opt]');
   const kb=e.target.closest('[data-bind]');
   const fs=e.target.closest('[data-fs]');
-  if(fs){ toggleFullscreen(); setTimeout(openModal,150); sfx('ui'); return; }   // v3.3 전환 애니메이션 끝나고 라벨 갱신
+  if(fs){ toggleFullscreen(); setTimeout(openModal,150); sfx('ui'); return; }
+  if(e.target.closest('[data-cloud]')){ openCloud(); sfx('ui'); return; }   // v2.52   // v3.3 전환 애니메이션 끝나고 라벨 갱신
   if(kb){ const k=kb.dataset.bind; bindMsg='';
     if(k==='reset'){ Object.assign(OPT,KEY_DEFAULT); binding=null; save(); refreshKeyLabels(); sfx('ui'); }
     else binding=(binding===k?null:k);
     openModal(); return; }
   if(r){ const k=r.dataset.opt;
     if(k==='vol') OPT.vol=OPT.vol>=100?0:OPT.vol+20;
+    else if(k==='bgm'){ OPT.bgm=OPT.bgm>=100?0:OPT.bgm+20; bgmStart(); bgmApply(); }   // v2.52
+    else if(k==='shake'){ const L=[0,0.5,1,1.6]; OPT.shake=L[(L.indexOf(OPT.shake)+1)%L.length]; }   // v2.52
     else if(k==='inputBuf'){ const L=[0,0.08,0.12,0.18]; OPT.inputBuf=L[(L.indexOf(OPT.inputBuf)+1)%L.length]; }   // v2.42
     else OPT[k]=OPT[k]?0:1;
     if(k==='lockMouse'&&!OPT.lockMouse) unlockMouse();
@@ -2527,7 +2723,7 @@ $('#modalBox').addEventListener('click',e=>{
   if(e.target.id==='tutClose'){ OPT.tutSeen=1; save(); $('#modal').classList.remove('on'); return; }
   if(e.target.id==='optClose'){
     binding=null; bindMsg=''; $('#modal').classList.remove('on');
-    if(screen==='game'&&paused) togglePause();   // v3.4 일시정지 중 열린 설정이면 닫을 때 같이 재개한다
+    if(screen==='game'&&paused&&!$('#pause').classList.contains('on')) togglePause();   // v3.4 · v2.52 일시정지 메뉴에서 연 창은 닫아도 메뉴로 돌아간다
   }
   if(e.target.id==='optReset'){   // v2.51 브라우저 기본 창 대신 게임 안 확인 팝업
     askConfirm('정말로 지우시겠습니까?','강화 · 재화 · 최고 기록 · 장착한 스킬이 모두 사라지고 되돌릴 수 없어요. 온라인 랭킹 기록은 지워지지 않아요.','지우기',
