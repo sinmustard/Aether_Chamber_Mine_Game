@@ -222,6 +222,18 @@ body.in-game #topPause{display:block}
 .log .lv ul{margin:4px 0 0;padding-left:16px;color:var(--dim);font-size:11px;line-height:1.7}
 .opt-desc{font-size:10.5px;line-height:1.6;color:var(--dim);padding:5px 0 8px;border-bottom:1px solid var(--line)}
 .opt-desc b{color:var(--fg);font-weight:600}
+/* v2.51 확인 팝업 — 설정 창(50)보다 위 */
+#confirm{position:absolute;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  background:rgba(8,12,17,.78);padding:16px}
+#confirm.on{display:flex}
+#confirm .box{width:min(290px,100%);background:var(--panel);border:1px solid var(--red);border-radius:10px;padding:16px;text-align:center}
+#confirm h4{margin:0 0 8px;font-size:13px;letter-spacing:.06em;color:var(--fg)}
+#confirm p{margin:0 0 14px;font-size:11px;line-height:1.6;color:var(--dim)}
+.cfBtns{display:flex;gap:8px}
+.cfBtns button{flex:1;padding:10px;font:inherit;font-size:12px;border-radius:7px;cursor:pointer;background:transparent}
+#cfNo{color:var(--dim);border:1px solid var(--line)}
+#cfYes{color:var(--red);border:1px solid var(--red)}
+#cfYes:hover{background:rgba(255,80,90,.08)}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -311,7 +323,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.50</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.51</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -371,6 +383,13 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="own" id="rwOwn"></div>
   </div>
   <div id="modal"><div class="box" id="modalBox"></div></div>
+  <div id="confirm">
+    <div class="box">
+      <h4 id="cfT">확인</h4>
+      <p id="cfD"></p>
+      <div class="cfBtns"><button id="cfNo">취소</button><button id="cfYes">확인</button></div>
+    </div>
+  </div>
   <div id="pause">
     <div class="box">
       <h4>일시정지</h4>
@@ -541,6 +560,18 @@ function load(){
     if(META.skill==='phase'){ if(!META.skillQ) META.skillQ='phase'; META.skill=''; }
   }catch(e){}
 }
+/* v2.51 확인 팝업 */
+let cfOk=null;
+queueMicrotask(()=>{
+  $('#cfNo').onclick=closeConfirm;
+  $('#cfYes').onclick=()=>{ const f=cfOk; closeConfirm(); if(f) f(); };
+  $('#confirm').addEventListener('click',e=>{ if(e.target.id==='confirm') closeConfirm(); });
+});
+function askConfirm(title,desc,okLabel,onOk){
+  $('#cfT').textContent=title; $('#cfD').textContent=desc; $('#cfYes').textContent=okLabel||'확인';
+  cfOk=onOk; $('#confirm').classList.add('on'); sfx('ui');
+}
+function closeConfirm(){ $('#confirm').classList.remove('on'); cfOk=null; }
 function wipe(){ META.cur=0;META.best=0;META.bestCycle=1;META.skill='';META.skillQ='';META.skillR=''; UPG.forEach(u=>u.lv=0); save(); }
 load();
 /* v2.49 터치 기기면 홀드 패링을 무료로 해금 */
@@ -1027,6 +1058,9 @@ const say=(t,c)=>msgs.push({text:t,color:c||'cyan',t:0.7,big:0});
 addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   const k=e.key.toLowerCase();
+  /* v2.51 ESC는 어느 화면에서든 확인 팝업 → 설정 창 순서로 닫는다 */
+  if(k==='escape'&&$('#confirm').classList.contains('on')){ closeConfirm(); return; }
+  if(k==='escape'&&!binding&&screen!=='game'&&$('#modal').classList.contains('on')){ $('#modal').classList.remove('on'); return; }
   if(binding){                                  // 키 설정 대기 중
     e.preventDefault();
     if(k==='escape'){ binding=null; bindMsg=''; openModal(); return; }
@@ -2335,6 +2369,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.51',['설정 창도 오른쪽 위 ✕로 닫기','저장 데이터 초기화를 누르면 "정말로 지우시겠습니까?" 확인 팝업']],
  ['2.50',['랭킹에서 같은 이름은 한 줄만 — 더 높은 점수로 등록하면 덮어쓰고, 낮으면 기존 기록 유지']],
  ['2.49',['랭킹 창 제목·글자가 잘리던 문제 수정','폰 전용 홀드 패링 — 폰으로 접속하면 자동 해금, 손을 떼지 않아도 자동 패링','설정에 패링 방식(누르고 있으면 자동 / 손 떼면 패링)과 설명 추가']],
  ['2.48',['온라인 랭킹 추가 — 결과 화면에서 닉네임으로 등록, 타이틀의 랭킹에서 상위 50명 보기','디버그 기능을 쓴 판은 랭킹 등록 불가']],
@@ -2460,7 +2495,7 @@ function openModal(kind){
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
               ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통']]
               .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링']]:[]);   // v2.42 · v2.49
-  $('#modalBox').innerHTML='<h4>설정</h4>'+
+  $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+   // v2.51
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
     (isTouchDev()?'<div class="opt-desc">패링 방식 — <b>누르고 있으면 자동</b>: 오른쪽 손가락으로 조준하고 있으면 탄환이 들어올 때 알아서 패링해요. '+
       '<b>손 떼면 패링</b>: 조준한 뒤 손을 떼는 순간 패링해요(예전 방식). 누를 때마다 바뀌어요.</div>':'')+
@@ -2471,7 +2506,6 @@ function openModal(kind){
       (binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
     '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+
     (bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'')+
-    '<button class="buy" id="optClose">닫기</button>'+
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
   $('#modal').classList.add('on');
 }
@@ -2495,7 +2529,10 @@ $('#modalBox').addEventListener('click',e=>{
     binding=null; bindMsg=''; $('#modal').classList.remove('on');
     if(screen==='game'&&paused) togglePause();   // v3.4 일시정지 중 열린 설정이면 닫을 때 같이 재개한다
   }
-  if(e.target.id==='optReset' && confirm('강화 · 재화 · 기록을 모두 초기화할까요?')){ wipe(); go('title'); }
+  if(e.target.id==='optReset'){   // v2.51 브라우저 기본 창 대신 게임 안 확인 팝업
+    askConfirm('정말로 지우시겠습니까?','강화 · 재화 · 최고 기록 · 장착한 스킬이 모두 사라지고 되돌릴 수 없어요. 온라인 랭킹 기록은 지워지지 않아요.','지우기',
+      ()=>{ wipe(); $('#modal').classList.remove('on'); go('title'); });
+  }
 });
 
 /* ================= HUB ================= */
