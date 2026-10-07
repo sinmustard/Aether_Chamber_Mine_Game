@@ -258,6 +258,17 @@ body.in-game #topPause{display:block}
 #errBox{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;
   max-width:92vw;padding:9px 12px;border-radius:8px;background:rgba(40,8,12,.95);border:1px solid var(--red);color:#ffd6d9;
   font-size:11.5px;line-height:1.5;cursor:pointer}
+#cloudStat{font-size:10.5px;color:var(--dim);margin:-4px 0 8px;min-height:14px}
+.login .lead{font-size:11px;line-height:1.7;color:var(--dim);margin:2px 0 12px}
+.login input{width:100%;box-sizing:border-box;margin:0 0 8px;padding:10px 11px;font:inherit;font-size:13px;color:var(--fg);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
+.login input:focus{outline:none;border-color:var(--cyan)}
+.login .go{width:100%;margin-top:4px;padding:11px;font:inherit;font-size:13px;letter-spacing:.1em;cursor:pointer;border-radius:7px;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+.login .go:disabled{opacity:.45;cursor:default}
+.login .off{width:100%;margin-top:8px;padding:9px;font:inherit;font-size:11.5px;cursor:pointer;border-radius:7px;
+  background:transparent;color:var(--dim);border:1px solid var(--line);display:none}
+.login .msg{min-height:16px;font-size:11px;color:var(--dim);margin-top:9px;line-height:1.6}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -347,7 +358,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.57</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.58</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -391,6 +402,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="stats" id="rStats"></div>
     <div id="rBoons"></div>
     <div class="gain" id="rGain">◆ +0</div>
+    <div id="cloudStat"></div>
     <div id="rankBox">
       <input id="rkName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="off">
       <button id="rkSend">랭킹 등록</button>
@@ -2425,6 +2437,7 @@ function armFullscreen(){
   addEventListener('pointerdown',once); addEventListener('touchstart',once);
 }
 function go(id){
+  if(id==='hub'&&!getSession()&&!offlineOK){ openLogin(); return; }   // v2.58 로그인 먼저
   screen=id;
   document.body.classList.toggle('in-game',id==='game');
   $$('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
@@ -2464,6 +2477,8 @@ function endRun(){
     '점수 '+gScore+' · 처치 '+gKill+' · 웨이브 '+gWave+(gBoss?' · 보스 '+gBoss:'')+'</div>';
   $('#rBoons').innerHTML=Object.keys(run.boons).length? '받은 보상 — '+Object.keys(run.boons).map(k=>{ const b=boonDef(k);
       return b? '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'') : ''; }).join(' · ') : '';   // v2.52
+  $('#cloudStat').textContent=getSession()?'☁ 자동 저장 중…':'';   // v2.58
+  if(getSession()) cloudAutoSave().then(ok=>{ $('#cloudStat').textContent= ok?'☁ '+getSession().name+' 계정에 자동 저장했어요':'☁ 자동 저장 실패 — 다음 판에 다시 시도해요'; });
   setupRankBox();   // v2.48
   go('result');
 }
@@ -2526,7 +2541,7 @@ document.addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go);return;}
   const m=e.target.closest('[data-modal]'); if(m){openModal(m.dataset.modal);}
 });
-$('#launch').onclick=startRun;
+$('#launch').onclick=()=>{ cloudAutoSave(); startRun(); };   // v2.58 출격할 때도 HUB에서 바꾼 강화를 저장
 $('#again').onclick=startRun;
 /* v2.52 결과 이미지 — 점수 카드를 그려서 공유(폰) 또는 내려받기(PC) */
 $('#rShare').onclick=async()=>{
@@ -2568,6 +2583,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.58',['시작할 때 닉네임 + 비밀번호로 로그인 (처음이면 계정 생성, 다른 기기에서 이어하기)','판이 끝날 때 · 출격할 때 자동 저장','설정의 클라우드 저장을 계정(로그아웃)으로 변경','서버에 연결이 안 되면 오프라인으로 하기 가능']],
  ['2.57',['폰 홀드 패링에 패링 과부하 — 오래 누르고 있으면 경직 + 자동 패링 정지, 손을 떼면 식음','캐릭터 아래 과부하 게이지 표시']],
  ['2.56',['전체화면에서 ESC를 짧게 누르면 설정 창만 닫힘 (전체화면은 ESC 길게 눌러 끄기, PC 크롬·엣지)']],
  ['2.55',['특수 특전을 가진 채로 일시정지하면 오류가 나던 원인 수정 (일시정지 화면 보상 이름 표시)']],
@@ -2625,6 +2641,63 @@ async function rankSend(row){
 }
 const myName=()=>{ try{ return localStorage.getItem('aether_rank_name')||''; }catch(e){ return ''; } };
 /* v2.52 클라우드 저장 — 이름 + 비밀번호로 서버에 저장하고, 다른 기기에서 불러온다 */
+/* v2.58 계정 — 시작할 때 닉네임 + 비밀번호로 들어가고, 판이 끝날 때·출격할 때 자동으로 서버에 저장한다 */
+const SESSION_KEY='aether_session';
+let offlineOK=false;
+const getSession=()=>{ try{ const d=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); return d&&d.name&&d.pin?d:null; }catch(e){ return null; } };
+function setSession(name,pin){ try{ localStorage.setItem(SESSION_KEY,JSON.stringify({name,pin})); localStorage.setItem('aether_rank_name',name); }catch(e){} }
+function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+function applySave(data){
+  localStorage.setItem(SAVE_KEY,JSON.stringify(data||{}));
+  UPG.forEach(u=>u.lv=0);
+  Object.assign(META,{cur:0,best:0,bestCycle:1,skill:'',skillQ:'',skillR:''});
+  load();
+  if(isTouchDev()){ const u=UPG.find(x=>x.k==='mparry'); if(u&&u.lv<1) u.lv=1; }
+  save(); refreshKeyLabels();
+}
+async function cloudAutoSave(){
+  const ss=getSession(); if(!ss) return null;
+  try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+    await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:ss.pin,p_data:data}); return true; }
+  catch(e){ return false; }
+}
+function openLogin(){
+  $('#modalBox').innerHTML='<div class="logHd"><h4>시작하기</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div class="login"><div class="lead">닉네임과 비밀번호로 시작해요. 처음이면 새로 만들어지고, 다른 기기에서도 같은 닉네임·비밀번호로 이어서 할 수 있어요. '+
+    '판이 끝나면 자동으로 저장돼요.</div>'+
+    '<input id="lgName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="username" value="'+escH(myName())+'">'+
+    '<input id="lgPin" type="password" maxlength="20" placeholder="비밀번호 (4~20자)" autocomplete="current-password">'+
+    '<button class="go" id="lgGo">시작하기</button><button class="off" id="lgOff">오프라인으로 하기 (저장 안 됨)</button>'+
+    '<div class="msg" id="lgMsg"></div></div>';
+  $('#modal').classList.add('on');
+  const msg=t=>$('#lgMsg').textContent=t;
+  const submit=async()=>{
+    const name=$('#lgName').value.trim(), pin=$('#lgPin').value;
+    if(name.length<1||name.length>12) return msg('닉네임은 1~12자로 써 주세요.');
+    if(pin.length<4) return msg('비밀번호는 4자 이상이에요.');
+    $('#lgGo').disabled=true; msg('확인 중…');
+    try{
+      const d=await cloudCall('aether_cloud_load',{p_name:name,p_pin:pin}); const row=Array.isArray(d)?d[0]:d;
+      if(row&&row.data) applySave(row.data);
+      setSession(name,pin); $('#modal').classList.remove('on'); go('hub');
+    }catch(e){
+      const m=String(e.message||'');
+      if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
+        try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+          await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
+          setSession(name,pin); $('#modal').classList.remove('on'); go('hub'); return;
+        }catch(e2){ msg(/비밀번호/.test(String(e2.message))?'이미 있는 닉네임이에요. 비밀번호가 달라요.':'만들지 못했어요. 인터넷 연결을 확인해 주세요.'); }
+      } else if(/비밀번호/.test(m)) msg('비밀번호가 달라요.');
+      else { msg('서버에 연결하지 못했어요. 인터넷을 확인하거나 오프라인으로 할 수 있어요.'); $('#lgOff').style.display='block'; }
+      $('#lgGo').disabled=false;
+    }
+  };
+  $('#lgGo').onclick=submit;
+  $('#lgPin').addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+  $('#lgName').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#lgPin').focus(); });
+  $('#lgOff').onclick=()=>{ offlineOK=true; $('#modal').classList.remove('on'); go('hub'); };
+  setTimeout(()=>{ const el=$('#lgName'); if(el&&!el.value) el.focus(); else if($('#lgPin')) $('#lgPin').focus(); },50);
+}
 async function cloudCall(fn,body){
   const r=await fetch(RANK.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
   const txt=await r.text(); let d=null; try{ d=JSON.parse(txt); }catch(e){}
@@ -2765,7 +2838,7 @@ function openModal(kind){
       (binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
     '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+
     (bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'')+
-    '<div class="opt-row opt-tg" data-cloud="1"><span>클라우드 저장</span><i>폰 ↔ PC 이어하기</i></div>'+   // v2.52
+    '<div class="opt-row opt-tg" data-cloud="1"><span>계정</span><i>'+(getSession()?escH(getSession().name)+' · 로그아웃':'로그인 안 됨 · 로그인')+'</i></div>'+   // v2.58
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
   $('#modal').classList.add('on');
 }
@@ -2774,7 +2847,11 @@ $('#modalBox').addEventListener('click',e=>{
   const kb=e.target.closest('[data-bind]');
   const fs=e.target.closest('[data-fs]');
   if(fs){ toggleFullscreen(); setTimeout(openModal,150); sfx('ui'); return; }
-  if(e.target.closest('[data-cloud]')){ openCloud(); sfx('ui'); return; }   // v2.52   // v3.3 전환 애니메이션 끝나고 라벨 갱신
+  if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
+    if(getSession()) askConfirm('로그아웃할까요?','지금 진행 상황을 서버에 저장한 뒤, 이 기기에서 계정 연결을 풀어요. 다시 시작할 때 닉네임·비밀번호를 입력해요.','로그아웃',
+      async()=>{ await cloudAutoSave(); clearSession(); offlineOK=false; $('#modal').classList.remove('on'); go('title'); });
+    else { $('#modal').classList.remove('on'); offlineOK=false; openLogin(); }
+    return; }   // v2.52   // v3.3 전환 애니메이션 끝나고 라벨 갱신
   if(kb){ const k=kb.dataset.bind; bindMsg='';
     if(k==='reset'){ Object.assign(OPT,KEY_DEFAULT); binding=null; save(); refreshKeyLabels(); sfx('ui'); }
     else binding=(binding===k?null:k);
@@ -2793,7 +2870,7 @@ $('#modalBox').addEventListener('click',e=>{
     if(screen==='game'&&paused&&!$('#pause').classList.contains('on')) togglePause();   // v3.4 · v2.52 일시정지 메뉴에서 연 창은 닫아도 메뉴로 돌아간다
   }
   if(e.target.id==='optReset'){   // v2.51 브라우저 기본 창 대신 게임 안 확인 팝업
-    askConfirm('정말로 지우시겠습니까?','강화 · 재화 · 최고 기록 · 장착한 스킬이 모두 사라지고 되돌릴 수 없어요. 온라인 랭킹 기록은 지워지지 않아요.','지우기',
+    askConfirm('정말로 지우시겠습니까?','강화 · 재화 · 최고 기록 · 장착한 스킬이 모두 사라지고 되돌릴 수 없어요. 로그인 중이면 다음 자동 저장 때 계정 데이터도 초기화돼요. 온라인 랭킹 기록은 지워지지 않아요.','지우기',
       ()=>{ wipe(); $('#modal').classList.remove('on'); go('title'); });
   }
 });
