@@ -344,7 +344,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 <body>
 
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.52</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.53</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1152,6 +1152,10 @@ addEventListener('keydown',e=>{
      F1도 함께 받는다. 어느 화면에서든 동작한다 */
   if(k==='`'||k==='~'||e.key==='F1'){ e.preventDefault(); toggleDebug(); return; }
   if(screen!=='game')return;
+  /* v2.53 ESC는 보상 화면에서도 먼저 처리한다. 예전엔 보상 화면 분기에서 먼저 return 해 버려서
+     보상을 고르는 중에 연 일시정지·설정이 ESC로 안 닫혔다 */
+  if(k==='escape'){ e.preventDefault(); handleEsc(); return; }
+  if(paused) return;                               // 멈춘 동안에는 보상 선택·스킬 입력을 받지 않는다
   if(run&&run.phase==='reward'){                 // v2.0 보상 선택
     if('123'.includes(k)){ e.preventDefault(); takeReward(+k-1); }
     else if(k==='r'||k===OPT.keyR){ e.preventDefault(); rerollReward(); }   // v2.52
@@ -1162,10 +1166,6 @@ addEventListener('keydown',e=>{
   else if(k===OPT.keySkill){e.preventDefault();doSkill();}
   else if(k===OPT.keyWall){e.preventDefault();doQ();}
   else if(k===OPT.keyR){e.preventDefault();doR();}
-  if(k==='escape'){
-    if($('#modal').classList.contains('on')){ binding=null; bindMsg=''; $('#modal').classList.remove('on'); }
-    else togglePause(true);   // v2.52 키보드로 재개
-  }
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 const gcv=$('#gamecv');
@@ -2352,6 +2352,7 @@ function exitLandscape(){
 $('#goFs').onclick=goLandscape;
 /* v3.3 전체화면 — 폰의 자동 가로 전환과 별개로, 아무 기기에서나 옵션에서 수동으로 켜고 끌 수 있게 한다 */
 function toggleFullscreen(){
+  fsByUs=performance.now();   // v2.53 설정에서 직접 켜고 끈 전환은 ESC로 치지 않는다
   try{
     if(document.fullscreenElement||document.webkitFullscreenElement){
       if(document.exitFullscreen) document.exitFullscreen();
@@ -2428,7 +2429,20 @@ function endRun(){
      잠금 해제·전체화면 해제로 멈춘 직후 같은 ESC가 한 번 더 들어와 바로 다시 풀려 버렸다.
    · 그래서 ① 잠금이 풀리면 바로 일시정지 ② 멈춘 직후 0.3초 안의 전환은 무시
      ③ ESC로 재개할 때는 마우스 잠금·전체화면을 다시 요청하지 않는다(키보드로는 브라우저가 거절) — 화면을 클릭하면 다시 잠긴다 */
-let pauseAt=0;
+let pauseAt=0, fsByUs=0;
+/* v2.53 ESC 한 번 = 한 단계: 확인 팝업 → 설정/보상 보기 창 → 일시정지 메뉴 순서로 닫거나 멈춘다 */
+function handleEsc(){
+  if($('#confirm').classList.contains('on')){ closeConfirm(); return; }
+  if($('#modal').classList.contains('on')){ binding=null; bindMsg=''; $('#modal').classList.remove('on'); return; }
+  togglePause(true);
+}
+/* 전체화면에서 누른 ESC는 브라우저가 '전체화면 끄기'로 먹어 버려 게임에 안 들어온다.
+   그래서 우리가 직접 끈 게 아니면 그 ESC를 대신 처리한다 */
+document.addEventListener('fullscreenchange',()=>{
+  if(document.fullscreenElement||screen!=='game') return;
+  if(performance.now()-fsByUs<800) return;
+  if(!paused) setPause(true); else handleEsc();
+});
 function setPause(on,viaKey){
   paused=on; pauseAt=performance.now();
   $('#pause').classList.toggle('on',on);
@@ -2508,6 +2522,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.53',['ESC가 보상 화면 · 전체화면에서 안 먹던 문제 수정 — ESC 한 번에 팝업 → 창 → 일시정지 순서로 한 단계씩','멈춘 동안에는 보상 선택 · 스킬 키 입력 무시']],
  ['2.52',['일시정지 후 ESC로 재개가 안 되던 버그 수정','일시정지 메뉴에 다시 시작 · 이번 판 보상 보기','결과 화면에 받은 보상 목록과 결과 이미지 저장/공유','HUB에 강화 되돌리기(재화 40% 환급)','효과음 · 배경음 볼륨 분리(배경음 새로 추가), 저사양 모드, 화면 흔들림 단계','랭킹에서 50위 밖이어도 내 순위 표시','클라우드 저장 — 이름 + 비밀번호로 폰 ↔ PC 이어하기','보상 카드 · 특수 특전 위치 무작위','보상 새로고침 — 보급 "새로고침"(20~40) · 보상 "새로고침 +1"(최대 3번)']],
  ['2.51',['설정 창도 오른쪽 위 ✕로 닫기','저장 데이터 초기화를 누르면 "정말로 지우시겠습니까?" 확인 팝업']],
  ['2.50',['랭킹에서 같은 이름은 한 줄만 — 더 높은 점수로 등록하면 덮어쓰고, 낮으면 기존 기록 유지']],
