@@ -392,7 +392,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.60</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.61</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -541,17 +541,17 @@ const dist=(a,b,c,d)=>Math.hypot(a-c,b-d);
    없으면 뿌리(선행 조건 없음). reqMet()/reqLabel()이 이 필드를 읽는다 */
 const UPG=[
  {k:'range', n:'패링 사거리', s:'패링이 닿는 거리', pos:{x:50,y:80}, lv:0, max:5, cost:[590,890,1330,2000,3000],
-  steps:['3.5m','3.8m','4.1m','4.4m','4.7m','5.0m']},
+  steps:['3.2m','3.5m','3.8m','4.1m','4.4m','4.7m']},
  {k:'fov',   n:'패링 시야각', s:'바라보는 방향 기준 패링 각도', pos:{x:230,y:30}, lv:0, max:5, cost:[490,740,1110,1670,2500],
-  req:[{k:'range',lv:1}], steps:['60°','65°','70°','75°','80°','85°']},
+  req:[{k:'range',lv:1}], steps:['55°','60°','65°','70°','75°','80°']},
  {k:'penalty',n:'빗나감 페널티', s:'패링이 빗나갔을 때 다시 패링하기까지 시간', pos:{x:230,y:170}, lv:0, max:5, cost:[250,420,710,1190,2000],
-  req:[{k:'range',lv:1}], steps:['1.20s','1.10s','1.00s','0.90s','0.80s','0.70s']},
+  req:[{k:'range',lv:1}], steps:['1.30s','1.20s','1.10s','1.00s','0.90s','0.80s']},
  {k:'move',  n:'이동', s:'이동 속도', pos:{x:50,y:300}, lv:0, max:5, cost:[490,740,1110,1670,2500],
   steps:['230','245','260','275','290','305']},
  {k:'bullet',n:'탄환', s:'왕복당 가속 · 점수 배율', pos:{x:50,y:480}, lv:0, max:5, cost:[790,1190,1780,2670,4000],
   steps:['×1.20 / 점수 ×1.00','×1.24 / ×1.10','×1.28 / ×1.20','×1.32 / ×1.35','×1.36 / ×1.50','×1.40 / ×1.70']},
  {k:'vital', n:'생존', s:'최대 체력 · 피격 무적', grp:'life', pos:{x:50,y:600}, lv:0, max:5, cost:[300,440,670,1000,1500],
-  steps:['100 / 0.40s','115 / 0.45s','130 / 0.50s','145 / 0.55s','160 / 0.60s','175 / 0.70s']},
+  steps:['85 / 0.40s','100 / 0.45s','115 / 0.50s','130 / 0.55s','145 / 0.60s','160 / 0.70s']},
  {k:'greed', n:'재화 획득', s:'한 판에서 버는 재화가 늘어남', grp:'life', pos:{x:230,y:690}, lv:0, max:5, cost:[600,900,1350,2000,3000],
   d:'전투가 끝나고 받는 재화가 늘어납니다. 점수·처치·웨이브·보스 보상 전부에 적용됩니다.',
   req:[{k:'vital',lv:2}], steps:['+0%','+8%','+16%','+24%','+32%','+40%']},
@@ -579,7 +579,7 @@ const UPG=[
  {k:'multi', n:'다중 패링', s:'한 번에 빼앗는 탄환 수', pos:{x:410,y:100}, lv:0, max:2, cost:[1500,3500],
   req:[{k:'fov',lv:2},{k:'penalty',lv:2}], steps:['1발','2발','3발']},
  {k:'heal',  n:'F · 회복', s:'F — 체력 즉시 회복', skill:1, pos:{x:230,y:550}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
-  req:[{k:'vital',lv:1}], steps:['잠김','회복 25 / 대기 26s','회복 30 / 대기 24s','회복 35 / 대기 22s','회복 40 / 대기 20s','회복 50 / 대기 18s']},
+  req:[{k:'vital',lv:1}], steps:['잠김','회복 18 / 대기 32s','회복 22 / 대기 30s','회복 26 / 대기 28s','회복 30 / 대기 26s','회복 36 / 대기 24s']},
  {k:'guard', n:'F · 방어', s:'F — 탄환을 막는 방어막', skill:1, pos:{x:230,y:620}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
   req:[{k:'vital',lv:1}], steps:['잠김','지속 1.5s / 대기 18s','지속 1.8s / 대기 16s','지속 2.1s / 대기 14s','지속 2.5s / 대기 12s','지속 3.0s / 대기 10s']},
  {k:'dash',  n:'F · 대시', s:'F — 짧은 거리 돌진 + 그동안 무적', skill:1, pos:{x:230,y:320}, lv:0, max:5, cost:[800,1200,1800,2700,4000],
@@ -761,17 +761,17 @@ function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
         h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp');
   return {
-    rangeM: 3.5+0.3*r, fov: 60+5*f, whiff: 1.20-0.10*pe,
+    rangeM: 3.2+0.3*r, fov: 55+5*f, whiff: 1.30-0.10*pe,   /* v2.61 기본 스탯 너프 (사거리 3.5→3.2m, 시야 60→55°, 빗나감 1.2→1.3s) */
     moveSpd: 230+15*m,
     accel: 1.20+0.04*b, scoreMul: [1,1.1,1.2,1.35,1.5,1.7][b],
-    hpMax: 100+15*v, iframe: [0.40,0.45,0.50,0.55,0.60,0.70][v],
+    hpMax: 85+15*v,   /* v2.61 기본 체력 100→85 */ iframe: [0.40,0.45,0.50,0.55,0.60,0.70][v],
     multi: 1+mu,
     homing: [0,0.8,1.4,2.0,2.8,3.6][hm],
     gainMul: 1+0.08*gr, startRewards: sp,
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
     skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
-    healAmt:[0,25,30,35,40,50][h], healCd:[0,26,24,22,20,18][h],
+    healAmt:[0,18,22,26,30,36][h], healCd:[0,32,30,28,26,24][h],   /* v2.61 회복 너프 */
     guardDur:[0,1.5,1.8,2.1,2.5,3.0][g], guardCd:[0,18,16,14,12,10][g],
     phaseDur:[0,2,2.5,3,3.5,4][ph], phaseCd:[0,16,15,13,12,10][ph],
     wallMax:(META.skillQ==='wall'&&wl>0)?wl:0,
@@ -789,17 +789,19 @@ function statsFromUpgrades(){
 }
 
 /* ================= 전투 설정 ================= */
-const CFG={ homeTime:1.4, rangeM:3.5, fov:60, whiff:1.2, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
+const CFG={ homeTime:1.4, rangeM:3.2, fov:55, whiff:1.3, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
             skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0, specialBoss:0, rerolls:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
-            moveSpd:230, scoreMul:1, hpMax:100, iframe:0.4, multi:1 };
+            moveSpd:230, scoreMul:1, hpMax:85, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
 const BODY_SQ=0.95;   // v2.8 캐릭터 몸통 세로 비율 (바닥 그림자는 SQUASH 유지)
 const WORLD={w:1000,h:760};
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
+/* v2.63 후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25%, 최대 ×2.5 (체험판은 그대로) */
+const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1));
 const BOSS_WAVE=10;
 const EMP_NEED=100;   // v2.23 EMP만 충전 100 고정 (다른 R 스킬은 단계별로 줄어든다)
 const range=()=>CFG.rangeM*M;
@@ -952,13 +954,27 @@ const BOSS_PATTERNS=[
  {n:'SPIRAL',  d:'5발 나선 — 각도가 조금씩 벌어진다',
   specs:[{t:0,ang:-0.7},{t:0.14,ang:-0.35},{t:0.28},{t:0.42,ang:0.35},{t:0.56,ang:0.7}]},
  {n:'TRAP',    d:'양쪽 우회로 가두고 정면 고속 한 발',
-  specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.55,fast:0.9}]}
+  specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.55,fast:0.9}]},
+ /* v2.62 추가 */
+ {n:'CROSS',   d:'넓게 벌어진 4발 — 자리를 옮겨야 한다',
+  specs:[{t:0,ang:-1.15},{t:0,ang:-0.4},{t:0,ang:0.4},{t:0,ang:1.15}]},
+ {n:'SHELL VOLLEY', d:'장갑탄 2발 시차 — 각각 패링 2번',
+  specs:[{t:0,heavy:1,ang:-0.28},{t:0.55,heavy:1,ang:0.28}]},
+ {n:'FEINT RAIN', d:'느리게 오다 갑자기 빨라지는 3발',
+  specs:[{t:0,feint:1,ang:-0.3},{t:0.25,feint:1},{t:0.5,feint:1,ang:0.3}]},
+ {n:'ORBIT CAGE', d:'양쪽에서 두 번 감싸는 우회탄 4발',
+  specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.6,orbit:1,odir:1},{t:0.6,orbit:1,odir:-1}]}
 ];
 /* 체력 50% 이하 2페이즈 전용 */
-const BOSS_P2={n:'OVERDRIVE', d:'고속 + 우회 혼합', specs:[{t:0,fast:0.8},{t:0.5,orbit:1},{t:1.0,fast:0.8}]};
+const BOSS_P2S=[
+ {n:'OVERDRIVE', d:'고속 + 우회 혼합', specs:[{t:0,fast:0.8},{t:0.5,orbit:1},{t:1.0,fast:0.8}]},
+ /* v2.62 2페이즈 전용 추가 */
+ {n:'MELTDOWN',  d:'고속 3연사 뒤 장갑탄', specs:[{t:0,fast:0.85,ang:-0.22},{t:0.22,fast:0.85},{t:0.44,fast:0.85,ang:0.22},{t:0.9,heavy:1}]},
+ {n:'TEMPEST',   d:'우회 + 페인트 + 고속이 한꺼번에', specs:[{t:0,orbit:1,odir:1},{t:0.15,feint:1},{t:0.3,orbit:1,odir:-1},{t:0.7,fast:0.9}]}
+];
 function pickPattern(e){
   if(e.grade==='boss'){
-    if(e.p2&&Math.random()<0.4) return BOSS_P2;
+    if(e.p2&&Math.random()<0.45) return BOSS_P2S[Math.floor(Math.random()*BOSS_P2S.length)];   // v2.62
     return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)]
                               : BOSS_PATTERNS[Math.floor(Math.random()*BOSS_PATTERNS.length)];
   }
@@ -1167,7 +1183,7 @@ function killEnemy(e){
   run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
   P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
-  hitstop=e.grade==='boss'?0.25:0.07; sfx(e.grade==='boss'?'boss':'kill');
+  hitstop=e.grade==='boss'?0.18:0; sfx(e.grade==='boss'?'boss':'kill');   // v2.61 일반 처치는 멈추지 않는다 (보스만 짧게)
   if(e.grade==='boss'){ run.bossKills++; announce('보스 격파  +'+bonus,'cyan'); shake=20; }
   else say('처치  +'+bonus,'cyan');
   ens.splice(idx,1);
@@ -1339,7 +1355,7 @@ function doParry(force){
   if(lunger){
     lunger.hp-=HIT_UNIT; lunger.hurt=.22; lunger.lungeHit=true;
     lunger.lungePhase='cd'; lunger.lungeT=LUNGE_CD*0.6;
-    say('패링 성공','cyan'); sfx('parry',2); shake=9; hitstop=0.05; burst(lunger.x,lunger.y,'cyan',14,220);
+    say('패링 성공','cyan'); sfx('parry',2); shake=9; burst(lunger.x,lunger.y,'cyan',14,220);   // v2.61 히트스톱 제거
     /* v2.0 파편 — 일반 명중과 동일하게 돌진 패링도 주변에 추가 피해를 준다 */
     const sh=boonLv('shard');
     if(sh){
@@ -1405,7 +1421,7 @@ function doParry(force){
     if(run.tut) run.tut.parried=(run.tut.parried||0)+1;   // v2.60
     say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
-    hitstop=0.045+0.02*(ts.length-1);
+    /* v2.61 패링 히트스톱 제거 — 멈춘 동안 경직 시간이 안 줄어 다음 패링이 씹혔다 */
     /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
     if(boonLv('s_focus')) P.focusT=3;   // v2.37 패링 집중
     P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1));
@@ -1484,7 +1500,7 @@ function doR(){
       const tgt=all.length?all[i%all.length]:null;
       t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir;
     });
-    say('덮어쓰기 ×'+ts.length,'warn'); sfx('overwrite'); shake=10; hitstop=0.06;
+    say('덮어쓰기 ×'+ts.length,'warn'); sfx('overwrite'); shake=10;
     P.rChg=0;
   } else if(CFG.skillR==='echo'){
     P.echoT=ECHO_DUR; P.rChg=0;
@@ -1495,7 +1511,7 @@ function doR(){
     /* v2.29 해킹 — 멈추거나 피해를 주지 않는다. 지속 시간 동안 적이 쏘는 탄환이 내 것이 된다 */
     ens.forEach(e=>{ e.hackT=Math.max(e.hackT||0,CFG.empDur); });
     P.rChg=0;
-    say('해킹  '+CFG.empDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=12; hitstop=0.05;
+    say('해킹  '+CFG.empDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=12;
     burst(P.x,P.y,'cyan',26,320);
   }
 }
@@ -1576,7 +1592,8 @@ function nearestEnemy(){
 function update(dt){
   if(paused)return;
   if(run&&run.phase==='reward') return;     // v2.0 보상 선택 중에는 전투 정지
-  if(hitstop>0){ hitstop-=dt; return; }
+  /* v2.61 히트스톱 중에도 패링 경직과 미리 누른 패링은 계속 흘러가게 — 멈춘 사이 입력이 씹히지 않도록 */
+  if(hitstop>0){ hitstop-=dt; if(P.lock>0) P.lock-=dt; if(P.pbuf>0) P.pbuf=Math.max(P.pbuf,0.05); return; }
   if(run&&run.phase!=='build') run.time+=dt;   // v1.7 B-4
 
   // 플레이어
@@ -1723,7 +1740,7 @@ function update(dt){
       e.lungeHit=true;
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){
-        P.hp-=CONTACT_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=14; say('충돌','red'); sfx('breach'); burst(P.x,P.y,'red',14);
+        P.hp-=Math.round(CONTACT_DMG*dmgScale()); P.hurt=.3;   // v2.63 P.inv=CFG.iframe; shake=14; say('충돌','red'); sfx('breach'); burst(P.x,P.y,'red',14);
       }
     }
     if(e.hurt>0)e.hurt-=dt; if(e.seizeFx>0)e.seizeFx-=dt;
@@ -1923,7 +1940,7 @@ function update(dt){
       }
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+(P.guard>0?14:0)){
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
-      else if(P.inv<=0&&!CFG.god){ P.hp-=PLAYER_DMG; P.hurt=.3; P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
+      else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round(PLAYER_DMG*(b.boss===2?1.75:b.boss?1.5:1)*dmgScale()); P.hurt=.3;   /* v2.62 보스 탄환은 ×1.5, 2페이즈 ×1.75 */ P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
       bullets.splice(i,1); continue;
     }
     if(b.x<-120||b.x>WORLD.w+120||b.y<-120||b.y>WORLD.h+120){ bullets.splice(i,1); continue; }
@@ -1962,12 +1979,12 @@ function spawnBullet(q){
   if(q.spec.heavy){
     /* v2.34 장갑탄 — 유도 없이 직선. armor가 남아 있으면 패링해도 소유권이 넘어오지 않는다 */
     const hs=CFG.spd*0.85;
-    bullets.push({x:q.ex,y:q.ey,dir:a,spd:hs,base:hs,owner:'enemy',returns:0,armor:2,
+    bullets.push({x:q.ex,y:q.ey,dir:a,spd:hs,base:hs,owner:'enemy',returns:0,armor:2,boss:q.boss?(q.src&&q.src.p2?2:1):0,
       age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
       feint:0, orbitDir:0, orbitAmt:0});
     return;
   }
-  bullets.push({x:q.ex,y:q.ey,dir:a,spd:s0,base:s0,owner:'enemy',returns:0,
+  bullets.push({x:q.ex,y:q.ey,dir:a,spd:s0,base:s0,owner:'enemy',returns:0,boss:q.boss?(q.src&&q.src.p2?2:1):0,   // v2.62
     age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
     feint:q.spec.feint||0, orbitDir:q.spec.orbit?(q.spec.odir||(Math.random()<.5?1:-1)):0,
     orbitAmt:q.spec.orbit?1.5:0});
@@ -2355,7 +2372,7 @@ function drawHUD(){
   ctx.font='700 13px ui-monospace,monospace';
   ctx.fillStyle=mx>0?C.cyan:C.dim;ctx.fillText('왕복 ×'+mx,W-18,H-22);
   ctx.textAlign='center';ctx.font='600 11px ui-monospace,monospace';ctx.fillStyle=C.dim;
-  ctx.fillText('사이클 '+run.cycle+'  ·  웨이브 '+(run.wave||1)+'  ·  '+fmtTime(run.time),W/2,H-22);
+  ctx.fillText('사이클 '+run.cycle+'  ·  웨이브 '+(run.wave||1)+'  ·  '+fmtTime(run.time)+(dmgScale()>1.001?'  ·  받는 피해 ×'+dmgScale().toFixed(2):''),W/2,H-22);   // v2.63
 
   // 벽 설치 준비 시간 안내
   if(run.phase==='build'){
@@ -2714,6 +2731,13 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.61',['기본 스탯 너프 — 체력 100→85, 패링 사거리 3.5→3.2m, 시야각 60→55°, 빗나감 페널티 1.2→1.3초 (강화 증가량은 그대로)',
+   'F 회복 너프 — 회복량 18~36, 대기 32~24초',
+   '적을 맞히거나 패링할 때 게임이 잠깐 멈춰 패링이 씹히던 문제 수정 (보스 처치만 짧게 멈춤)',
+   '보스 패턴 4종 추가 — CROSS · SHELL VOLLEY(장갑탄) · FEINT RAIN · ORBIT CAGE',
+   '보스 2페이즈 전용 패턴 2종 추가 — MELTDOWN · TEMPEST',
+   '보스 탄환 피해 ×1.5 (2페이즈 ×1.75)',
+   '후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25% (최대 ×2.5), 화면 아래에 배율 표시']],
  ['2.60',['체험판 튜토리얼 — 이동 · 패링 · 반격 · F/Q/R 스킬을 실제 전투 화면에서 직접 해 보기','튜토리얼 창에 "직접 해 보기" 버튼, 체험판에선 쓰러지지 않고 재화·랭킹에 영향 없음']],
  ['2.59',['아이폰: 전체화면 대신 보이는 화면을 꽉 채우도록 (주소창 높이 반영)','아이폰 첫 접속 때 "홈 화면에 추가" 안내 — 홈 화면에서 열면 주소창 없이 실행','홈 화면 앱 설정(아이콘 이름 · 가로 고정 · 전체화면) 추가']],
  ['2.58',['시작할 때 닉네임 + 비밀번호로 로그인 (처음이면 계정 생성, 다른 기기에서 이어하기)','판이 끝날 때 · 출격할 때 자동 저장','설정의 클라우드 저장을 계정(로그아웃)으로 변경','서버에 연결이 안 되면 오프라인으로 하기 가능']],
