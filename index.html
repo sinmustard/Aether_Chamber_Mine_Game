@@ -400,7 +400,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.64</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.65</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -502,6 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <button data-spawn="tracker">추적자</button>
   <button data-spawn="healer">힐러</button>
   <button data-spawn="cannon">대포병</button>
+  <button data-spawn="sniper">저격수</button>
   <button data-spawn="summoner">소환사</button>
   <button data-spawn="minion">잡졸</button>
   <button data-spawn="splinter">분열체</button>
@@ -563,8 +564,8 @@ const UPG=[
   steps:['85 / 0.40s','100 / 0.45s','115 / 0.50s','130 / 0.55s','145 / 0.60s','160 / 0.70s']},
  {k:'greed', n:'재화 획득', s:'한 판에서 버는 재화가 늘어남', grp:'life', pos:{x:230,y:690}, lv:0, max:5, cost:[600,900,1350,2000,3000],
   d:'전투가 끝나고 받는 재화가 늘어납니다. 점수·처치·웨이브·보스 보상 전부에 적용됩니다.',
-  req:[{k:'vital',lv:2}], steps:['+0%','+8%','+16%','+24%','+32%','+40%']},
- {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', pos:{x:230,y:760}, lv:0, max:2, cost:[2500,5000],
+  req:[{k:'vital',lv:2}], steps:['+0%','+6%','+12%','+18%','+24%','+30%']},
+ {k:'supply',n:'선행 보급', s:'출격하자마자 웨이브 보상 선택', grp:'life', pos:{x:230,y:760}, lv:0, max:2, cost:[3500,7000],   // v2.65 비용 증가
   d:'출격 직후에 웨이브 보상을 미리 고릅니다. 1단계는 1회, 2단계는 2회입니다.',
   req:[{k:'vital',lv:3}], steps:['없음','출격 시 1회','출격 시 2회']},
  /* v2.49 폰 전용 — 터치 기기에서는 자동으로 해금된다. 설정에서 방식을 바꿀 수 있다 */
@@ -580,8 +581,8 @@ const UPG=[
   d:'웨이브 보상 화면에서 새로고침(R)으로 카드를 다시 뽑을 수 있어요. 단계마다 판당 횟수가 1회씩 늘어요. 보상 "새로고침 +1"로 더 얻을 수도 있어요.',
   steps:['없음','판마다 1회','판마다 2회','판마다 3회','판마다 4회','판마다 5회']},
  /* v2.37 생존 — 부활 · 특수 특전 */
- {k:'revive',n:'부활', s:'쓰러지면 다시 일어남', grp:'life', pos:{x:410,y:690}, lv:0, max:2, cost:[4000,9000],
-  d:'체력이 0이 되면 체력 40%로 다시 일어나고 2초간 무적이 됩니다. 주변 적 탄환은 사라집니다. 1단계 1회, 2단계 2회.',
+ {k:'revive',n:'부활', s:'쓰러지면 다시 일어남', grp:'life', pos:{x:410,y:690}, lv:0, max:2, cost:[5000,11000],   // v2.65 너프
+  d:'체력이 0이 되면 체력 30%로 다시 일어나고 1.5초간 무적이 됩니다. 주변 적 탄환은 사라집니다. 1단계 1회, 2단계 2회.',
   req:[{k:'vital',lv:3}], steps:['없음','부활 1회','부활 2회']},
  {k:'special',n:'특수 특전', s:'웨이브 보상에 특수 특전이 섞임', grp:'life', pos:{x:410,y:760}, lv:0, max:3, cost:[3000,6000,10000],
   d:'웨이브 보상을 고를 때 확률적으로 특수 특전 하나가 섞여 나옵니다. 보스를 잡은 직후 보상에서는 확률이 38 / 47 / 50%로 오릅니다. 특수 특전은 부활 +1, 유도 대폭 강화, 패링 집중(성공 후 3초간 빗나감 페널티 대폭 감소), 점수 배율 ×1.35, 패링 사거리 +20%, 패링 시야각 +25°입니다.',
@@ -780,7 +781,7 @@ function statsFromUpgrades(){
     hpMax: 85+15*v,   /* v2.61 기본 체력 100→85 */ iframe: [0.40,0.45,0.50,0.55,0.60,0.70][v],
     multi: 1+mu,
     homing: [0,0.8,1.4,2.0,2.8,3.6][hm],
-    gainMul: 1+0.08*gr, startRewards: sp,
+    gainMul: 1+0.06*gr, startRewards: sp,   /* v2.65 재화 획득 너프 8%→6% */
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
     skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
@@ -838,6 +839,8 @@ const GRADES={
   healer:  {hits:2,  r:R_ENEMY, pool:'mob',     score:130,  seize:0.44, heal:0.2},
   /* v2.34 대포병 — 유도 없이 직선으로 날아가는 장갑탄을 쏜다. 장갑탄은 패링을 연속 2번 해야 뺏을 수 있다 */
   cannon:  {hits:3,  r:42,      pool:'cannon',  score:200,  seize:0.50, fireMul:1.8},
+  /* v2.65 저격수 — 조준선을 1초 보여 준 뒤 아주 빠른 직선탄 한 발. 조준선이 멈추면(0.3초 전) 곧 쏜다 */
+  sniper:  {hits:2,  r:R_ENEMY, pool:'mob',     score:160,  seize:0.35, noFire:true, sniper:true},
   /* v2.1 분열형 — 처치되면 1칸짜리 분열체(splinter) 2기로 갈라진다 */
   splitter:{hits:2,  r:R_ENEMY, pool:'splitter',score:45,   seize:0.42},
   splinter:{hits:1,  r:20,      pool:'splinter',score:15,   seize:0.38},
@@ -1085,7 +1088,8 @@ function enemyPool(){
     /* v2.19 소환사 — 2사이클을 끝낸 3사이클부터 */
     {g:'summoner', from:1, w:1, cap:1, ok:()=>run.cycle>=3},
     /* v2.34 대포병 — 3사이클 3웨이브부터 */
-    {g:'cannon',   from:3, w:1, cap:1, ok:()=>run.cycle>=3}
+    {g:'cannon',   from:3, w:1, cap:1, ok:()=>run.cycle>=3},
+    {g:'sniper',   from:5, w:1, cap:2, ok:()=>run.cycle>=2}   // v2.65 2사이클 5웨이브부터
   ];
 }
 function rollWave(n){
@@ -1801,6 +1805,23 @@ function update(dt){
         o.healFx=0.25;
       });
     }
+    /* v2.65 저격수 — 자기 박자로만 쏜다 (일반 패턴 안 씀) */
+    if(G(e).sniper){
+      if(run.phase!=='fight') { e.snipeT=2.2; e.aimOn=0; return; }
+      if(e.hackT>0) return;
+      e.snipeT=(e.snipeT===undefined?2.2:e.snipeT-dt);
+      if(e.snipeT<=1.0){ e.aimOn=1; if(e.snipeT>0.3) e.aimAng=Math.atan2(P.y-e.y,P.x-e.x); }
+      if(e.snipeT<=0){
+        e.aimOn=0; e.snipeT=3.0+Math.random()*1.2;
+        if(bullets.filter(b=>b.owner==='enemy').length<CFG.maxB){
+          const sp=Math.max(CFG.spd*2.4, 520);
+          bullets.push({x:e.x+Math.cos(e.aimAng)*(e.r+6),y:e.y+Math.sin(e.aimAng)*(e.r+6),dir:e.aimAng,spd:sp,base:sp,owner:'enemy',returns:0,
+            straight:1, snipe:1, age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,feint:0,orbitDir:0,orbitAmt:0});
+          sfx('fire'); burst(e.x,e.y,'red',8,160);
+        }
+      }
+      return;
+    }
     if(run.phase!=='fight'&&!(run.tut&&run.tut.fire))return;   // v2.60 체험판에선 단계에 따라 쏜다
     /* v2.8 송신기·추적자는 평소엔 안 쏘지만, 남은 적이 전부 안 쏘는 부류뿐이면 패링할 탄환 자체가
        없어 못 잡게 되므로(예: 송신기 2기만 남는 경우) 그럴 땐 다른 적처럼 쏘게 한다.
@@ -1837,7 +1858,7 @@ function update(dt){
       if(b.feint) b.spd = b.age<0.55 ? b.base*0.35 : Math.min(b.base*1.35,cap());
       if(b.orbitAmt>0) b.orbitAmt=Math.max(0,b.orbitAmt-dt*1.05);
       const want=Math.atan2(P.y-b.y,P.x-b.x)+b.orbitDir*b.orbitAmt;
-      if(P.phase<=0 && !b.armor) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
+      if(P.phase<=0 && !b.armor && !b.straight) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
     } else {
       /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
       /* v2.46 유도가 강하면 탄환이 적 주위를 원을 그리며 계속 도는 문제가 있었다.
@@ -1977,7 +1998,7 @@ function update(dt){
   if(P.hp<=0){
     if(run.revives>0){
       run.revives--;
-      P.hp=Math.round(CFG.hpMax*0.4); P.inv=2.0; P.hurt=0;
+      P.hp=Math.round(CFG.hpMax*0.3); P.inv=1.5; P.hurt=0;   // v2.65 부활 너프
       for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i];
         if(b.owner==='enemy'&&dist(b.x,b.y,P.x,P.y)<240) bullets.splice(i,1); }
       announce('부활'+(run.revives?'  ·  남은 '+run.revives+'회':''),'cyan');
@@ -2082,7 +2103,7 @@ function drawEnemyBody(e){
     ctx.lineWidth=2; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+10,(e.r+10)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
   }
-  if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:C.red,e.hurt); return; }
+  if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:G(e).sniper?'#ff7a3d':C.red,e.hurt); return; }   // v2.65 저격수는 주황
   const p=proj(e.x,e.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],e.r*.86,e.r*.86*SQUASH,0,0,TAU);ctx.fill();
@@ -2251,6 +2272,23 @@ function drawRelayLinks(){
   });
 }
 /* v2.7 추적자 — 예비 동작(wind) 중에는 곧 돌진한다는 걸 커지는 붉은 경고 링으로 알려준다 */
+/* v2.65 저격수 조준선 — 따라오는 동안은 옅게, 멈추면(곧 발사) 진하게 깜빡인다 */
+function drawSniperLines(){
+  ens.forEach(e=>{
+    if(!G(e).sniper) return;
+    const p=proj(e.x,e.y);
+    ctx.save(); ctx.strokeStyle='#ff7a3d'; ctx.lineWidth=1.5; ctx.globalAlpha=.8;
+    ctx.beginPath(); ctx.arc(p[0],p[1]-e.r*SQUASH-12,5,0,TAU); ctx.moveTo(p[0]-8,p[1]-e.r*SQUASH-12); ctx.lineTo(p[0]+8,p[1]-e.r*SQUASH-12);
+    ctx.moveTo(p[0],p[1]-e.r*SQUASH-20); ctx.lineTo(p[0],p[1]-e.r*SQUASH-4); ctx.stroke(); ctx.restore();
+    if(!e.aimOn||e.aimAng===undefined) return;
+    const locked=e.snipeT<=0.3, L=1400, x2=e.x+Math.cos(e.aimAng)*L, y2=e.y+Math.sin(e.aimAng)*L, q=proj(x2,y2);
+    ctx.save();
+    ctx.strokeStyle=locked?'#ff3b3b':'#ff7a3d';
+    ctx.globalAlpha=locked?(Math.sin(performance.now()/40)>0?.95:.45):.35+.3*(1-e.snipeT);
+    ctx.lineWidth=locked?2.5:1.2; if(!locked) ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); ctx.restore();
+  });
+}
 function drawLungeWarning(){
   ens.forEach(e=>{
     if(e.grade!=='tracker'||e.lungePhase!=='wind') return;
@@ -2437,7 +2475,7 @@ function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
-  drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();drawHealLinks();drawLungeWarning();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
@@ -2781,6 +2819,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.65',['신규 적 저격수 — 조준선을 1초 보여 준 뒤 아주 빠른 직선탄 (2사이클 5웨이브부터, 최대 2기)','보급 너프 — 재화 획득 +8%→+6%/단계, 선행 보급 3,500 · 7,000, 부활 체력 30% · 무적 1.5초 · 5,000 · 11,000']],
  ['2.64',['디버그 모드는 개발자 계정만 — 켤 때 서버에서 닉네임·비밀번호로 확인']],
  ['2.63',['전체화면에서 조준이 실제 마우스와 어긋나던 문제 수정 — 전체화면에선 마우스를 잠그지 않고 실제 위치로 조준','마우스 잠금 모드에서 조준점이 확 튀던 현상 완화 (원시 입력 + 비정상 값 무시)','보급에 무작위 보정 — 출격 때 무작위 능력치 +1단계 (1~3개)','폰 버튼 위치 바꾸기(아래 · 위 · 오른쪽 · 왼쪽)와 조작 좌우 바꾸기']],
  ['2.62',['디스코드 랭킹 분리 — 로그인 계정으로만 판 끝에 자동 기록 (게임 안 랭킹과 별개, 다른 이름으로 올릴 수 없음)','결과 화면에 디스코드 랭킹 갱신 · 순위 표시']],
