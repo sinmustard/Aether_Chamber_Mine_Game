@@ -276,7 +276,8 @@ body.in-game #topPause{display:block}
 #errBox{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;
   max-width:92vw;padding:9px 12px;border-radius:8px;background:rgba(40,8,12,.95);border:1px solid var(--red);color:#ffd6d9;
   font-size:11.5px;line-height:1.5;cursor:pointer}
-#cloudStat{font-size:10.5px;color:var(--dim);margin:-4px 0 8px;min-height:14px}
+#cloudStat{font-size:10.5px;color:var(--dim);margin:-4px 0 2px;min-height:14px}
+#discStat{font-size:10.5px;color:#9aa6ff;margin:0 0 8px;min-height:14px}
 .login .lead{font-size:11px;line-height:1.7;color:var(--dim);margin:2px 0 12px}
 .login input{width:100%;box-sizing:border-box;margin:0 0 8px;padding:10px 11px;font:inherit;font-size:13px;color:var(--fg);
   background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
@@ -392,7 +393,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.61</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.62</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -437,6 +438,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div id="rBoons"></div>
     <div class="gain" id="rGain">◆ +0</div>
     <div id="cloudStat"></div>
+    <div id="discStat"></div>
     <div id="rankBox">
       <input id="rkName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="off">
       <button id="rkSend">랭킹 등록</button>
@@ -2626,6 +2628,15 @@ function endRun(){
       return b? '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'') : ''; }).join(' · ') : '';   // v2.52
   $('#cloudStat').textContent=getSession()?'☁ 자동 저장 중…':'';   // v2.58
   if(getSession()) cloudAutoSave().then(ok=>{ $('#cloudStat').textContent= ok?'☁ '+getSession().name+' 계정에 자동 저장했어요':'☁ 자동 저장 실패 — 다음 판에 다시 시도해요'; });
+  /* v2.62 디스코드 랭킹 — 로그인 계정으로만 자동 기록 (게임 안 랭킹과 별개, 이름을 바꿔 올릴 수 없음) */
+  $('#discStat').textContent='';
+  if(getSession()&&!run.cheat&&!run.tut&&run.score>0){
+    const ss=getSession();
+    cloudCall('aether_submit_verified',{p_name:ss.name,p_pin:ss.pin,p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:BUILD})
+      .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
+        $('#discStat').textContent= r.updated? '디스코드 랭킹 기록 갱신 · '+r.rank+'위' : '디스코드 랭킹 · 최고 기록 '+Number(r.best).toLocaleString()+'점 유지 · '+r.rank+'위'; })
+      .catch(()=>{ $('#discStat').textContent='디스코드 랭킹 기록 실패 — 다음 판에 다시 시도해요'; });
+  } else if(getSession()&&run.cheat) $('#discStat').textContent='디버그를 쓴 판은 디스코드 랭킹에 기록되지 않아요';
   setupRankBox();   // v2.48
   go('result');
 }
@@ -2731,6 +2742,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.62',['디스코드 랭킹 분리 — 로그인 계정으로만 판 끝에 자동 기록 (게임 안 랭킹과 별개, 다른 이름으로 올릴 수 없음)','결과 화면에 디스코드 랭킹 갱신 · 순위 표시']],
  ['2.61',['기본 스탯 너프 — 체력 100→85, 패링 사거리 3.5→3.2m, 시야각 60→55°, 빗나감 페널티 1.2→1.3초 (강화 증가량은 그대로)',
    'F 회복 너프 — 회복량 18~36, 대기 32~24초',
    '적을 맞히거나 패링할 때 게임이 잠깐 멈춰 패링이 씹히던 문제 수정 (보스 처치만 짧게 멈춤)',
