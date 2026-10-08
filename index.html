@@ -400,7 +400,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.65</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.66</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -813,6 +813,11 @@ const CFG={ homeTime:1.4, rangeM:3.2, fov:55, whiff:1.3, dwell:0.35, spd:240, se
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
 const BODY_SQ=0.95;   // v2.8 캐릭터 몸통 세로 비율 (바닥 그림자는 SQUASH 유지)
 const WORLD={w:1000,h:760};
+/* v2.66 가장자리 압박 — 구석에 박혀 앞만 보고 패링하는 플레이를 막는다.
+   가장자리 띠(90) 안에 있으면 잠깐 뒤부터 지속 피해, 구석(두 띠가 겹치는 곳)은 더 빨리 · 더 세게 */
+const EDGE=90;
+const inEdge=()=>P.x<EDGE||P.x>WORLD.w-EDGE||P.y<EDGE||P.y>WORLD.h-EDGE;
+const inCorner=()=>(P.x<EDGE||P.x>WORLD.w-EDGE)&&(P.y<EDGE||P.y>WORLD.h-EDGE);
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
 /* v2.63 후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25%, 최대 ×2.5 (체험판은 그대로) */
@@ -1653,6 +1658,17 @@ function update(dt){
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.focusT>0)P.focusT-=dt;   // v2.37
   if(debug||CFG.god) run.cheat=1;   // v2.48 디버그를 쓴 판은 랭킹 등록 불가
+  /* v2.66 가장자리 압박 — 전투 중에만 (웨이브 사이 · 체험판은 제외) */
+  if(run.phase==='fight'&&!run.tut){
+    if(inEdge()){
+      const corner=inCorner(); P.edgeT=(P.edgeT||0)+dt;
+      if(!P.edgeWarned&&P.edgeT>0.4){ P.edgeWarned=1; say(corner?'구석은 위험해요 — 가운데로!':'가장자리에 오래 있으면 피해를 입어요','red'); }
+      if(P.edgeT>(corner?0.8:1.5)&&P.inv<=0&&!CFG.god){
+        P.edgeDmg=(P.edgeDmg||0)+dt*(corner?12:6)*dmgScale();
+        if(P.edgeDmg>=1){ const d=Math.floor(P.edgeDmg); P.edgeDmg-=d; P.hp-=d; P.hurt=Math.max(P.hurt,.12); }
+      }
+    } else { P.edgeT=Math.max(0,(P.edgeT||0)-dt*2); P.edgeDmg=0; if(!P.edgeT) P.edgeWarned=0; }
+  } else { P.edgeT=0; P.edgeDmg=0; }
   /* v2.49 홀드 패링 — 오른쪽 손가락이 닿아 있는 동안 패링할 탄환이 들어오면 자동 패링 */
   /* v2.57 패링 과부하 — 홀드 패링(폰)은 손을 계속 대고만 있으면 너무 쉬워서, 오래 누르고 있을수록 과부하가 쌓인다.
      · 누르고 있는 동안 초당 1, 자동 패링 한 번에 +0.15 / 떼면 초당 1.4씩 식는다
@@ -2041,6 +2057,16 @@ let C={};
 const proj=(x,y)=>[x,y*SQUASH+OY];
 function refreshColors(){C={cyan:css('--cyan'),red:css('--red'),fg:css('--fg'),dim:css('--dim'),warn:css('--warn')};}
 
+/* v2.66 가장자리 위험 띠 — 평소엔 아주 옅게, 들어가 있으면 붉게 깜빡인다 */
+function drawEdgeZone(){
+  if(!run||run.tut||run.phase!=='fight') return;
+  const k=Math.min(1,(P.edgeT||0)/1.2), a=0.05+k*(0.18+0.1*Math.sin(performance.now()/90));
+  const strips=[[0,0,WORLD.w,EDGE],[0,WORLD.h-EDGE,WORLD.w,WORLD.h],[0,EDGE,EDGE,WORLD.h-EDGE],[WORLD.w-EDGE,EDGE,WORLD.w,WORLD.h-EDGE]];
+  ctx.save(); ctx.fillStyle='rgba(255,70,85,'+a.toFixed(3)+')';
+  strips.forEach(([x1,y1,x2,y2])=>{ const p1=proj(x1,y1),p2=proj(x2,y1),p3=proj(x2,y2),p4=proj(x1,y2);
+    ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.lineTo(p3[0],p3[1]); ctx.lineTo(p4[0],p4[1]); ctx.closePath(); ctx.fill(); });
+  ctx.restore();
+}
 function drawGrid(){
   ctx.strokeStyle='rgba(47,227,208,.05)';ctx.lineWidth=1;
   for(let i=-WORLD.h;i<WORLD.w+WORLD.h;i+=120){
@@ -2475,7 +2501,7 @@ function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
-  drawGrid();drawObstacles();drawWallPreview();drawZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
@@ -2819,6 +2845,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.66',['구석 패링 플레이 방지 — 가장자리 띠에 오래 있으면 지속 피해 (가장자리 1.5초 뒤 초당 6, 구석 0.8초 뒤 초당 12, 후반 피해 배율 적용)','전투 중 가장자리 위험 띠 표시']],
  ['2.65',['신규 적 저격수 — 조준선을 1초 보여 준 뒤 아주 빠른 직선탄 (2사이클 5웨이브부터, 최대 2기)','보급 너프 — 재화 획득 +8%→+6%/단계, 선행 보급 3,500 · 7,000, 부활 체력 30% · 무적 1.5초 · 5,000 · 11,000']],
  ['2.64',['디버그 모드는 개발자 계정만 — 켤 때 서버에서 닉네임·비밀번호로 확인']],
  ['2.63',['전체화면에서 조준이 실제 마우스와 어긋나던 문제 수정 — 전체화면에선 마우스를 잠그지 않고 실제 위치로 조준','마우스 잠금 모드에서 조준점이 확 튀던 현상 완화 (원시 입력 + 비정상 값 무시)','보급에 무작위 보정 — 출격 때 무작위 능력치 +1단계 (1~3개)','폰 버튼 위치 바꾸기(아래 · 위 · 오른쪽 · 왼쪽)와 조작 좌우 바꾸기']],
