@@ -400,7 +400,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.63</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.64</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2781,6 +2781,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.64',['디버그 모드는 개발자 계정만 — 켤 때 서버에서 닉네임·비밀번호로 확인']],
  ['2.63',['전체화면에서 조준이 실제 마우스와 어긋나던 문제 수정 — 전체화면에선 마우스를 잠그지 않고 실제 위치로 조준','마우스 잠금 모드에서 조준점이 확 튀던 현상 완화 (원시 입력 + 비정상 값 무시)','보급에 무작위 보정 — 출격 때 무작위 능력치 +1단계 (1~3개)','폰 버튼 위치 바꾸기(아래 · 위 · 오른쪽 · 왼쪽)와 조작 좌우 바꾸기']],
  ['2.62',['디스코드 랭킹 분리 — 로그인 계정으로만 판 끝에 자동 기록 (게임 안 랭킹과 별개, 다른 이름으로 올릴 수 없음)','결과 화면에 디스코드 랭킹 갱신 · 순위 표시']],
  ['2.61',['기본 스탯 너프 — 체력 100→85, 패링 사거리 3.5→3.2m, 시야각 60→55°, 빗나감 페널티 1.2→1.3초 (강화 증가량은 그대로)',
@@ -3157,8 +3158,24 @@ $('#hubTitle').addEventListener('click',()=>{
   dbgTapT=now; dbgTaps++;
   if(dbgTaps>=5){ dbgTaps=0; toggleDebug(); }
 });
-function toggleDebug(){
-  debug=!debug;
+/* v2.64 디버그는 개발자 계정만 — 켤 때 서버에 (닉네임 + 비밀번호)로 개발자인지 확인한다. 끄는 건 언제나 가능 */
+let devOK=null, devName='';
+async function toggleDebug(){
+  if(!debug){
+    const ss=getSession();
+    if(!ss){ flashDbg('개발자 계정으로 로그인해야 디버그를 쓸 수 있어요'); return; }
+    if(devOK===null||devName!==ss.name){
+      try{ const d=await cloudCall('aether_is_dev',{p_name:ss.name,p_pin:ss.pin}); devOK=(d===true||d==='true'); devName=ss.name; }
+      catch(e){ flashDbg('개발자 확인에 실패했어요 (인터넷 연결 확인)'); return; }
+    }
+    if(!devOK){ flashDbg('디버그는 개발자 계정만 쓸 수 있어요'); return; }
+  }
+  setDebug(!debug);
+}
+function flashDbg(t){ if(screen==='game') say(t,'red'); const el=$('#dbgTag'); if(!el) return; el.textContent=' · '+t; el.style.color='var(--red)';
+  clearTimeout(flashDbg._t); flashDbg._t=setTimeout(()=>{ el.textContent=debug?'· DEBUG':''; el.style.color=''; },2200); }
+function setDebug(on){
+  debug=on;
   document.body.classList.toggle('debug',debug);
   const d=$('details.dev'); if(d) d.open=debug;
   $('#dbgTag').textContent=debug?'· DEBUG':'';
