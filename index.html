@@ -360,6 +360,13 @@ body.touch.in-game .pads{display:flex;position:fixed;z-index:45;
 body.touch.in-game .pads button{background:rgba(8,12,17,.72);backdrop-filter:blur(2px);
   padding:13px 6px;font-size:12px}
 @media (max-height:560px){ .pads button{padding:11px;font-size:12px} }
+/* v2.63 폰 버튼 위치 — 아래(기본) · 위 · 오른쪽 · 왼쪽 */
+body.touch.in-game.pads-top .pads{bottom:auto;top:calc(52px + env(safe-area-inset-top,0px))}
+body.touch.in-game.pads-right .pads,body.touch.in-game.pads-left .pads{flex-direction:column;width:auto;gap:7px;
+  top:50%;bottom:auto;transform:translateY(-50%)}
+body.touch.in-game.pads-right .pads{left:auto;right:calc(8px + env(safe-area-inset-right,0px))}
+body.touch.in-game.pads-left .pads{left:calc(8px + env(safe-area-inset-left,0px))}
+body.touch.in-game.pads-right .pads button,body.touch.in-game.pads-left .pads button{width:92px;padding:12px 6px}
 
 /* DEV */
 details.dev{display:none}
@@ -393,7 +400,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.62</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.63</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -564,6 +571,10 @@ const UPG=[
  {k:'mparry',n:'홀드 패링', s:'폰 전용 · 손을 떼지 않아도 패링', grp:'life', phoneOnly:1, lv:0, max:1, cost:[0],
   d:'폰(터치)에서만 쓰는 조작이에요. 오른쪽 손가락으로 조준하고 있는 동안, 패링할 수 있는 탄환이 들어오면 손을 떼지 않아도 자동으로 패링해요. 단, 너무 오래 누르고 있으면 패링 과부하가 걸려 잠깐 경직되고 자동 패링이 멈춰요. 손을 떼면 식어요. 폰으로 접속하면 자동으로 해금돼요. 설정 → 패링 방식에서 "손 떼면 패링"(예전 방식)으로 바꿀 수 있어요.',
   steps:['잠김','해금됨 · 설정에서 켜고 끔']},
+ /* v2.63 보급 — 출격할 때 무작위 능력치 +1단계 (그 판에만) */
+ {k:'randstat',n:'무작위 보정', s:'출격 때 무작위 능력치 +1단계', grp:'life', lv:0, max:3, cost:[600,1200,2400],
+  d:'출격할 때마다 능력치 하나가 무작위로 강화 1단계만큼 올라가요(그 판에만). 사거리 · 시야각 · 빗나감 페널티 · 이동 속도 · 최대 체력 · 유도 중에서 고르며, 단계가 오르면 개수가 늘어요.',
+  steps:['없음','판마다 1개','판마다 2개','판마다 3개']},
  /* v2.52 보급 — 보상 새로고침 (선행 조건 없음, 싸게) */
  {k:'reroll',n:'새로고침', s:'웨이브 보상을 다시 뽑기', grp:'life', lv:0, max:5, cost:[20,25,30,35,40],
   d:'웨이브 보상 화면에서 새로고침(R)으로 카드를 다시 뽑을 수 있어요. 단계마다 판당 횟수가 1회씩 늘어요. 보상 "새로고침 +1"로 더 얻을 수도 있어요.',
@@ -610,7 +621,7 @@ const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -783,6 +794,7 @@ function statsFromUpgrades(){
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.5,0.8,1.5][em],
     rerolls: lv('reroll'),   // v2.52
+    randBoosts: lv('randstat'),   // v2.63
     revives: lv('revive'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
     specialBoss: [0,0.38,0.47,0.50][lv('special')],   // v2.47 보스 처치 후 확률
     rNeed: META.skillR==='emp' ? EMP_NEED
@@ -794,7 +806,7 @@ function statsFromUpgrades(){
 const CFG={ homeTime:1.4, rangeM:3.2, fov:55, whiff:1.3, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookRange:0, hookCd:9,
-            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0, specialBoss:0, rerolls:0,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, revives:0, specialChance:0, specialBoss:0, rerolls:0, randBoosts:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:85, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
@@ -1042,7 +1054,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookRange:st.hookRange,hookCd:st.hookCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,revives:st.revives,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,randBoosts:st.randBoosts,
     spd:240,fire:1.8,seizeMul:1,homeTime:1.4});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,heat:0,ovl:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -1250,14 +1262,23 @@ const gcv=$('#gamecv');
    잠긴 동안에는 움직인 거리(movementX/Y)로 조준점을 옮기고, 조준점은 맵 밖으로 못 나간다.
    ESC를 누르면 브라우저가 잠금을 풀고, 일시정지도 같이 걸린다 */
 const locked=()=>document.pointerLockElement===gcv;
+/* v2.63 전체화면에서는 마우스를 잠그지 않는다 — 어차피 화면 밖으로 못 나가고,
+   잠그면 크롬이 주는 움직임 값이 화면 배율(125% 등)과 어긋나 조준이 실제 마우스와 달라지고 가끔 튀었다 */
+const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
 function lockMouse(){
-  if(!OPT.lockMouse||screen!=='game'||paused||touchMode)return;
-  if(!locked()&&gcv.requestPointerLock) gcv.requestPointerLock();
+  if(!OPT.lockMouse||screen!=='game'||paused||touchMode||isFs())return;
+  if(!locked()&&gcv.requestPointerLock){
+    try{ const pr=gcv.requestPointerLock({unadjustedMovement:true});   // 가속 없는 원시 입력 — 튀는 현상 감소
+      if(pr&&pr.catch) pr.catch(()=>{ try{ gcv.requestPointerLock(); }catch(e){} });
+    }catch(e){ try{ gcv.requestPointerLock(); }catch(_){} }
+  }
 }
 function unlockMouse(){ if(locked()&&document.exitPointerLock) document.exitPointerLock(); }
 gcv.addEventListener('mousemove',e=>{
   const r=gcv.getBoundingClientRect();
   if(locked()){
+    /* v2.63 한 번에 비정상적으로 큰 움직임은 무시 (크롬 잠금 모드에서 가끔 들어오는 튀는 값) */
+    if(Math.abs(e.movementX)>innerWidth*0.3||Math.abs(e.movementY)>innerHeight*0.3) return;
     mouse.x=clamp(mouse.x+e.movementX*(W/r.width), 0, WORLD.w);
     mouse.y=clamp(mouse.y+e.movementY*(H/r.height)/SQUASH, 0, WORLD.h);
     return;
@@ -1283,7 +1304,7 @@ gcv.addEventListener('touchstart',e=>{
   e.preventDefault(); touchMode=true; document.body.classList.add('touch');
   for(const t of e.changedTouches){
     const [x,y]=tPos(t);
-    const side = x < W/2 ? 'move' : 'aim';
+    const side = ((x < W/2) !== !!OPT.swapSticks) ? 'move' : 'aim';   // v2.63 좌우 바꾸기
     if(stick[side]) continue;                      // 같은 쪽은 먼저 닿은 손가락 우선
     stick[side]={id:t.identifier, ox:x, oy:y, x, y, dx:0, dy:0, len:0};
   }
@@ -2492,6 +2513,7 @@ function toggleFullscreen(){
 function syncFsClass(){
   const on=!!(document.fullscreenElement||document.webkitFullscreenElement);
   document.body.classList.toggle('fullscreen', on);
+  if(on) unlockMouse(); else if(screen==='game'&&!paused) lockMouse();   // v2.63 전체화면은 잠금 없이 실제 마우스 위치로 조준
   /* v2.56 전체화면에서 ESC를 게임이 받도록 키보드 잠금(크롬·엣지 PC).
      짧게 누른 ESC는 설정 창 닫기·일시정지로 쓰이고, 전체화면은 ESC를 '길게' 눌러야 꺼진다 */
   try{
@@ -2600,7 +2622,22 @@ document.addEventListener('click',e=>{
   else if(id==='tbMore'){ const T=run&&run.tut; if(T){ T.fire=true; CFG.fire=1.4; ens.length=0; tutSpawnDummy(760,300,3); tutSpawnDummy(800,480,3);
     $('#tbD').innerHTML='자유롭게 연습해 보세요. 적을 다 쓰러뜨리면 다시 나와요.'; T.free=true; } }
 });
-function startRun(){ newRun(); go('game');
+/* v2.63 무작위 보정 — 서로 다른 능력치를 골라 강화 1단계만큼 올린다 */
+const RAND_BOOSTS=[
+ ['패링 사거리 +0.3m',()=>{CFG.rangeM+=0.3;}],
+ ['패링 시야각 +5°',()=>{CFG.fov=Math.min(180,CFG.fov+5);}],
+ ['빗나감 페널티 −0.1초',()=>{CFG.whiff=Math.max(0.3,CFG.whiff-0.1);}],
+ ['이동 속도 +15',()=>{CFG.moveSpd+=15;}],
+ ['최대 체력 +15',()=>{CFG.hpMax+=15; P.hp+=15;}],
+ ['유도 +0.6',()=>{CFG.homing+=0.6;}]
+];
+function applyRandBoosts(){
+  run.randBoosts=[]; const n=CFG.randBoosts||0; if(!n) return;
+  const bag=RAND_BOOSTS.slice();
+  for(let i=0;i<n&&bag.length;i++){ const [name,fn]=bag.splice(Math.floor(Math.random()*bag.length),1)[0]; fn(); run.randBoosts.push(name); }
+  setTimeout(()=>{ if(run&&run.randBoosts.length) announce('무작위 보정 — '+run.randBoosts.join(' · '),'cyan'); },700);
+}
+function startRun(){ newRun(); applyRandBoosts(); go('game');
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
 }
 function endRun(){
@@ -2671,7 +2708,7 @@ function setPause(on,viaKey){
 }
 function togglePause(viaKey){ if(screen!=='game')return; if(performance.now()-pauseAt<300) return; setPause(!paused,viaKey); }
 document.addEventListener('pointerlockchange',()=>{
-  if(!locked()&&screen==='game'&&!paused&&run&&run.phase!=='reward') setPause(true);
+  if(!locked()&&!isFs()&&screen==='game'&&!paused&&run&&run.phase!=='reward') setPause(true);   // v2.63 전체화면 진입으로 풀린 건 멈추지 않음
 });
 $('#pmResume').onclick=()=>setPause(false);
 /* v2.52 일시정지 메뉴 — 다시 시작 · 이번 판 보상 보기 */
@@ -2680,9 +2717,11 @@ $('#pmRestart').onclick=()=>askConfirm('다시 시작할까요?','지금 판은 
 $('#pmBoons').onclick=()=>openBoons();
 function boonListHTML(){
   const own=Object.keys(run&&run.boons||{});
-  return own.length? '<ul class="bnList">'+own.map(k=>{ const b=boonDef(k); if(!b) return '';
+  const __bl=(own.length? '<ul class="bnList">'+own.map(k=>{ const b=boonDef(k); if(!b) return '';
       return '<li class="'+(b.sp?'sp':'')+'"><b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'')+(b.sp?' · 특수 특전':'')+'<span>'+b.d+'</span></li>'; }).join('')+'</ul>'
-    : '<div class="rkNote">아직 받은 보상이 없어요.</div>';
+    : '<div class="rkNote">아직 받은 보상이 없어요.</div>')
+    +((run&&run.randBoosts&&run.randBoosts.length)?'<div class="rkNote">무작위 보정 — '+run.randBoosts.join(' · ')+'</div>':'');   // v2.63
+  return __bl;
 }
 function openBoons(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>이번 판 보상</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+boonListHTML()+
@@ -2742,6 +2781,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.63',['전체화면에서 조준이 실제 마우스와 어긋나던 문제 수정 — 전체화면에선 마우스를 잠그지 않고 실제 위치로 조준','마우스 잠금 모드에서 조준점이 확 튀던 현상 완화 (원시 입력 + 비정상 값 무시)','보급에 무작위 보정 — 출격 때 무작위 능력치 +1단계 (1~3개)','폰 버튼 위치 바꾸기(아래 · 위 · 오른쪽 · 왼쪽)와 조작 좌우 바꾸기']],
  ['2.62',['디스코드 랭킹 분리 — 로그인 계정으로만 판 끝에 자동 기록 (게임 안 랭킹과 별개, 다른 이름으로 올릴 수 없음)','결과 화면에 디스코드 랭킹 갱신 · 순위 표시']],
  ['2.61',['기본 스탯 너프 — 체력 100→85, 패링 사거리 3.5→3.2m, 시야각 60→55°, 빗나감 페널티 1.2→1.3초 (강화 증가량은 그대로)',
    'F 회복 너프 — 회복량 18~36, 대기 32~24초',
@@ -2993,7 +3033,9 @@ function openModal(kind){
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
               ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통']]
-              .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링']]:[]);   // v2.42 · v2.49
+              .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링'],
+                ['버튼 위치 (폰)','padPos',({bottom:'아래',top:'위',right:'오른쪽',left:'왼쪽'})[OPT.padPos]||'아래'],
+                ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔']]:[]);   // v2.63   // v2.42 · v2.49
   $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+   // v2.51
     rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
     (isTouchDev()?'<div class="opt-desc">패링 방식 — <b>누르고 있으면 자동</b>: 오른쪽 손가락으로 조준하고 있으면 탄환이 들어올 때 알아서 패링해요. '+
@@ -3029,6 +3071,7 @@ $('#modalBox').addEventListener('click',e=>{
     if(k==='vol') OPT.vol=OPT.vol>=100?0:OPT.vol+20;
     else if(k==='bgm'){ OPT.bgm=OPT.bgm>=100?0:OPT.bgm+20; bgmStart(); bgmApply(); }   // v2.52
     else if(k==='shake'){ const L=[0,0.5,1,1.6]; OPT.shake=L[(L.indexOf(OPT.shake)+1)%L.length]; }   // v2.52
+    else if(k==='padPos'){ const L=['bottom','top','right','left']; OPT.padPos=L[(L.indexOf(OPT.padPos)+1)%L.length]; applyPadPos(); }   // v2.63
     else if(k==='inputBuf'){ const L=[0,0.08,0.12,0.18]; OPT.inputBuf=L[(L.indexOf(OPT.inputBuf)+1)%L.length]; }   // v2.42
     else OPT[k]=OPT[k]?0:1;
     if(k==='lockMouse'&&!OPT.lockMouse) unlockMouse();
@@ -3201,7 +3244,10 @@ const TOGS=[{k:'bounce',on:'충돌: 반사',off:'충돌: 소멸'},
     CFG[b.dataset.k]=CFG[b.dataset.k]?0:1;syncUI();
   });
 })();
+/* v2.63 폰 버튼 위치 적용 */
+function applyPadPos(){ ['top','right','left'].forEach(p=>document.body.classList.toggle('pads-'+p,OPT.padPos===p)); }
 function syncUI(){
+  applyPadPos();
   SPECS.forEach(sp=>{
     const v=$('#v_'+sp.k),s=$('#s_'+sp.k);
     if(v)v.textContent=Number(CFG[sp.k]).toFixed(sp.dec)+sp.u;
