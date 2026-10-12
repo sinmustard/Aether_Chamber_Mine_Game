@@ -303,6 +303,29 @@ body.in-game #topPause{display:block}
   color:var(--dim);border:1px solid var(--line)}
 #tutBar .tb-btns button.go{color:var(--cyan);border-color:var(--cyan)}
 @media (max-height:420px){ #tutBar{top:40px;padding:7px 10px} #tutBar .tb-t{font-size:13px} #tutBar .tb-d{font-size:10.5px} }
+/* v2.68 */
+.optTabs{display:flex;gap:5px;margin:0 0 10px}
+.optTabs button{flex:1;padding:7px 4px;font:inherit;font-size:11px;cursor:pointer;border-radius:6px;background:transparent;color:var(--dim);border:1px solid var(--line)}
+.optTabs button.on{color:var(--cyan);border-color:var(--cyan)}
+.modeBox{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 8px}
+.modes{display:flex;gap:4px}
+.modes button{padding:6px 11px;font:inherit;font-size:11px;letter-spacing:.06em;cursor:pointer;border-radius:6px;background:transparent;color:var(--dim);border:1px solid var(--line)}
+.modes button.on{color:var(--warn);border-color:var(--warn)}
+#modeDesc{font-size:9.5px;color:var(--dim);max-width:340px;text-align:center;line-height:1.4}
+#achStat{font-size:10.5px;color:var(--warn);margin:0 0 8px;min-height:0}
+#achStat b{color:var(--fg)}
+.achList{list-style:none;margin:0;padding:0}
+.achList li{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+.achList li b{color:var(--fg)} .achList li.on b{color:var(--cyan)}
+.achList .rw{color:var(--warn);font-size:10.5px} .achList .dd{grid-column:1/3;font-size:10.5px}
+.achList .bar{grid-column:1/2;height:4px;background:rgba(255,255,255,.07);border-radius:3px;align-self:center;overflow:hidden}
+.achList .bar i{display:block;height:100%;background:var(--cyan)} .achList .pc{font-size:10px}
+.statGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.statGrid div{display:flex;flex-direction:column;gap:2px;padding:8px;border:1px solid var(--line);border-radius:7px}
+.statGrid span{font-size:10px;color:var(--dim)} .statGrid b{font-size:14px;color:var(--fg)}
+#toastBox{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%) translateY(-20px);z-index:95;opacity:0;pointer-events:none;
+  padding:9px 14px;border-radius:9px;background:rgba(8,12,17,.95);border:1px solid var(--cyan);color:var(--fg);font-size:12px;transition:.25s}
+#toastBox.on{opacity:1;transform:translateX(-50%) translateY(0)}
 #modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;max-height:100%;overflow:auto}
 /* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
@@ -400,7 +423,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.67</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.68</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -415,6 +438,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
       <button data-modal="opt">설정</button>
       <button data-modal="tutorial">튜토리얼</button>
       <button data-modal="rank" id="rankBtn">랭킹</button>
+      <button data-modal="ach">업적</button>
+      <button data-modal="stats">기록</button>
       <button data-modal="log" id="logBtn">업데이트<span id="logNew"></span></button>
     </div>
     <div class="ver" id="tKeys">WASD 이동 · 마우스 조준 · E 패링 · F 스킬 · Q 스킬</div>
@@ -433,6 +458,8 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     </div>
     <div class="foot">
       <button class="ghost" data-go="title">← 타이틀</button>
+      <div class="modeBox"><div class="modes"><button data-mode="normal">노멀</button><button data-mode="hard">하드</button><button data-mode="daily">데일리</button></div>
+        <div id="modeDesc"></div></div>
       <button class="go" id="launch">출 격</button>
     </div>
   </section>
@@ -446,6 +473,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="gain" id="rGain">◆ +0</div>
     <div id="cloudStat"></div>
     <div id="discStat"></div>
+    <div id="achStat"></div>
     <div id="rankBox">
       <input id="rkName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="off">
       <button id="rkSend">랭킹 등록</button>
@@ -618,11 +646,14 @@ const UPG=[
   d:'R — 화면의 모든 적을 해킹합니다. 해킹된 적이 쏘는 탄환은 내 것이 되어 다른 적에게 피해를 줍니다. 적을 멈추거나 직접 피해를 주지는 않습니다. 해킹은 충전 100이 필요하고 단계가 올라도 줄지 않습니다. 충전은 패링 +1, 적 처치 +2.',
   steps:['잠김','해킹 0.5s','해킹 0.8s','해킹 1.5s']}
 ];
-const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:''};
+const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:'', stats:{}, ach:{}, cloudAt:''};
+/* v2.68 누적 기록 */
+function stat(k,n){ if(!META.stats) META.stats={}; META.stats[k]=(META.stats[k]||0)+(n==null?1:n); }
+function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(META.stats[k]||0,v||0); }
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -662,6 +693,7 @@ function load(){
 }
 /* v2.51 확인 팝업 */
 let cfOk=null;
+let optTab='game';   // v2.68 설정 탭
 queueMicrotask(()=>{ const rb=$('#respec'); if(!rb) return;
   rb.onclick=()=>{ const back=respecRefund();
     if(back<=0){ askConfirm('되돌릴 강화가 없어요','아직 찍은 강화가 없어요.','확인',()=>{}); return; }
@@ -710,15 +742,21 @@ function bgmStart(){
     const g=a.createGain(); g.gain.value=gv; o.connect(g).connect(filt); o.start(); });
   const lfo=a.createOscillator(); lfo.frequency.value=0.06; const lg=a.createGain(); lg.gain.value=280;
   lfo.connect(lg).connect(filt.frequency); lfo.start();
-  BGM={out};
+  BGM={out,filt};
   const notes=[220,261.63,329.63,392,329.63,261.63,196,246.94];
+  /* v2.68 ⑨ 보스가 있으면 단조 · 두 배 빠른 박자 · 필터를 열어 더 날카롭게 */
+  const bossNotes=[196,233.08,293.66,349.23,293.66,233.08,174.61,220];
+  let tick=0, wasBoss=false;
   bgmTimer=setInterval(()=>{
     if(!BGM||OPT.bgm<=0||screen!=='game'||paused) return;
-    const t=a.currentTime, f=notes[bgmStep++%notes.length];
-    const o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=f;
-    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.05*OPT.bgm/100,t+0.03);
-    g.gain.exponentialRampToValueAtTime(0.0001,t+0.9); o.connect(g).connect(a.destination); o.start(t); o.stop(t+1);
-  },460);
+    const boss=!!(typeof ens!=='undefined'&&ens&&ens.some(e=>e.grade==='boss'));
+    if(boss!==wasBoss){ wasBoss=boss; try{ BGM.filt.frequency.setTargetAtTime(boss?950:520,a.currentTime,0.8); }catch(e){} }
+    tick++; if(!boss&&tick%2) return;
+    const t=a.currentTime, f=(boss?bossNotes:notes)[bgmStep++%8];
+    const o=a.createOscillator(), g=a.createGain(); o.type=boss?'triangle':'sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime((boss?0.06:0.05)*OPT.bgm/100,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+(boss?0.45:0.9)); o.connect(g).connect(a.destination); o.start(t); o.stop(t+1);
+  },230);
   bgmApply();
 }
 function bgmApply(){
@@ -821,7 +859,7 @@ const inCorner=()=>(P.x<EDGE||P.x>WORLD.w-EDGE)&&(P.y<EDGE||P.y>WORLD.h-EDGE);
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
 /* v2.63 후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25%, 최대 ×2.5 (체험판은 그대로) */
-const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1));
+const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1))*(run.mode==='hard'?1.3:1);   // v2.68 하드 ×1.3
 const BOSS_WAVE=10;
 const EMP_NEED=100;   // v2.23 EMP만 충전 100 고정 (다른 R 스킬은 단계별로 줄어든다)
 const range=()=>CFG.rangeM*M;
@@ -881,7 +919,7 @@ const ENEMY_IFRAME=0.10; // v1.9.2 적 피격 무적. 다중 패링으로 한 �
 const HIT_UNIT=BASE_DMG*DMG_MULT;        // 1칸
 const SHARD_UNIT=0.5;                    // 파편은 중첩당 0.5칸 (최대 2중첩 → 1칸)
 function shielded(e,b){
-  const sh=G(e).shield; if(!sh) return false;
+  const sh=G(e).shield||e.shieldArc; if(!sh) return false;   // v2.68 수호형 보스도 방패
   const toB=Math.atan2(b.y-e.y,b.x-e.x);          // 적에서 탄환을 향하는 방향
   return angDiff(e.sa!=null?e.sa:toB, toB)<=(sh/2)*Math.PI/180;
 }
@@ -997,6 +1035,7 @@ const BOSS_P2S=[
 function pickPattern(e){
   if(e.grade==='boss'){
     if(e.p2&&Math.random()<0.45) return BOSS_P2S[Math.floor(Math.random()*BOSS_P2S.length)];   // v2.62
+    if(e.variant==='phantom'){ const ph=BOSS_PATTERNS.filter(p=>p.specs.some(sp=>sp.feint||sp.orbit)); return ph[Math.floor(Math.random()*ph.length)]; }   // v2.68
     return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)]
                               : BOSS_PATTERNS[Math.floor(Math.random()*BOSS_PATTERNS.length)];
   }
@@ -1046,7 +1085,7 @@ const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
 /* ================= 게임 상태 ================= */
 let P,ens,bullets,queue,msgs,shake,run,paused=false,screen='title';
 let t0=0,raf=0;
-let parts=[],hitstop=0;
+let parts=[],hitstop=0,dmgNums=[];   // v2.68 피해 숫자
 function burst(x,y,col,n,sp){ if(OPT.lowfx) n=Math.ceil(n*0.3);   // v2.52 저사양 모드
   for(let i=0;i<n;i++){const a=Math.random()*TAU,v=(sp||160)*(0.4+Math.random()*0.8);
   parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0.35+Math.random()*0.25,col});} }
@@ -1113,7 +1152,12 @@ function waveSpawn(){
   run.wave++;
   if(run.wave>1 && run.wave%5===1){ rerollMap(); say('지형 변화','warn'); }   // v3.2 5웨이브마다 맵 교체
   const boss = run.wave>BOSS_WAVE;
-  if(boss){ spawnEnemy('boss'); announce('알레테이아','red'); sfx('boss'); }
+  if(boss){ spawnEnemy('boss');
+    /* v2.68 ④ 사이클마다 다른 보스 — 1: 기본 · 2: 수호형(정면 방패 120° + 잡졸 소환) · 3: 환영형(순간이동 + 페인트·우회 위주), 이후 반복 */
+    const bb=ens[ens.length-1], v=['core','warden','phantom'][(run.cycle-1)%3]; bb.variant=v;
+    if(v==='warden'){ bb.shieldArc=120; bb.sa=Math.atan2(P.y-bb.y,P.x-bb.x); bb.hp*=1.15; bb.hpMax=bb.hp; bb.wardT=6; }
+    if(v==='phantom'){ bb.hp*=0.85; bb.hpMax=bb.hp; bb.blinkT=4.5; }
+    announce(v==='warden'?'알레테이아 · 수호형':v==='phantom'?'알레테이아 · 환영형':'알레테이아','red'); sfx('boss'); }
   else{
     const base=Math.min(5,1+Math.ceil(run.wave/2));
     const n=Math.min(6, base+(run.cycle>=2?1:0));
@@ -1204,6 +1248,7 @@ function killEnemy(e){
   const idx=ens.indexOf(e); if(idx<0) return;
   const bonus=G(e).score;
   run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
+  if(!run.tut){ stat('kills'); if(e.grade==='boss'){ stat('bossKills'); if(run.mode==='hard') stat('hardBoss'); } }   // v2.68
   P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
   hitstop=e.grade==='boss'?0.18:0; sfx(e.grade==='boss'?'boss':'kill');   // v2.61 일반 처치는 멈추지 않는다 (보스만 짧게)
@@ -1451,6 +1496,7 @@ function doParry(force){
     /* v2.35 대포병 장갑탄은 손이 더 가는 만큼 충전을 3 준다 (장갑 깎기 1 + 빼앗기 3) */
     P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1));
     if(run.tut) run.tut.parried=(run.tut.parried||0)+1;   // v2.60
+    else stat('parries');   // v2.68
     say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
     shake=6+2*(ts.length-1); sfx('parry',maxRet); if(ts.length>1) sfx('parry',maxRet+3);
     /* v2.61 패링 히트스톱 제거 — 멈춘 동안 경직 시간이 안 줄어 다음 패링이 씹혔다 */
@@ -1603,6 +1649,7 @@ $('#rwReroll').onclick=rerollReward;
 function takeReward(i){
   const b=rwPicks[i]; if(!b) return;
   run.boons[b.k]=(run.boons[b.k]||0)+1;
+  if(b.sp) stat('specials');   // v2.68
   b.fn();
   $('#reward').classList.remove('on');
   run.phase='break'; run.phaseT=Math.max(run.phaseT,0.9);   // v2.2 보스 직후 CYCLE 연출 시간 유지
@@ -1658,6 +1705,7 @@ function update(dt){
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.focusT>0)P.focusT-=dt;   // v2.37
   if(debug||CFG.god) run.cheat=1;   // v2.48 디버그를 쓴 판은 랭킹 등록 불가
+  if(run.lastHp!==undefined&&P.hp<run.lastHp) run.waveHurt=1; run.lastHp=P.hp;   // v2.68
   /* v2.66 가장자리 압박 — 전투 중에만 (웨이브 사이 · 체험판은 제외) */
   if(run.phase==='fight'&&!run.tut){
     if(inEdge()){
@@ -1719,6 +1767,7 @@ function update(dt){
     }
   } else if(run.phase!=='tut' && !ens.length && !queue.length){   // v2.60 체험판은 웨이브 진행 안 함
     run.phase='clear'; run.phaseT=3; say('웨이브 클리어','cyan');
+    if(!run.waveHurt) stat('noHit'); run.waveHurt=0;   // v2.68 피격 없이 넘긴 웨이브
   }
 
   // 적
@@ -1795,6 +1844,15 @@ function update(dt){
         e.sa+=clamp(norm(want-e.sa),-SHIELD_TURN*dt,SHIELD_TURN*dt);
       }
     }
+    /* v2.68 보스 변종 행동 */
+    if(e.variant==='warden'&&run.phase==='fight'){ e.wardT-=dt;
+      if(e.wardT<=0){ e.wardT=9; for(let i=0;i<2;i++){ const a=Math.random()*TAU; spawnEnemyAt('minion',e.x+Math.cos(a)*95,e.y+Math.sin(a)*95); }
+        say('수호형 — 잡졸 소환','red'); sfx('boss'); } }
+    if(e.variant==='phantom'&&run.phase==='fight'){ e.blinkT-=dt;
+      if(e.blinkT<=0){ e.blinkT=5+Math.random()*1.5; burst(e.x,e.y,'red',14,200);
+        for(let k=0;k<24;k++){ const nx=130+Math.random()*(WORLD.w-260), ny=130+Math.random()*(WORLD.h-260);
+          if(dist(nx,ny,P.x,P.y)>300){ e.x=e.ax=nx; e.y=e.ay=ny; break; } }
+        burst(e.x,e.y,'red',14,200); sfx('phase'); say('환영형 — 순간이동','red'); } }
     /* v2.19 소환사 */
     if(G(e).summon){
       if(e.summonFx>0) e.summonFx-=dt;
@@ -1975,7 +2033,9 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        e.hp-=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1);
+        e.hp-=dmgv;
+        if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:e.hp<=0,big:dmgv>HIT_UNIT});   // v2.68
         e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
         if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('과부하','red'); sfx('boss'); shake=16; }
         const pts=Math.round(10*Math.max(1,b.returns)*CFG.scoreMul);
@@ -2170,7 +2230,7 @@ function drawWallPreview(){
   ctx.restore();
 }
 function drawShield(e){
-  const sh=G(e).shield; if(!sh) return;
+  const sh=G(e).shield||e.shieldArc; if(!sh) return;
   const q=proj(e.x,e.y), half=(sh/2)*Math.PI/180;
   const facing=e.sa!=null?e.sa:Math.atan2(P.y-e.y,P.x-e.x);
   const exposed=angDiff(facing,Math.atan2(P.y-e.y,P.x-e.x))>half;   // 플레이어가 사각에 있음
@@ -2299,6 +2359,13 @@ function drawRelayLinks(){
 }
 /* v2.7 추적자 — 예비 동작(wind) 중에는 곧 돌진한다는 걸 커지는 붉은 경고 링으로 알려준다 */
 /* v2.65 저격수 조준선 — 따라오는 동안은 옅게, 멈추면(곧 발사) 진하게 깜빡인다 */
+/* v2.68 보스 변종 표시 — 발밑 고리 색 (수호형 파랑, 환영형 보라) */
+function drawBossMarks(){
+  ens.forEach(e=>{ if(!e.variant||e.variant==='core') return; const p=proj(e.x,e.y);
+    ctx.save(); ctx.strokeStyle=e.variant==='warden'?'#5fa8ff':'#c27cff'; ctx.lineWidth=3;
+    ctx.globalAlpha=e.variant==='phantom'?(0.45+0.35*Math.sin(performance.now()/160)):0.7;
+    ctx.beginPath(); ctx.ellipse(p[0],p[1],e.r+14,(e.r+14)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); });
+}
 function drawSniperLines(){
   ens.forEach(e=>{
     if(!G(e).sniper) return;
@@ -2426,6 +2493,16 @@ function drawHeat(){
     ctx.fillStyle=P.ovl?C.red:C.warn; ctx.fillText(P.ovl?'과부하 · 손을 떼세요':'과부하 주의',p[0],y+15); }
   ctx.restore();
 }
+/* v2.68 ⑩ 피해 숫자 — 0.7초 동안 떠오르며 사라진다 */
+function drawDmgNums(){
+  if(!dmgNums.length) return; const now=performance.now();
+  dmgNums=dmgNums.filter(d=>now-d.t<700);
+  ctx.save(); ctx.textAlign='center';
+  dmgNums.forEach(d=>{ const k=(now-d.t)/700, p=proj(d.x,d.y);
+    ctx.globalAlpha=1-k; ctx.font='800 '+(d.kill||d.big?16:13)+'px ui-monospace,monospace';
+    ctx.fillStyle=d.kill?C.warn:d.big?'#ff9f43':'#e6eef4'; ctx.fillText('-'+d.v,p[0],p[1]-14-k*26); });
+  ctx.restore();
+}
 function drawSticks(){
   [['move',C.cyan],['aim',C.warn]].forEach(([k,col])=>{
     const st=stick[k]; if(!st)return;
@@ -2501,7 +2578,7 @@ function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
-  drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
@@ -2518,7 +2595,7 @@ function render(){
   parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
     ctx.fillRect(pp[0]-2,pp[1]-2,4,4);});ctx.globalAlpha=1;
   ctx.restore();
-  drawSticks(); drawHeat(); drawCrosshair(); drawHUD();
+  drawDmgNums(); drawSticks(); drawHeat(); drawCrosshair(); drawHUD();
 }
 
 /* ================= 화면 전환 ================= */
@@ -2598,6 +2675,8 @@ function armFullscreen(){
 }
 function go(id){
   if(id==='hub'&&!getSession()&&!offlineOK){ openLogin(); return; }   // v2.58 로그인 먼저
+  if(id==='hub') setTimeout(syncFromCloud,0);   // v2.68 HUB에 들어갈 때마다 다른 기기 기록 확인
+  if(id!=='game') unseedRandom();   // v2.68 데일리 시드 해제
   screen=id;
   document.body.classList.toggle('in-game',id==='game');
   $$('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
@@ -2701,7 +2780,32 @@ function applyRandBoosts(){
   for(let i=0;i<n&&bag.length;i++){ const [name,fn]=bag.splice(Math.floor(Math.random()*bag.length),1)[0]; fn(); run.randBoosts.push(name); }
   setTimeout(()=>{ if(run&&run.randBoosts.length) announce('무작위 보정 — '+run.randBoosts.join(' · '),'cyan'); },700);
 }
-function startRun(){ newRun(); applyRandBoosts(); go('game');
+/* v2.68 ⑥ 데일리 챌린지 — 하루 동안 모두 같은 맵·적·보상 순서 (난수 고정), 강화 없이 기본 능력치로 */
+const REAL_RANDOM=Math.random;
+function seedRandom(seed){ let a=seed>>>0;
+  Math.random=function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function unseedRandom(){ Math.random=REAL_RANDOM; }
+const todayKST=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+let lastMode='normal';
+const MODE_NAME={normal:'노멀',hard:'하드',daily:'데일리'};
+function startRun(mode){
+  if(typeof mode!=='string') mode=lastMode||OPT.mode||'normal';
+  lastMode=mode; unseedRandom(); dmgNums=[];
+  let keep=null;
+  if(mode==='daily'){
+    keep={lv:UPG.map(u=>u.lv), sk:[META.skill,META.skillQ,META.skillR]};
+    UPG.forEach(u=>{ if(!u.phoneOnly) u.lv=0; }); META.skill=''; META.skillQ=''; META.skillR='';
+    seedRandom(+todayKST().replace(/-/g,''));
+  }
+  newRun();
+  if(keep){ UPG.forEach((u,i)=>u.lv=keep.lv[i]); META.skill=keep.sk[0]; META.skillQ=keep.sk[1]; META.skillR=keep.sk[2]; }
+  run.mode=mode; run.day=mode==='daily'?todayKST():'';
+  /* ③ 하드 — 적 체력 ×1.5 · 탄속 ×1.15 · 발사 간격 ×0.85 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 */
+  if(mode==='hard'){ run.diff*=1.5; CFG.spd*=1.15; CFG.fire*=0.85; CFG.scoreMul*=1.3; CFG.gainMul=(CFG.gainMul||1)*1.5; }
+  if(mode==='daily'){ CFG.gainMul=(CFG.gainMul||1)*0.5; run.startRewards=0; run.revives=0; run.randBoosts=[]; }
+  else applyRandBoosts();
+  go('game');
+  if(mode!=='normal') setTimeout(()=>{ if(run) announce(mode==='hard'?'하드 모드':'데일리 챌린지 · '+run.day,'warn'); },300);
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
 }
 function endRun(){
@@ -2714,7 +2818,11 @@ function endRun(){
   META.cur+=gain;
   const isNew=run.score>META.best;
   if(isNew)META.best=run.score;
-  META.bestCycle=Math.max(META.bestCycle,run.cycle);
+  if(run.mode!=='daily') META.bestCycle=Math.max(META.bestCycle,run.cycle);
+  /* v2.68 누적 기록 · 업적 */
+  stat('runs'); stat('playTime',Math.max(0,Math.round(run.time))); statMax('bestRet',run.bestRet); statMax('bestScore',run.score);
+  if(run.mode==='daily') stat('dailyRuns'); if(run.mode==='hard') statMax('hardBestCycle',run.cycle);
+  const newAch=run.cheat?[]:checkAch(); const achGold=newAch.reduce((a,x)=>a+x.r,0); META.cur+=achGold;
   save();
   $('#rScore').textContent=run.score.toLocaleString();
   $('#rNew').textContent=isNew?'신기록':'';
@@ -2731,6 +2839,19 @@ function endRun(){
   if(getSession()) cloudAutoSave().then(ok=>{ $('#cloudStat').textContent= ok?'☁ '+getSession().name+' 계정에 자동 저장했어요':'☁ 자동 저장 실패 — 다음 판에 다시 시도해요'; });
   /* v2.62 디스코드 랭킹 — 로그인 계정으로만 자동 기록 (게임 안 랭킹과 별개, 이름을 바꿔 올릴 수 없음) */
   $('#discStat').textContent='';
+  if(run.mode==='hard'||run.mode==='daily'){   // v2.68 하드 · 데일리는 각자 랭킹으로 (로그인 계정만)
+    const ss=getSession(), nm=run.mode==='hard'?'하드':'데일리';
+    if(!ss) $('#discStat').textContent=nm+' 랭킹은 로그인해야 기록돼요';
+    else if(run.cheat) $('#discStat').textContent='디버그를 쓴 판은 '+nm+' 랭킹에 기록되지 않아요';
+    else if(run.score>0){
+      const body={p_name:ss.name,p_pin:ss.pin,p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:BUILD};
+      if(run.mode==='daily') body.p_day=run.day;
+      cloudCall(run.mode==='hard'?'aether_submit_hard':'aether_submit_daily',body)
+        .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
+          $('#discStat').textContent=nm+' 랭킹 '+(r.updated?'기록 갱신 · ':'최고 '+Number(r.best).toLocaleString()+'점 유지 · ')+r.rank+'위'; })
+        .catch(e=>{ $('#discStat').textContent=nm+' 랭킹 기록 실패'+(/점수/.test(String(e.message))?' (점수 확인 실패)':''); });
+    }
+  } else
   if(getSession()&&!run.cheat&&!run.tut&&run.score>0){
     const ss=getSession();
     cloudCall('aether_submit_verified',{p_name:ss.name,p_pin:ss.pin,p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:BUILD})
@@ -2738,6 +2859,7 @@ function endRun(){
         $('#discStat').textContent= r.updated? '디스코드 랭킹 기록 갱신 · '+r.rank+'위' : '디스코드 랭킹 · 최고 기록 '+Number(r.best).toLocaleString()+'점 유지 · '+r.rank+'위'; })
       .catch(()=>{ $('#discStat').textContent='디스코드 랭킹 기록 실패 — 다음 판에 다시 시도해요'; });
   } else if(getSession()&&run.cheat) $('#discStat').textContent='디버그를 쓴 판은 디스코드 랭킹에 기록되지 않아요';
+  $('#achStat').innerHTML=newAch.length?'업적 달성 — '+newAch.map(a=>'<b>'+a.n+'</b>').join(' · ')+'  ◆ +'+achGold.toLocaleString():'';   // v2.68
   setupRankBox();   // v2.48
   go('result');
 }
@@ -2802,7 +2924,14 @@ document.addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go);return;}
   const m=e.target.closest('[data-modal]'); if(m){openModal(m.dataset.modal);}
 });
-$('#launch').onclick=()=>{ cloudAutoSave(); startRun(); };   // v2.58 출격할 때도 HUB에서 바꾼 강화를 저장
+$('#launch').onclick=()=>{ cloudAutoSave(); startRun(OPT.mode||'normal'); };   // v2.58 · v2.68 고른 모드로 출격
+/* v2.68 모드 고르기 */
+function syncModeUI(){ document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===(OPT.mode||'normal')));
+  const d=$('#modeDesc'); if(d) d.textContent=({normal:'기본 모드',
+    hard:'적 체력 ×1.5 · 탄속 · 발사 빨라짐 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 · 하드 랭킹(로그인)',
+    daily:'오늘 '+todayKST()+' — 모두 같은 맵·적, 강화 없이 기본 능력치 · 재화 ×0.5 · 데일리 랭킹(로그인)'})[OPT.mode||'normal']; }
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mode]'); if(!b) return;
+  OPT.mode=b.dataset.mode; save(); syncModeUI(); sfx('ui'); });
 $('#again').onclick=startRun;
 /* v2.52 결과 이미지 — 점수 카드를 그려서 공유(폰) 또는 내려받기(PC) */
 $('#rShare').onclick=async()=>{
@@ -2845,6 +2974,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.68',['여러 기기 저장 덮어쓰기 방지 — 다른 기기가 더 늦게 저장했으면 HUB에 들어갈 때 먼저 불러옴','랭킹 점수 검증 — 처치 수·사이클에 비해 말이 안 되는 점수는 서버가 거절','하드 모드 (적 체력 ×1.5 · 탄속 · 발사 빨라짐 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5) + 하드 랭킹','사이클마다 다른 보스 — 수호형(정면 방패 + 잡졸 소환) · 환영형(순간이동 + 페인트·우회)','업적 12종 (달성 시 재화)','데일리 챌린지 — 하루 동안 모두 같은 맵·적, 기본 능력치 + 오늘의 랭킹','설정 창을 게임 · 조작 · 소리 · 계정 탭으로','누적 기록 화면','보스전 배경음','피해 숫자 표시 (설정에서 끌 수 있음)']],
  ['2.67',['게임 랭킹을 한 번 직접 등록하면 다음 판부터 같은 이름으로 자동 등록 (더 높을 때만 갱신, 결과 화면에서 끌 수 있음)']],
  ['2.66',['구석 패링 플레이 방지 — 가장자리 띠에 오래 있으면 지속 피해 (가장자리 1.5초 뒤 초당 6, 구석 0.8초 뒤 초당 12, 후반 피해 배율 적용)','전투 중 가장자리 위험 띠 표시']],
  ['2.65',['신규 적 저격수 — 조준선을 1초 보여 준 뒤 아주 빠른 직선탄 (2사이클 5웨이브부터, 최대 2기)','보급 너프 — 재화 획득 +8%→+6%/단계, 선행 보급 3,500 · 7,000, 부활 체력 30% · 무적 1.5초 · 5,000 · 11,000']],
@@ -2927,7 +3057,7 @@ function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} 
 function applySave(data){
   localStorage.setItem(SAVE_KEY,JSON.stringify(data||{}));
   UPG.forEach(u=>u.lv=0);
-  Object.assign(META,{cur:0,best:0,bestCycle:1,skill:'',skillQ:'',skillR:''});
+  Object.assign(META,{cur:0,best:0,bestCycle:1,skill:'',skillQ:'',skillR:'',stats:{},ach:{},cloudAt:''});
   load();
   if(isTouchDev()){ const u=UPG.find(x=>x.k==='mparry'); if(u&&u.lv<1) u.lv=1; }
   save(); refreshKeyLabels();
@@ -2935,7 +3065,9 @@ function applySave(data){
 async function cloudAutoSave(){
   const ss=getSession(); if(!ss) return null;
   try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
-    await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:ss.pin,p_data:data}); return true; }
+    const at=await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:ss.pin,p_data:data});
+    if(at){ META.cloudAt=String(at); try{ const d2=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'); d2.meta=META; localStorage.setItem(SAVE_KEY,JSON.stringify(d2)); }catch(e){} }   // v2.68
+    return true; }
   catch(e){ return false; }
 }
 function openLogin(){
@@ -2955,13 +3087,14 @@ function openLogin(){
     $('#lgGo').disabled=true; msg('확인 중…');
     try{
       const d=await cloudCall('aether_cloud_load',{p_name:name,p_pin:pin}); const row=Array.isArray(d)?d[0]:d;
-      if(row&&row.data) applySave(row.data);
+      if(row&&row.data){ applySave(row.data); META.cloudAt=String(row.updated_at||''); save(); }   // v2.68
       setSession(name,pin); $('#modal').classList.remove('on'); go('hub');
     }catch(e){
       const m=String(e.message||'');
       if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
         try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
-          await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
+          const at=await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
+          META.cloudAt=String(at||''); save();   // v2.68
           setSession(name,pin); $('#modal').classList.remove('on'); go('hub'); return;
         }catch(e2){ msg(/비밀번호/.test(String(e2.message))?'이미 있는 닉네임이에요. 비밀번호가 달라요.':'만들지 못했어요. 인터넷 연결을 확인해 주세요.'); }
       } else if(/비밀번호/.test(m)) msg('비밀번호가 달라요.');
@@ -2975,6 +3108,25 @@ function openLogin(){
   $('#lgOff').onclick=()=>{ offlineOK=true; $('#modal').classList.remove('on'); go('hub'); };
   setTimeout(()=>{ const el=$('#lgName'); if(el&&!el.value) el.focus(); else if($('#lgPin')) $('#lgPin').focus(); },50);
 }
+/* v2.68 ① 여러 기기 저장 덮어쓰기 방지 — 다른 기기가 더 늦게 저장했으면 그걸 먼저 불러온다 */
+function toast(msg){ let t=document.getElementById('toastBox');
+  if(!t){ t=document.createElement('div'); t.id='toastBox'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),3200); }
+let syncing=false;
+async function syncFromCloud(){
+  const ss=getSession(); if(!ss||syncing) return; syncing=true;
+  try{
+    const st=await cloudCall('aether_cloud_stamp',{p_name:ss.name,p_pin:ss.pin});
+    const remote=Date.parse(st)||0, local=Date.parse(META.cloudAt||'')||0;
+    if(remote>local+1500){
+      const d=await cloudCall('aether_cloud_load',{p_name:ss.name,p_pin:ss.pin}); const row=Array.isArray(d)?d[0]:d;
+      if(row&&row.data){ applySave(row.data); META.cloudAt=String(row.updated_at||st); save();
+        if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
+        toast('다른 기기에서 진행한 최신 기록을 불러왔어요'); }
+    }
+  }catch(e){} finally{ syncing=false; }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&screen!=='game') syncFromCloud(); });
 async function cloudCall(fn,body){
   const r=await fetch(RANK.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
   const txt=await r.text(); let d=null; try{ d=JSON.parse(txt); }catch(e){}
@@ -3016,8 +3168,25 @@ function openCloud(){
     });
   };
 }
-async function openRanking(){
-  $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+/* v2.68 랭킹 탭 */
+const rkTabs=cur=>'<div class="optTabs">'+[['normal','노멀'],['hard','하드'],['daily','오늘의 데일리']].map(([k,n])=>'<button data-rtab="'+k+'" class="'+(k===cur?'on':'')+'">'+n+'</button>').join('')+'</div>';
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rtab]'); if(b){ openRanking(b.dataset.rtab); sfx('ui'); } });
+async function openRankTable(tab){
+  const hard=tab==='hard', day=todayKST();
+  $('#modalBox').innerHTML='<div class="logHd"><h4>'+(hard?'하드 랭킹':'데일리 · '+day)+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs(tab)+
+    '<div class="rkNote">'+(hard?'로그인 계정으로 하드 모드를 한 기록 · 계정당 최고 1줄':'오늘('+day+') 모두 같은 맵·적으로 한 기록 · 강화 없이 기본 능력치')+'</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
+  $('#modal').classList.add('on');
+  try{ const q=hard?'aether_hard?select=name,score,cycle,wave&order=score.desc,updated_at.asc&limit=50'
+                   :'aether_daily?select=name,score,cycle,wave&day=eq.'+day+'&order=score.desc,updated_at.asc&limit=50';
+    const r=await fetch(RANK.url+'/rest/v1/'+q,{headers:{apikey:RANK.key}}); if(!r.ok) throw 0; const rows=await r.json();
+    const me=(getSession()||{}).name||myName();
+    $('#rkList').innerHTML=rows.length? rows.map((r,i)=>'<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+escH(r.name)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
+      : '<li>'+(hard?'아직 하드 기록이 없어요.':'오늘은 아직 기록이 없어요. 첫 번째로 도전해 보세요.')+'</li>';
+  }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
+}
+async function openRanking(tab){
+  if(tab==='hard'||tab==='daily') return openRankTable(tab);
+  $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs('normal')+
     '<div class="rkNote">상위 50명 · 이름당 최고 기록 하나만 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
   $('#modal').classList.add('on');
   try{
@@ -3041,7 +3210,7 @@ async function openRanking(){
 function setupRankBox(){
   const box=$('#rankBox'), btn=$('#rkSend'), msg=$('#rkMsg'), inp=$('#rkName');
   inp.value=myName(); btn.disabled=false; msg.textContent='';
-  if(run.score<=0){ box.style.display='none'; return; }
+  if(run.score<=0||run.mode==='hard'||run.mode==='daily'){ box.style.display='none'; return; }   // v2.68 공개 랭킹은 노멀만
   box.style.display='flex';
   if(run.cheat){ btn.disabled=true; inp.disabled=true; msg.textContent='디버그 기능을 쓴 판은 랭킹에 등록할 수 없어요.'; return; }
   inp.disabled=false;
@@ -3074,6 +3243,40 @@ $('#rkSend').onclick=async()=>{
   }catch(e){ btn.disabled=false; msg.textContent='등록하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; }
 };
 $('#rkName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') $('#rkSend').click(); });
+/* v2.68 ⑤ 업적 */
+const ACHS=[
+ ['first_boss','첫 보스 격파','보스를 처음으로 쓰러뜨리기',500,s=>s.bossKills>=1, s=>[s.bossKills||0,1]],
+ ['parry500','패링 500회','누적 패링 500회',800,s=>s.parries>=500, s=>[s.parries||0,500]],
+ ['parry3000','패링 장인','누적 패링 3,000회',2000,s=>s.parries>=3000, s=>[s.parries||0,3000]],
+ ['kill1000','처치 1,000','누적 처치 1,000',1500,s=>s.kills>=1000, s=>[s.kills||0,1000]],
+ ['cycle3','3사이클 도달','한 판에서 3사이클 도달',1500,()=>META.bestCycle>=3, ()=>[META.bestCycle||1,3]],
+ ['ret10','왕복 ×10','한 탄환으로 왕복 10번',1000,s=>s.bestRet>=10, s=>[s.bestRet||0,10]],
+ ['nohit10','무결','피격 없이 넘긴 웨이브 10번',1200,s=>s.noHit>=10, s=>[s.noHit||0,10]],
+ ['score50k','5만 점','한 판 50,000점',2000,s=>s.bestScore>=50000, s=>[s.bestScore||0,50000]],
+ ['hardboss','하드 정복','하드 모드에서 보스 격파',3000,s=>s.hardBoss>=1, s=>[s.hardBoss||0,1]],
+ ['daily5','데일리 5회','데일리 챌린지 5판',1000,s=>s.dailyRuns>=5, s=>[s.dailyRuns||0,5]],
+ ['special5','특수 특전 수집가','특수 특전 5번 획득',800,s=>s.specials>=5, s=>[s.specials||0,5]],
+ ['play1h','한 시간','총 플레이 1시간',1500,s=>s.playTime>=3600, s=>[Math.floor((s.playTime||0)/60),60]]
+];
+function checkAch(){ const s=META.stats||{}; META.ach=META.ach||{}; const got=[];
+  ACHS.forEach(([id,n,d,r,ok])=>{ if(!META.ach[id]&&ok(s)){ META.ach[id]=Date.now(); got.push({id,n,r}); } }); return got; }
+function openAch(){ const s=META.stats||{}; META.ach=META.ach||{};
+  const done=ACHS.filter(a=>META.ach[a[0]]).length;
+  $('#modalBox').innerHTML='<div class="logHd"><h4>업적 '+done+' / '+ACHS.length+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<ul class="achList">'+ACHS.map(([id,n,d,r,ok,pr])=>{ const [c,m]=pr(s), on=!!META.ach[id];
+      return '<li class="'+(on?'on':'')+'"><b>'+(on?'✓ ':'')+n+'</b><span class="rw">◆ '+r.toLocaleString()+'</span><span class="dd">'+d+'</span>'+
+        '<span class="bar"><i style="width:'+Math.min(100,Math.round(c/m*100))+'%"></i></span><span class="pc">'+Math.min(c,m).toLocaleString()+' / '+m.toLocaleString()+'</span></li>'; }).join('')+'</ul>';
+  $('#modal').classList.add('on'); }
+/* v2.68 ⑧ 누적 기록 */
+function openStats(){ const s=META.stats||{}; const h=Math.floor((s.playTime||0)/3600), mi=Math.floor((s.playTime||0)%3600/60);
+  const rows=[['플레이한 판',(s.runs||0).toLocaleString()],['총 플레이 시간',h+'시간 '+mi+'분'],['누적 패링',(s.parries||0).toLocaleString()],
+    ['누적 처치',(s.kills||0).toLocaleString()],['보스 격파',(s.bossKills||0).toLocaleString()],['최고 점수',(Math.max(s.bestScore||0,META.best||0)).toLocaleString()],
+    ['최고 사이클',META.bestCycle||1],['최장 왕복','×'+(s.bestRet||0)],['피격 없이 넘긴 웨이브',(s.noHit||0).toLocaleString()],
+    ['특수 특전 획득',(s.specials||0).toLocaleString()],['하드 보스 격파',(s.hardBoss||0).toLocaleString()],['데일리 플레이',(s.dailyRuns||0).toLocaleString()]];
+  $('#modalBox').innerHTML='<div class="logHd"><h4>누적 기록</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div class="statGrid">'+rows.map(([a,b])=>'<div><span>'+a+'</span><b>'+b+'</b></div>').join('')+'</div>'+
+    '<div class="rkNote">로그인 중이면 다른 기기와 함께 이어져요.</div>';
+  $('#modal').classList.add('on'); }
 function openLog(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>업데이트 내역</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div><div class="log">'+
     CHANGELOG.map(([v,items])=>'<div class="lv'+(v===BUILD?' cur':'')+'"><b>v'+v+'</b><ul>'+
@@ -3108,34 +3311,40 @@ function openModal(kind){
   if(kind==='tutorial'){ openTutorial(); return; }
   if(kind==='log'){ openLog(); return; }   // v2.38
   if(kind==='rank'){ openRanking(); return; }   // v2.48
+  if(kind==='ach'){ openAch(); return; }   // v2.68
+  if(kind==='stats'){ openStats(); return; }   // v2.68
   const rows=[['효과음','vol',OPT.vol?OPT.vol+'':'끔'],
               ['배경음','bgm',OPT.bgm?OPT.bgm+'':'끔'],                                        // v2.52
               ['화면 흔들림','shake',({0:'끔',0.5:'약하게',1:'보통',1.6:'강하게'})[OPT.shake]||'보통'],   // v2.52
               ['저사양 모드','lowfx',OPT.lowfx?'켬 · 효과 줄임':'끔'],                          // v2.52
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
-              ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통']]
+              ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통'],
+              ['피해 숫자','dmgNum',OPT.dmgNum?'켬':'끔']]   // v2.68
               .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링'],
                 ['버튼 위치 (폰)','padPos',({bottom:'아래',top:'위',right:'오른쪽',left:'왼쪽'})[OPT.padPos]||'아래'],
                 ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔']]:[]);   // v2.63   // v2.42 · v2.49
-  $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+   // v2.51
-    rows.map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('')+
-    (isTouchDev()?'<div class="opt-desc">패링 방식 — <b>누르고 있으면 자동</b>: 오른쪽 손가락으로 조준하고 있으면 탄환이 들어올 때 알아서 패링해요. '+
-      '<b>손 떼면 패링</b>: 조준한 뒤 손을 떼는 순간 패링해요(예전 방식). 누를 때마다 바뀌어요. '+
-      '자동 방식은 4초 넘게 계속 누르고 있으면 <b>패링 과부하</b>로 잠깐 경직돼요.</div>':'')+
-    /* v3.3 전체화면 — 폰이 아니어도 언제든 켜고 끌 수 있게 별도 행으로 둔다 (지속 저장값이 아니라 그때그때 상태를 보여줌) */
-    '<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
-    (escLockable()?'<div class="opt-desc">전체화면에서 ESC를 <b>짧게</b> 누르면 창만 닫히고, <b>길게</b> 누르면 전체화면이 꺼져요.</div>':'')+   // v2.56
-    [['패링 키','keyParry',' / 좌클릭'],['F 스킬 키','keySkill',''],['Q 스킬 키','keyWall',''],['R 스킬 키','keyR','']].map(([a,k,suf])=>
-      '<div class="opt-row opt-tg" data-bind="'+k+'"><span>'+a+'</span><i>'+
-      (binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
-    '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+
-    (bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'')+
-    '<div class="opt-row opt-tg" data-cloud="1"><span>계정</span><i>'+(getSession()?escH(getSession().name)+' · 로그아웃':'로그인 안 됨 · 로그인')+'</i></div>'+   // v2.58
+  /* v2.68 ⑦ 설정을 탭으로 — 게임 · 조작 · 소리 · 계정 */
+  const R2=ks=>ks.map(k=>rows.find(r=>r[1]===k)).filter(Boolean).map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('');
+  const tabH='<div class="optTabs">'+[['game','게임'],['ctrl','조작'],['sound','소리'],['acct','계정']].map(([k,n])=>'<button data-otab="'+k+'" class="'+(optTab===k?'on':'')+'">'+n+'</button>').join('')+'</div>';
+  const fsRow='<div class="opt-row opt-tg" data-fs="1"><span>전체화면</span><i>'+(document.fullscreenElement?'켬':'끔')+'</i></div>'+
+    (escLockable()?'<div class="opt-desc">전체화면에서 ESC를 <b>짧게</b> 누르면 창만 닫히고, <b>길게</b> 누르면 전체화면이 꺼져요.</div>':'');
+  const phoneDesc=isTouchDev()?'<div class="opt-desc">패링 방식 — <b>누르고 있으면 자동</b>: 오른쪽 손가락으로 조준하고 있으면 탄환이 들어올 때 알아서 패링해요. '+
+      '<b>손 떼면 패링</b>: 조준한 뒤 손을 떼는 순간 패링해요(예전 방식). 누를 때마다 바뀌어요. 자동 방식은 4초 넘게 계속 누르고 있으면 <b>패링 과부하</b>로 잠깐 경직돼요.</div>':'';
+  const keyRows=[['패링 키','keyParry',' / 좌클릭'],['F 스킬 키','keySkill',''],['Q 스킬 키','keyWall',''],['R 스킬 키','keyR','']].map(([a,k,suf])=>
+      '<div class="opt-row opt-tg" data-bind="'+k+'"><span>'+a+'</span><i>'+(binding===k?'<span style="color:var(--warn)">키를 누르세요… (ESC 취소)</span>':keyName(OPT[k])+suf)+'</i></div>').join('')+
+    '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+(bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'');
+  const acct='<div class="opt-row opt-tg" data-cloud="1"><span>계정</span><i>'+(getSession()?escH(getSession().name)+' · 로그아웃':'로그인 안 됨 · 로그인')+'</i></div>'+
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
+  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','padPos','swapSticks'])+phoneDesc+keyRows
+           : optTab==='sound'? R2(['vol','bgm'])
+           : optTab==='acct'? acct
+           : R2(['shake','lowfx','cb','inputBuf','dmgNum'])+fsRow;
+  $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+tabH+body;
   $('#modal').classList.add('on');
 }
 $('#modalBox').addEventListener('click',e=>{
+  const ot=e.target.closest('[data-otab]'); if(ot){ optTab=ot.dataset.otab; binding=null; bindMsg=''; openModal(); sfx('ui'); return; }   // v2.68
   const r=e.target.closest('[data-opt]');
   const kb=e.target.closest('[data-bind]');
   const fs=e.target.closest('[data-fs]');
@@ -3345,7 +3554,7 @@ const TOGS=[{k:'bounce',on:'충돌: 반사',off:'충돌: 소멸'},
 /* v2.63 폰 버튼 위치 적용 */
 function applyPadPos(){ ['top','right','left'].forEach(p=>document.body.classList.toggle('pads-'+p,OPT.padPos===p)); }
 function syncUI(){
-  applyPadPos();
+  applyPadPos(); syncModeUI();   // v2.68
   SPECS.forEach(sp=>{
     const v=$('#v_'+sp.k),s=$('#s_'+sp.k);
     if(v)v.textContent=Number(CFG[sp.k]).toFixed(sp.dec)+sp.u;
