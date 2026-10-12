@@ -423,7 +423,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.68</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.69</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -852,8 +852,8 @@ const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
 const BODY_SQ=0.95;   // v2.8 캐릭터 몸통 세로 비율 (바닥 그림자는 SQUASH 유지)
 const WORLD={w:1000,h:760};
 /* v2.66 가장자리 압박 — 구석에 박혀 앞만 보고 패링하는 플레이를 막는다.
-   가장자리 띠(90) 안에 있으면 잠깐 뒤부터 지속 피해, 구석(두 띠가 겹치는 곳)은 더 빨리 · 더 세게 */
-const EDGE=90;
+   가장자리 띠(45) 안에 있으면 잠깐 뒤부터 지속 피해, 구석(두 띠가 겹치는 곳)은 더 빨리 · 더 세게 */
+const EDGE=45;   // v2.69 띠 두께 90 → 45
 const inEdge=()=>P.x<EDGE||P.x>WORLD.w-EDGE||P.y<EDGE||P.y>WORLD.h-EDGE;
 const inCorner=()=>(P.x<EDGE||P.x>WORLD.w-EDGE)&&(P.y<EDGE||P.y>WORLD.h-EDGE);
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
@@ -2974,6 +2974,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.69',['가장자리 위험 띠 두께를 절반으로 (90 → 45)']],
  ['2.68',['여러 기기 저장 덮어쓰기 방지 — 다른 기기가 더 늦게 저장했으면 HUB에 들어갈 때 먼저 불러옴','랭킹 점수 검증 — 처치 수·사이클에 비해 말이 안 되는 점수는 서버가 거절','하드 모드 (적 체력 ×1.5 · 탄속 · 발사 빨라짐 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5) + 하드 랭킹','사이클마다 다른 보스 — 수호형(정면 방패 + 잡졸 소환) · 환영형(순간이동 + 페인트·우회)','업적 12종 (달성 시 재화)','데일리 챌린지 — 하루 동안 모두 같은 맵·적, 기본 능력치 + 오늘의 랭킹','설정 창을 게임 · 조작 · 소리 · 계정 탭으로','누적 기록 화면','보스전 배경음','피해 숫자 표시 (설정에서 끌 수 있음)']],
  ['2.67',['게임 랭킹을 한 번 직접 등록하면 다음 판부터 같은 이름으로 자동 등록 (더 높을 때만 갱신, 결과 화면에서 끌 수 있음)']],
  ['2.66',['구석 패링 플레이 방지 — 가장자리 띠에 오래 있으면 지속 피해 (가장자리 1.5초 뒤 초당 6, 구석 0.8초 뒤 초당 12, 후반 피해 배율 적용)','전투 중 가장자리 위험 띠 표시']],
