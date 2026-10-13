@@ -501,7 +501,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.92</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.94</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -734,7 +734,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1};   // v2.89 커스텀 캐릭터 이미지
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -2315,8 +2315,24 @@ function setPImg(d,dataUrl){ try{ localStorage.setItem(pimgKey(d),dataUrl); }cat
 function clearPImg(d){ try{ localStorage.removeItem(pimgKey(d)); }catch(e){} }
 function pimgSpriteKey(d){ return d==='single'?'player':'player_'+d; }
 function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[pimgSpriteKey(d)]=img; }; img.src=dataUrl; }
+/* v2.93 배경 제거 — AI 분리 없이 가벼운 방식. 테두리 픽셀 평균을 배경색으로 보고, 비슷한 색을 지운다.
+   단색/단순한 배경일 때만 잘 먹힌다(사람이 그린 캐릭터 그림처럼 배경이 깔끔한 경우에 맞음) */
+function stripBg(cx,SZ){
+  const id=cx.getImageData(0,0,SZ,SZ), d=id.data;
+  let rs=0,gs=0,bs=0,n=0;
+  const add=(y,x)=>{ const i=(y*SZ+x)*4; rs+=d[i]; gs+=d[i+1]; bs+=d[i+2]; n++; };
+  for(let x=0;x<SZ;x+=4){ add(0,x); add(SZ-1,x); }
+  for(let y=0;y<SZ;y+=4){ add(y,0); add(y,SZ-1); }
+  const br=rs/n, bg=gs/n, bb=bs/n, TH=42;
+  for(let i=0;i<d.length;i+=4){
+    const dr=d[i]-br, dg=d[i+1]-bg, db=d[i+2]-bb, dist=Math.sqrt(dr*dr+dg*dg+db*db);
+    if(dist<TH) d[i+3]=0;
+    else if(dist<TH*1.8) d[i+3]=Math.round(d[i+3]*((dist-TH)/(TH*0.8)));
+  }
+  cx.putImageData(id,0,0);
+}
 /* 올린 원본 이미지를 정사각형으로 잘라 작게 줄인 뒤 데이터 URL로 바꾼다 (저장 용량 · 로딩 가볍게) */
-function readPImgFile(file){
+function readPImgFile(file,removeBg){
   return new Promise((resolve,reject)=>{
     const url=URL.createObjectURL(file), img=new Image();
     img.onload=()=>{
@@ -2325,6 +2341,7 @@ function readPImgFile(file){
         const cv=document.createElement('canvas'); cv.width=cv.height=SZ;
         const cx=cv.getContext('2d');
         cx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,SZ,SZ);
+        if(removeBg) stripBg(cx,SZ);
         resolve(cv.toDataURL('image/png'));
       }catch(e){ reject(e); } finally{ URL.revokeObjectURL(url); }
     };
@@ -2382,8 +2399,9 @@ function drawPlayerBody(){
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();
   const s=R_PLAYER*2.6;
+  const willRotate=!dir4&&OPT.pimgRotate;   // v2.92 회전 중엔 세로압축(SQUASH)을 끈다 — 같이 걸면 이미지가 평행사변형처럼 기울어 보였다
   ctx.save();
-  ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); if(!dir4&&OPT.pimgRotate) ctx.rotate(P.face);
+  ctx.translate(p[0],p[1]); if(willRotate) ctx.rotate(P.face); else ctx.scale(1,SQUASH);
   if(P.hurt>0) ctx.filter='brightness('+(1+P.hurt*6)+') saturate('+Math.max(0,1-P.hurt*3)+')';
   else if(P.inv>0) ctx.filter='brightness(1.4) hue-rotate(15deg)';
   ctx.drawImage(img,-s/2,-s/2,s,s);
@@ -3173,6 +3191,8 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.94',['캐릭터 이미지 올릴 때 배경 제거 옵션 추가 — 테두리 색을 기준으로 단색 배경을 지움 (복잡한 배경은 한계 있음)']],
+ ['2.93',['캐릭터 이미지가 회전할 때 비스듬히(평행사변형처럼) 보이던 문제 수정']],
  ['2.92',['폰에서 패링한 탄환이 엉뚱한 쪽(화면 밖)으로 날아가던 문제 — 폰은 조준 쪽 100° 안의 적, 없으면 보이는 가장 가까운 적을 자동으로 노림','조준 방향 바로 앞이 벽이면 보이는 적 쪽으로 보정 (벽에 맞고 튕겨 돌아오는 것 방지)','적이 벽에 바짝 붙어 숨지 못하게 벽과 거리 유지']],
  ['2.91',['캐릭터 이미지 1장 모드에 회전 켜고 끄기 선택 추가 — 끄면 방향과 상관없이 이미지가 그대로 고정']],
  ['2.90',['캐릭터 이미지를 직접 올릴 수 있게 — 설정 → 게임 → 캐릭터 이미지. 이미지 1장(바라보는 방향으로 회전) 또는 4방향 이미지(위/아래/왼쪽/오른쪽, 방향마다 교체) 중 선택. 이 기기에만 저장됨']],
@@ -3658,6 +3678,7 @@ $('#modalBox').addEventListener('click',e=>{
   const pc=e.target.closest('[data-pimgclear]');
   if(pc){ const d=pc.dataset.pimgclear; clearPImg(d); delete SPRITES[pimgSpriteKey(d)]; openAppearance(); sfx('ui'); return; }   // v2.89
   if(e.target.closest('[data-protate]')){ OPT.pimgRotate=OPT.pimgRotate?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.91
+  if(e.target.closest('[data-pnobg]')){ OPT.pimgNoBg=OPT.pimgNoBg?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.93
   if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
     if(getSession()) askConfirm('로그아웃할까요?','지금 진행 상황을 서버에 저장한 뒤, 이 기기에서 계정 연결을 풀어요. 다시 시작할 때 닉네임·비밀번호를 입력해요.','로그아웃',
       async()=>{ await cloudAutoSave(); clearSession(); offlineOK=false; $('#modal').classList.remove('on'); go('title'); });
@@ -3713,9 +3734,11 @@ function openAppearance(){
     }).join('')+'</div>'+
     '<div class="opt-desc">4장 다 올려야 적용돼요. 바라보는 방향에 맞는 이미지로 바뀌어 보여요(회전 없음).</div>';
   }
+  const bgRow=mode!=='off'?'<div class="opt-row opt-tg" data-pnobg="1"><span>배경 제거</span><i>'+(OPT.pimgNoBg?'켬 · 단색 배경만':'끔')+'</i></div>'+
+    '<div class="opt-desc">올릴 때 테두리 색을 배경으로 보고 지워요. 사진처럼 배경이 복잡하면 잘 안 될 수 있어요 — 배경이 단순한 캐릭터 그림에 잘 맞아요.</div>':'';
   $('#modalBox').innerHTML='<div class="logHd"><h4>캐릭터 이미지</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
     '<div class="opt-desc">플레이어는 기본적으로 원으로 표시돼요. 이미지를 올리면 바꿀 수 있어요 — 이 브라우저에만 저장되고 다른 기기에는 안 보여요.</div>'+
-    modeBtns+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
+    modeBtns+bgRow+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
   $('#modal').classList.add('on');
 }
 $('#modalBox').addEventListener('change',async e=>{
@@ -3725,7 +3748,7 @@ $('#modalBox').addEventListener('change',async e=>{
   const file=e.target.files&&e.target.files[0]; if(!file) return;
   pimgErr='';
   try{
-    const dataUrl=await readPImgFile(file);
+    const dataUrl=await readPImgFile(file,!!OPT.pimgNoBg);
     const key=single?'single':dir;
     setPImg(key,dataUrl); applyPImg(key,dataUrl);
     sfx('ui');
