@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.99</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.0</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -553,11 +553,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div id="cloudStat"></div>
     <div id="discStat"></div>
     <div id="achStat"></div>
-    <div id="rankBox">
-      <input id="rkName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="off">
-      <button id="rkSend">랭킹 등록</button>
-      <div id="rkMsg"></div>
-    </div>
+    <div id="rankBox"></div>
     <div class="btns">
       <button class="primary" id="again">다시</button>
       <button id="rShare">결과 이미지</button>
@@ -2407,8 +2403,9 @@ function drawPlayerBody(){
   ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();
   const s=R_PLAYER*3.8;   // v2.97 일반 몹(72px)보다 조금 더 크게 — 판정(히트박스)은 그대로, 그림자도 기존 크기 유지
   const willRotate=!dir4&&OPT.pimgRotate;   // v2.92 회전 중엔 세로압축(SQUASH)을 끈다 — 같이 걸면 이미지가 평행사변형처럼 기울어 보였다
+  /* v3.1 회전 안 할 때만 SQUASH를 걸었더니 회전 여부에 따라 그림 세로 크기가 달라 보였다(평평해짐) — 그림엔 아예 SQUASH를 안 건다 */
   ctx.save();
-  ctx.translate(p[0],p[1]); if(willRotate) ctx.rotate(P.face); else ctx.scale(1,SQUASH);
+  ctx.translate(p[0],p[1]); if(willRotate) ctx.rotate(P.face);
   if(P.hurt>0) ctx.filter='brightness('+(1+P.hurt*6)+') saturate('+Math.max(0,1-P.hurt*3)+')';
   else if(P.inv>0) ctx.filter='brightness(1.4) hue-rotate(15deg)';
   ctx.drawImage(img,-s/2,-s/2,s,s);
@@ -2750,8 +2747,12 @@ function drawHUD(){
   const mx=bullets.reduce((m,b)=>Math.max(m,b.returns),0);
   ctx.font='700 13px ui-monospace,monospace';
   ctx.fillStyle=mx>0?C.cyan:C.dim;ctx.fillText('왕복 ×'+mx,W-18,H-22);
-  ctx.textAlign='center';ctx.font='600 11px ui-monospace,monospace';ctx.fillStyle=C.dim;
-  ctx.fillText('사이클 '+run.cycle+'  ·  웨이브 '+(run.wave||1)+'  ·  '+fmtTime(run.time)+(dmgScale()>1.001?'  ·  받는 피해 ×'+dmgScale().toFixed(2):''),W/2,H-22);   // v2.63
+  ctx.textAlign='center';ctx.font='600 11px ui-monospace,monospace';
+  /* v3.0 플레이어가 화면 아래쪽 끝까지 내려가면 이 줄에 가려서 안 보였다 — 뒤에 반투명 패널을 깔아 항상 읽히게 */
+  const hudLine='사이클 '+run.cycle+'  ·  웨이브 '+(run.wave||1)+'  ·  '+fmtTime(run.time)+(dmgScale()>1.001?'  ·  받는 피해 ×'+dmgScale().toFixed(2):'');
+  const hudW=ctx.measureText(hudLine).width;
+  ctx.fillStyle='rgba(8,12,17,.62)'; ctx.fillRect(W/2-hudW/2-10,H-34,hudW+20,22);
+  ctx.fillStyle=C.dim; ctx.fillText(hudLine,W/2,H-22);   // v2.63
 
   // 벽 설치 준비 시간 안내
   if(run.phase==='build'){
@@ -3160,6 +3161,8 @@ $('#again').onclick=startRun;
 /* v2.52 결과 이미지 — 점수 카드를 그려서 공유(폰) 또는 내려받기(PC) */
 $('#rShare').onclick=async()=>{
   if(!run) return;
+  const wasFs=isFs();   // v3.1 공유창(네이티브 공유 시트·다운로드)이 뜨면 브라우저가 전체화면을 강제로 꺼버린다 — 끝나면 되돌린다
+  const reFs=()=>{ if(wasFs&&!isFs()) toggleFullscreen(); };
   const c=document.createElement('canvas'); c.width=720; c.height=400; const g=c.getContext('2d');
   const gr=g.createLinearGradient(0,0,720,400); gr.addColorStop(0,'#0b1118'); gr.addColorStop(1,'#13202a');
   g.fillStyle=gr; g.fillRect(0,0,720,400);
@@ -3176,9 +3179,10 @@ $('#rShare').onclick=async()=>{
   g.textAlign='right'; g.fillStyle='#2fe3d0'; g.fillText('sinmustard.github.io/Aether_Chamber_Mine_Game',680,352);
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));
   const file=new File([blob],'aether_chamber_'+Math.round(run.score)+'.png',{type:'image/png'});
-  try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'에테르 챔버 결과'}); return; } }catch(e){ return; }
+  try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'에테르 챔버 결과'}); reFs(); return; } }catch(e){ reFs(); return; }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  reFs();
 };
 /* v3.4 튜토리얼 — 처음 HUB에 들어오면 자동으로 한 번, 이후엔 타이틀 버튼으로 언제든 다시 볼 수 있다 */
 function openTutorial(){
@@ -3198,6 +3202,10 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.0',['화면 아래쪽 끝에서 플레이어가 HUD 글자("사이클·웨이브·시간")에 가려 안 보이던 문제 — 글자 뒤에 반투명 패널 추가',
+         '게임 안 공개 랭킹(이름만으로 등록)이 아무 닉네임이나 사칭 등록할 수 있던 문제 — 로그인 계정 이름으로만 자동 등록되게 변경',
+         '캐릭터 이미지 회전 켜고 끌 때 그림 크기가 달라 보이던 문제 수정',
+         '결과 이미지 공유 시 전체화면이 풀리면 자동으로 다시 켜지게']],
  ['2.99',['캐릭터 이미지 업로드 창에 "캐릭터가 이미지의 80% 이상 차지하게 잘라서 올려주세요" 안내 추가']],
  ['2.98',['업적 진행 게이지가 채워지지 않던 문제 수정 (다른 화면의 스타일이 겹쳐서 두꺼운 빈 칸으로 보였음)']],
  ['2.97',['캐릭터 이미지를 일반 몹보다 조금 더 크게']],
@@ -3470,42 +3478,27 @@ async function openRanking(tab){
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
 /* 결과 화면 — 디버그를 쓴 판은 등록하지 않는다 */
+/* v3.0 공개 랭킹(aether_normal)은 이름만으로 등록돼서 남의 닉네임을 사칭할 수 있었다(이슈 #8).
+   비밀번호 없이 이름만 보내는 서버 API라 자유 입력란을 없애고, 로그인 계정 이름으로만 자동 등록한다 */
 function setupRankBox(){
-  const box=$('#rankBox'), btn=$('#rkSend'), msg=$('#rkMsg'), inp=$('#rkName');
-  inp.value=myName(); btn.disabled=false; msg.textContent='';
-  if(run.score<=0||run.mode==='hard'||run.mode==='daily'){ box.style.display='none'; return; }   // v2.68 공개 랭킹은 노멀만
+  const box=$('#rankBox');
+  if(run.score<=0||run.mode==='hard'||run.mode==='daily'){ box.style.display='none'; box.innerHTML=''; return; }   // v2.68 공개 랭킹은 노멀만
   box.style.display='flex';
-  if(run.cheat){ btn.disabled=true; inp.disabled=true; msg.textContent='디버그 기능을 쓴 판은 랭킹에 등록할 수 없어요.'; return; }
-  inp.disabled=false;
-  /* v2.67 한 번 직접 등록하면 그다음부턴 판이 끝날 때 같은 이름으로 자동 등록 (더 높을 때만 갱신) */
-  const autoName=rankAutoName();
-  if(autoName&&!run.tut){
-    inp.value=autoName; btn.disabled=true; msg.textContent='랭킹 자동 등록 중…';
-    rankSend({name:autoName, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD})
-      .then(res=>{ run.rankSent=true;
-        msg.innerHTML=((!res||res.updated)?'랭킹 자동 등록 · ':'최고 기록 '+Number(res.best).toLocaleString()+'점 유지 · ')+(res&&res.rank?res.rank+'위':'')+
-          ' <button id="rkAutoOff" style="margin-left:6px;padding:2px 7px;font:inherit;font-size:10px;cursor:pointer;background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:5px">자동 등록 끄기</button>'; })
-      .catch(()=>{ btn.disabled=false; msg.textContent='자동 등록에 실패했어요. 버튼으로 다시 등록할 수 있어요.'; });
+  if(run.cheat){ box.innerHTML='<div id="rkMsg">디버그 기능을 쓴 판은 랭킹에 등록할 수 없어요.</div>'; return; }
+  const ss=getSession();
+  if(!ss){
+    box.innerHTML='<div id="rkMsg">공개 랭킹은 로그인 계정 이름으로만 등록돼요(이름 사칭 방지). '+
+      '<button id="rkLogin" style="margin-left:4px;padding:3px 9px;font:inherit;font-size:10.5px;cursor:pointer;background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:6px">로그인</button>'+
+      ' — 로그인하면 다음 판부터 자동 등록돼요.</div>';
+    return;
   }
+  box.innerHTML='<div id="rkMsg">'+escH(ss.name)+' 이름으로 등록 중…</div>';
+  rankSend({name:ss.name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD})
+    .then(res=>{ run.rankSent=true; const place=res&&res.rank?' · '+res.rank+'위':'';
+      const m=$('#rkMsg'); if(m) m.textContent=((!res||res.updated)?'랭킹 등록됨':'최고 기록 '+Number(res.best).toLocaleString()+'점 유지')+place; })
+    .catch(()=>{ const m=$('#rkMsg'); if(m) m.textContent='랭킹 등록에 실패했어요.'; });
 }
-const rankAutoName=()=>{ try{ return localStorage.getItem('aether_rank_auto')||''; }catch(e){ return ''; } };
-document.addEventListener('click',e=>{ if(e.target&&e.target.id==='rkAutoOff'){
-  try{ localStorage.removeItem('aether_rank_auto'); }catch(_){}
-  $('#rkMsg').textContent='자동 등록을 껐어요. 다음부턴 직접 등록해요.'; $('#rkSend').disabled=!!run.rankSent; } });
-$('#rkSend').onclick=async()=>{
-  const btn=$('#rkSend'), msg=$('#rkMsg'), name=$('#rkName').value.trim();
-  if(!run||run.rankSent||run.cheat) return;
-  if(name.length<1||name.length>12){ msg.textContent='닉네임은 1~12자로 써 주세요.'; return; }
-  btn.disabled=true; msg.textContent='등록 중…';
-  try{
-    const res=await rankSend({name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD});
-    run.rankSent=true; try{ localStorage.setItem('aether_rank_name',name); localStorage.setItem('aether_rank_auto',name); }catch(e){}   // v2.67 다음 판부터 자동 등록
-    const place=res&&res.rank?' 현재 '+res.rank+'위예요.':'';
-    msg.textContent=(!res||res.updated)? '등록했어요!'+place
-      : '"'+name+'"의 기존 기록 '+Number(res.best).toLocaleString()+'점이 더 높아서 그대로 뒀어요.'+place;
-  }catch(e){ btn.disabled=false; msg.textContent='등록하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; }
-};
-$('#rkName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') $('#rkSend').click(); });
+$('#rankBox').addEventListener('click',e=>{ if(e.target&&e.target.id==='rkLogin') openLogin(); });
 /* v2.70 ⑤ 업적 — 한 번에 큰 목표 대신 단계별로 점진 증가 (10·30·50·100식) */
 const ACH_GROUPS=[
  {id:'boss', name:'보스 격파', get:s=>s.bossKills||0, tiers:[
