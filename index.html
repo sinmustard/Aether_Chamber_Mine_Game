@@ -450,6 +450,7 @@ body.ui-cover .ring,body.ui-cover .pads{display:none!important}
 #stickEdit .se-dot{position:absolute;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:12px;font-weight:700;cursor:grab;border:2px dashed currentColor;background:rgba(255,255,255,.04)}
 #stickEdit .se-dot.mv{color:var(--cyan)} #stickEdit .se-dot.am{color:var(--warn)}
+#stickEdit .se-dot.sk{width:46px;height:46px;color:var(--cyan);font-weight:700;font-size:14px}   /* v3.13 스킬 버튼 */
 #stickEdit .se-btns{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px}
 #stickEdit .se-btns button{padding:10px 16px;font:inherit;font-size:12px;border-radius:7px;cursor:pointer;background:rgba(8,12,17,.9);color:var(--dim);border:1px solid var(--line)}
 #stickEdit .se-btns button.go{color:var(--cyan);border-color:var(--cyan)}
@@ -504,7 +505,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.12</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.13</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -733,7 +734,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1, pimgAnimMove:0};   // v2.89 커스텀 캐릭터 이미지
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, posSkill:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1, pimgAnimMove:0};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -1211,6 +1212,14 @@ const fixCenter=side=>{ const c=side==='move'?OPT.posMove:OPT.posAim; if(c&&c.le
   return ((side==='move')!==!!OPT.swapSticks)?fixL():fixR(); };
 const isFixed=side=>side==='move'?!!OPT.fixMove:!!OPT.fixAim;
 const fixCenterS=side=>{ const c=fixCenter(side); return [c[0]+OFX,c[1]]; };   // v2.85 화면 좌표
+/* v3.13 스킬 버튼(F · Q · R) 자리 — 직접 옮긴 자리가 없으면 패링 조이스틱 둘레(기존 배치)를 따라간다.
+   좌표는 조이스틱 자리와 같은 기준(가운데 정렬 기준 x, 화면 y) */
+const SKILL_KEYS=['F','Q','R'];
+function skillDefaultPos(k,aim){
+  const a=aim||fixCenter('aim'), right=(a[0]+OFX)>VW/2, angs=right?[180,228,276]:[0,-48,-96], rad=TOUCH_MAX+44;
+  const t=angs[SKILL_KEYS.indexOf(k)]*Math.PI/180; return [Math.round(a[0]+Math.cos(t)*rad), Math.round(a[1]+Math.sin(t)*rad)];
+}
+const skillPos=k=>(OPT.posSkill&&OPT.posSkill[k])||skillDefaultPos(k);
 const stick={move:null, aim:null};   // {id, ox, oy, x, y, dx, dy, len}
 let touchMode=false;
 
@@ -1530,12 +1539,11 @@ padBind('rgF',doSkill); padBind('rgQ',doQ); padBind('rgR',doR);   // v2.79 패�
 /* v2.79 스킬 버튼을 패링 조이스틱 자리 둘레(왼쪽 · 왼쪽 위 · 위)에 놓는다 */
 let ringKey='';
 function placeRing(){
-  const r=gcv.getBoundingClientRect(), sc=r.width/VW, c=fixCenterS('aim');   // v2.85
-  const cx=r.left+c[0]*sc, cy=r.top+c[1]*sc, rad=(TOUCH_MAX+44)*sc, right=c[0]>VW/2;
-  const key=[cx,cy,rad,right].map(v=>Math.round(+v)).join(','); if(key===ringKey) return; ringKey=key;
-  const angs=right?[180,228,276]:[0,-48,-96];
-  ['rgF','rgQ','rgR'].forEach((id,i)=>{ const a=angs[i]*Math.PI/180, el=document.getElementById(id); if(!el) return;
-    el.style.left=(cx+Math.cos(a)*rad)+'px'; el.style.top=(cy+Math.sin(a)*rad)+'px'; });
+  const r=gcv.getBoundingClientRect(), sc=r.width/VW;   // v3.13 버튼마다 자리(직접 옮긴 자리 또는 조이스틱 둘레)
+  const ps=SKILL_KEYS.map(skillPos);
+  const key=[r.left,r.top,sc].concat(...ps).map(v=>Math.round(+v*100)).join(','); if(key===ringKey) return; ringKey=key;
+  SKILL_KEYS.forEach((k,i)=>{ const el=document.getElementById('rg'+k); if(!el) return;
+    el.style.left=(r.left+(ps[i][0]+OFX)*sc)+'px'; el.style.top=(r.top+ps[i][1]*sc)+'px'; });
 }
 $('#topPause').onclick=()=>{ if(screen==='game')togglePause(); };
 
@@ -3360,6 +3368,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.13',['폰 스킬 버튼(F · Q · R) 자리도 직접 옮길 수 있게 — 설정 → 조작 → 조이스틱 자리 편집에서 끌기, 옮기지 않은 버튼은 패링 조이스틱을 따라감, "기본 자리"로 되돌리기']],
  ['3.12',['캐릭터에 영상 · 움짤도 올릴 수 있게 — 최대 3초 · 12장으로 잘라 반복 재생, 이미지 1장 · 4방향 모두 가능 (프레임마다 배경 제거)','설정: 영상 캐릭터 재생 — 항상 반복 / 움직일 때만','타이틀 배경 캐릭터도 영상이면 움직이게']],
  ['3.11',['Q 스킬 "견인"을 "구속"으로 교체 — 적을 끌어당기는 대신 제자리에서 이동만 못 하게 묶음(공격은 그대로), 레벨업할수록 구속 시간도 늘어남, 걸린 동안 보이는 청록 링 추가']],
  ['3.10',['웨이브 보상 고르는 중에 ESC → HUB로 나가면 보상창이 안 닫히고 HUB 위에 그대로 남아있던 문제 수정']],
@@ -4140,27 +4149,36 @@ if(OPT.fixedSticks){ OPT.fixMove=1; OPT.fixAim=1; OPT.fixedSticks=0; }
 function openStickEdit(){
   let box=document.getElementById('stickEdit');
   if(!box){ box=document.createElement('div'); box.id='stickEdit';
-    box.innerHTML='<div class="se-note">원을 끌어서 조이스틱 자리를 옮기세요 · 스킬 버튼은 패링 조이스틱을 따라가요</div>'+
+    box.innerHTML='<div class="se-note">원과 버튼을 끌어서 자리를 옮기세요 · 스킬 버튼을 옮기지 않으면 패링 조이스틱을 따라가요</div>'+
       '<div class="se-dot mv" data-k="move">이동</div><div class="se-dot am" data-k="aim">패링</div>'+
+      '<div class="se-dot sk" data-k="F">F</div><div class="se-dot sk" data-k="Q">Q</div><div class="se-dot sk" data-k="R">R</div>'+   // v3.13
       '<div class="se-btns"><button id="seReset">기본 자리</button><button id="seDone" class="go">완료</button></div>';
     document.body.appendChild(box);
     const st=box._st={drag:null,pos:null,fr:null,sc:1};
-    st.place=()=>box.querySelectorAll('.se-dot').forEach(d=>{ const c=st.pos[d.dataset.k];
-      d.style.width=d.style.height=(TOUCH_MAX*2*st.sc)+'px'; d.style.left=(st.fr.left+(c[0]+OFX)*st.sc)+'px'; d.style.top=(st.fr.top+c[1]*st.sc)+'px'; });
+    st.place=()=>box.querySelectorAll('.se-dot').forEach(d=>{ const k=d.dataset.k, sk=SKILL_KEYS.includes(k);
+      if(sk&&!OPT.skillRing){ d.style.display='none'; return; } d.style.display='';
+      const c=sk?(st.skill[k]||skillDefaultPos(k,st.pos.aim)):st.pos[k];
+      if(!sk) d.style.width=d.style.height=(TOUCH_MAX*2*st.sc)+'px';
+      d.style.left=(st.fr.left+(c[0]+OFX)*st.sc)+'px'; d.style.top=(st.fr.top+c[1]*st.sc)+'px'; });
     box.querySelectorAll('.se-dot').forEach(d=>d.addEventListener('pointerdown',e=>{ st.drag=d.dataset.k; try{ d.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); }));
     box.addEventListener('pointermove',e=>{ if(!st.drag) return;
+      if(SKILL_KEYS.includes(st.drag)){   // v3.13 스킬 버튼 — 화면 안 어디든
+        const x=clamp((e.clientX-st.fr.left)/st.sc-OFX, 30-OFX, W+OFX-30), y=clamp((e.clientY-st.fr.top)/st.sc, 50, H-30);
+        st.skill[st.drag]=[Math.round(x),Math.round(y)]; st.place(); return; }
       const x=clamp((e.clientX-st.fr.left)/st.sc-OFX, TOUCH_MAX+6-OFX, W+OFX-TOUCH_MAX-6), y=clamp((e.clientY-st.fr.top)/st.sc, TOUCH_MAX+40, H-TOUCH_MAX-6);
       st.pos[st.drag]=[Math.round(x),Math.round(y)]; st.place(); });
     const end=()=>{ st.drag=null; }; box.addEventListener('pointerup',end); box.addEventListener('pointercancel',end);
-    box.querySelector('#seReset').addEventListener('click',()=>{ OPT.posMove=null; OPT.posAim=null; st.pos={move:fixCenter('move').slice(),aim:fixCenter('aim').slice()}; st.place(); sfx('ui'); });
+    box.querySelector('#seReset').addEventListener('click',()=>{ OPT.posMove=null; OPT.posAim=null; OPT.posSkill=null; st.skill={}; st.pos={move:fixCenter('move').slice(),aim:fixCenter('aim').slice()}; st.place(); sfx('ui'); });
     box.querySelector('#seDone').addEventListener('click',()=>{
       OPT.posMove=null; OPT.posAim=null; const dm=fixCenter('move'), da=fixCenter('aim');
       OPT.posMove=(st.pos.move[0]!==dm[0]||st.pos.move[1]!==dm[1])?st.pos.move:null;
       OPT.posAim=(st.pos.aim[0]!==da[0]||st.pos.aim[1]!==da[1])?st.pos.aim:null;
+      OPT.posSkill=Object.keys(st.skill).length?Object.assign({},st.skill):null;   // v3.13 옮긴 버튼만 저장 (나머지는 조이스틱을 따라감)
       save(); ringKey=''; box.classList.remove('on'); sfx('ui'); optTab='ctrl'; openModal(); });
   }
   fitCanvas(); const st=box._st; st.fr=$('#frame').getBoundingClientRect(); st.sc=st.fr.width/VW;
   st.pos={move:fixCenter('move').slice(), aim:fixCenter('aim').slice()}; st.drag=null;
+  st.skill=Object.assign({},OPT.posSkill||{});   // v3.13
   st.place(); box.classList.add('on');
 }
 function applyPadPos(){ ['top','right','left'].forEach(p=>document.body.classList.toggle('pads-'+p,OPT.padPos===p));
