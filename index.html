@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.07</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.08</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -731,7 +731,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1};   // v2.89 커스텀 캐릭터 이미지
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -2380,18 +2380,24 @@ function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[p
 /* v2.95 배경 제거 — AI 분리 없이 가벼운 방식. 테두리 전체 평균색 하나로 거리 재던 걸
    "마법봉" 방식으로 바꿨다 — 테두리에서 시작해서 이웃 픽셀끼리 색이 비슷하면 계속 번져나가고,
    경계(피사체)에서 색이 확 바뀌면 멈춘다. 그라데이션·그림자가 있어도 잘 따라가고, 단색이 아니어도 된다 */
+/* v3.08 배경 제거 강도 — 약(덜 지움) · 보통 · 강(그라데이션·빛 효과가 있어도 최대한 지움) */
+const BG_LV=[{tm:0.5,cov:0.75,refs:3},{tm:1,cov:0.6,refs:4},{tm:1.6,cov:0.4,refs:6}];
 function stripBg(cx,SZ){
   /* v3.06 배경 제거 다시 만듦 — 예전 마법봉은 '이웃 픽셀끼리' 색 차이만 봐서, 조금씩 비슷한 색을 따라
      피사체 안쪽까지 번져 그림이 군데군데 뚫렸다(검은 옷·그림자·JPG 노이즈). 이제는
      ① 테두리 색에서 배경 대표색(최대 3개)을 뽑고  ② 테두리와 이어진 픽셀 중 '대표색과 가까운' 것만 지우며
      ③ 경계는 부드럽게 반투명 처리하고  ④ 배경이 복잡하거나 너무 많이 지워지면 아예 지우지 않는다 */
   const id=cx.getImageData(0,0,SZ,SZ), d=id.data, n=SZ*SZ;
+  /* v3.08 이미 배경이 투명한 PNG면 건드리지 않는다 — 투명 부분이 '검정'으로 읽혀 캐릭터의 어두운 곳까지 지워졌다 */
+  { let tr=0, tot=0; for(let i=0;i<SZ;i++){ for(const k of [i, (SZ-1)*SZ+i, i*SZ, i*SZ+SZ-1]){ tot++; if(d[k*4+3]<20) tr++; } }
+    if(tr>tot*0.5) return {ok:true,removed:0,already:true}; }
   const col=k=>[d[k*4],d[k*4+1],d[k*4+2]];
   const d2=(a,b)=>{ const r=a[0]-b[0],g=a[1]-b[1],bb=a[2]-b[2]; return r*r+g*g+bb*bb; };
   /* ① 테두리 2픽셀 두께에서 대표색 뽑기 (가장 흔한 색 덩어리 순서) */
   const border=[]; for(let t=0;t<2;t++) for(let i=0;i<SZ;i++){ border.push(t*SZ+i,(SZ-1-t)*SZ+i,i*SZ+t,i*SZ+SZ-1-t); }
   const refs=[], spr=[]; let left=border.map(col);
-  for(let r=0;r<3&&left.length;r++){
+  const LV=BG_LV[OPT.pimgBgLv|0]||BG_LV[1];
+  for(let r=0;r<LV.refs&&left.length;r++){
     const c=left.slice().sort((a,b)=>(a[0]+a[1]+a[2])-(b[0]+b[1]+b[2]))[Math.floor(left.length/2)];
     const near=left.filter(p=>d2(p,c)<40*40);
     if(near.length<border.length*0.12) break;
@@ -2399,9 +2405,9 @@ function stripBg(cx,SZ){
     refs.push(m); spr.push(Math.sqrt(near.reduce((s,p)=>s+d2(p,m),0)/near.length)); left=left.filter(p=>d2(p,m)>=40*40);
   }
   const covered=border.length-left.length;
-  if(!refs.length||covered<border.length*0.7) return {ok:false,why:'complex'};   // 테두리가 여러 색으로 복잡 — 지우지 않음
+  if(!refs.length||covered<border.length*LV.cov) return {ok:false,why:'complex'};   // 테두리가 여러 색으로 복잡 — 지우지 않음
   /* v3.07 허용치를 배경이 얼마나 깨끗한지에 맞춘다 — 깨끗한 단색(검정 등) 배경이면 좁게 잡아 어두운 옷·그림자를 지키고, 노이즈 많은 배경이면 넓게 */
-  const T=Math.min(46,Math.max(18,3*Math.max(...spr)+12));
+  const T=Math.min(46*LV.tm,Math.max(18,3*Math.max(...spr)+12)*LV.tm);
   const dist=k=>{ const c=col(k); let m=1e9; for(const r of refs){ const v=d2(c,r); if(v<m) m=v; } return Math.sqrt(m); };
   /* ② 테두리에서 시작해 '대표색과 가까운' 픽셀만 따라 번진다 (이웃끼리가 아니라 대표색 기준이라 피사체 안으로 새지 않음) */
   const bg=new Uint8Array(n), q=new Int32Array(n); let qt=0;
@@ -3287,6 +3293,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.08',['캐릭터 이미지 배경 제거 강도 설정 (약 · 보통 · 강) — 배경에 그라데이션이나 빛 효과가 있어 안 지워지면 "강"으로, 바꾸면 보관된 원본으로 바로 다시 처리']],
  ['3.07',['캐릭터 이미지 원본을 같이 보관 — 배경 제거를 켜고 끄면 다시 올리지 않아도 원본으로 다시 처리','배경 제거 허용치를 배경 상태에 맞춤 — 깨끗한 단색 배경이면 어두운 옷·그림자를 덜 지움']],
  ['3.06',['캐릭터 이미지 배경 제거가 그림 안쪽까지 뚫어 버리던 문제 — 테두리에서 배경 대표색을 뽑아 그 색과 가까운 곳만 지우고 경계는 부드럽게, 배경이 복잡하면 지우지 않고 원본 유지 (이미 올린 이미지는 다시 올려야 적용)']],
  ['3.05',['타이틀 배경이 실제 전투 화면이랑 다른 공간처럼 보이던 문제 — 전투 바닥과 같은 대각선 격자 추가','탄환이 캐릭터까지 다 갔다가 돌아오던 걸 — 닿기 전 중간 지점에서 가로채이는 걸로 수정','플레이어·적에 붙어있던 반투명 테두리(halo) 제거','탄환이 돌아올 때 패링 가능 청록 링, 적에게 뺏길 때 빼앗김 빨간 링 — 실제 게임의 b.ready·e.seizeFx와 똑같은 타이밍·반지름·굵기 상수로 맞춤']],
@@ -3775,6 +3782,7 @@ $('#modalBox').addEventListener('click',e=>{
   const pc=e.target.closest('[data-pimgclear]');
   if(pc){ const d=pc.dataset.pimgclear; clearPImg(d); delete SPRITES[pimgSpriteKey(d)]; openAppearance(); sfx('ui'); return; }   // v2.89
   if(e.target.closest('[data-protate]')){ OPT.pimgRotate=OPT.pimgRotate?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.91
+  if(e.target.closest('[data-pbglv]')){ OPT.pimgBgLv=((OPT.pimgBgLv|0)+1)%3; save(); sfx('ui'); reprocessPImgs().then(openAppearance,openAppearance); return; }   // v3.08
   if(e.target.closest('[data-pnobg]')){ OPT.pimgNoBg=OPT.pimgNoBg?0:1; save(); sfx('ui'); reprocessPImgs().then(openAppearance,openAppearance); return; }   // v2.93 · v3.07 원본으로 다시 처리
   if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
     if(getSession()) askConfirm('로그아웃할까요?','지금 진행 상황을 서버에 저장한 뒤, 이 기기에서 계정 연결을 풀어요. 다시 시작할 때 닉네임·비밀번호를 입력해요.','로그아웃',
@@ -3832,7 +3840,8 @@ function openAppearance(){
     '<div class="opt-desc">4장 다 올려야 적용돼요. 바라보는 방향에 맞는 이미지로 바뀌어 보여요(회전 없음).</div>';
   }
   const tipRow=mode!=='off'?'<div class="opt-desc"><b>올리기 전에</b> — 캐릭터가 이미지의 80% 이상을 차지하도록 가깝게 자른 사진을 올려주세요. 배경이 많이 남으면 가운데를 정사각형으로 잘라서 캐릭터가 작게 나오거나 잘릴 수 있어요.</div>':'';
-  const bgRow=mode!=='off'?'<div class="opt-row opt-tg" data-pnobg="1"><span>배경 제거</span><i>'+(OPT.pimgNoBg?'켬 · 단색 배경만':'끔')+'</i></div>'+
+  const bgRow=mode!=='off'?'<div class="opt-row opt-tg" data-pnobg="1"><span>배경 제거</span><i>'+(OPT.pimgNoBg?'켬':'끔')+'</i></div>'+
+    (OPT.pimgNoBg?'<div class="opt-row opt-tg" data-pbglv="1"><span>배경 제거 강도</span><i>'+(['약 · 덜 지움','보통','강 · 그라데이션·빛 효과도'][OPT.pimgBgLv|0]||'보통')+'</i></div>':'')+   // v3.08
     '<div class="opt-desc">올릴 때 테두리에서부터 비슷한 색을 따라 배경을 지워요. 그라데이션·그림자 정도는 괜찮지만, 배경이 피사체만큼 울긋불긋하면 잘 안 될 수 있어요.</div>':'';
   $('#modalBox').innerHTML='<div class="logHd"><h4>캐릭터 이미지</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
     '<div class="opt-desc">플레이어는 기본적으로 원으로 표시돼요. 이미지를 올리면 바꿀 수 있어요 — 이 브라우저에만 저장되고 다른 기기에는 안 보여요.</div>'+
