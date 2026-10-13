@@ -485,7 +485,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.85</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.87</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1166,6 +1166,7 @@ function burst(x,y,col,n,sp){ if(OPT.lowfx) n=Math.ceil(n*0.3);   // v2.52 저�
   for(let i=0;i<n;i++){const a=Math.random()*TAU,v=(sp||160)*(0.4+Math.random()*0.8);
   parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0.35+Math.random()*0.25,col});} }
 const keys={}; let mouse={x:600,y:380};
+const mouseS={x:0,y:0,ok:0};   // v2.86 마우스의 화면 좌표 (카메라가 움직여도 커서 아래 지점을 조준하도록)
 /* v2.3 모바일 — 왼쪽 절반 드래그: 이동 / 오른쪽 절반 드래그: 조준.
    화면 좌표(px)로 받아서 세로 눌림(SQUASH)을 보정해 월드 방향으로 바꾼다 */
 const TOUCH_DEAD=14, TOUCH_MAX=70;
@@ -1417,12 +1418,12 @@ gcv.addEventListener('mousemove',e=>{
   if(locked()){
     /* v2.63 한 번에 비정상적으로 큰 움직임은 무시 (크롬 잠금 모드에서 가끔 들어오는 튀는 값) */
     if(Math.abs(e.movementX)>innerWidth*0.3||Math.abs(e.movementY)>innerHeight*0.3) return;
-    mouse.x=clamp(mouse.x+e.movementX*(VW/r.width)/ZK, 0, WORLD.w);
-    mouse.y=clamp(mouse.y+e.movementY*(H/r.height)/ZK/SQUASH, 0, WORLD.h);
+    if(!mouseS.ok){ mouseS.x=mouse.x*ZK; mouseS.y=(mouse.y*SQUASH+OY)*ZK+CAMY; mouseS.ok=1; }
+    mouseS.x=clamp(mouseS.x+e.movementX*(VW/r.width), 0, VW);
+    mouseS.y=clamp(mouseS.y+e.movementY*(H/r.height), 0, H);
     return;
   }
-  mouse.x=(e.clientX-r.left)*(VW/r.width)/ZK;   // v2.85
-  mouse.y=((((e.clientY-r.top)*(H/r.height))-CAMY)/ZK-OY)/SQUASH;   // v2.85
+  mouseS.x=(e.clientX-r.left)*(VW/r.width); mouseS.y=(e.clientY-r.top)*(H/r.height); mouseS.ok=1;   // v2.86
 });
 gcv.addEventListener('mousedown',e=>{e.preventDefault(); if(screen!=='game')return; lockMouse(); doParry();});
 document.addEventListener('pointerlockchange',()=>{ document.body.classList.toggle('locked',locked()); });
@@ -1577,6 +1578,7 @@ function doParry(force){
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
       t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
+      t.htg=(i===0?tgt:foes[i])||null;   // v2.86 이 탄환이 노리는 적을 기억
       if(i===0) t.dir=mainDir;
       else if(foes[i]) t.dir=Math.atan2(foes[i].y-P.y,foes[i].x-P.x);   // 추가 탄환은 조준 쪽 다른 적에게 (v2.84)
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
@@ -1674,7 +1676,7 @@ function doR(){
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       const tgt=all.length?all[i%all.length]:null;
-      t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir;
+      t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir; t.htg=tgt;   // v2.86
     });
     say('덮어쓰기 ×'+ts.length,'warn'); sfx('overwrite'); shake=10;
     P.rChg=0;
@@ -1797,6 +1799,8 @@ function update(dt){
     if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0) P.x=h.dx>=0?o.x+o.w+R_PLAYER:o.x-R_PLAYER;
     else P.y=h.dy>=0?o.y+o.h+R_PLAYER:o.y-R_PLAYER;
   });
+  /* v2.86 카메라가 움직이면 같은 커서 위치도 다른 월드 지점이 된다 → 매 프레임 다시 계산 */
+  if(mouseS.ok){ mouse.x=clamp(mouseS.x/ZK,0,WORLD.w); mouse.y=clamp(((mouseS.y-CAMY)/ZK-OY)/SQUASH,0,WORLD.h); }
   const as=stick.aim;                                     // v2.3 오른쪽 드래그 조준
   if(as&&(as.dx||as.dy)) P.face=Math.atan2(as.dy,as.dx);
   else if(!touchMode)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
@@ -2040,14 +2044,16 @@ function update(dt){
       if(b.homeT===undefined) b.homeT=CFG.homeTime;
       if(CFG.homing>0&&ens.length&&b.homeT>0){
         b.homeT-=dt;
-        let tg=null,bd=1e9;
-        for(const e of ens){
-          const d=dist(b.x,b.y,e.x,e.y);
-          if(d<bd&&Math.abs(norm(Math.atan2(e.y-b.y,e.x-b.x)-b.dir))<Math.PI*0.6){ bd=d; tg=e; }
-        }
+        /* v2.86 예전엔 매 프레임 '앞쪽 108° 안에서 가장 가까운 적'으로 목표를 바꿔서, 지나가던 옆의 적에게 확 꺾였다.
+           → 패링 때 노린 적을 끝까지 따라가고(뒤로 넘어가면 포기), 노린 적이 없을 때만 앞쪽 36° 안의 적을 살짝 쫓는다.
+           한 프레임에 꺾이는 각도에도 상한을 둬서 자연스러운 곡선으로 */
+        const angTo=e=>Math.abs(norm(Math.atan2(e.y-b.y,e.x-b.x)-b.dir));
+        let tg=(b.htg&&ens.includes(b.htg)&&angTo(b.htg)<Math.PI*0.5)?b.htg:null;
+        if(!tg){ let bd=1e9; for(const e of ens){ const d=dist(b.x,b.y,e.x,e.y); if(d<bd&&angTo(e)<Math.PI*0.2){ bd=d; tg=e; } } }
         if(tg){
-          const close=bd<140?2.5:1;
-          b.dir+=norm(Math.atan2(tg.y-b.y,tg.x-b.x)-b.dir)*Math.min(1,dt*CFG.homing*close);
+          const close=dist(b.x,b.y,tg.x,tg.y)<140?2:1;
+          const diff=norm(Math.atan2(tg.y-b.y,tg.x-b.x)-b.dir), lim=dt*Math.min(7,1.8*CFG.homing*close);
+          b.dir+=clamp(diff*Math.min(1,dt*CFG.homing*close),-lim,lim);
         }
       }
       if(b.hcd>0) b.hcd-=dt;
@@ -2699,9 +2705,9 @@ function drawHUD(){
 function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,gcv.width,gcv.height);
   ZK=VW/W;
-  { const contentH=(WORLD.h*SQUASH+OY+14)*ZK, py=(P.y*SQUASH+OY)*ZK;
-    const want=contentH<=H?0:clamp(H/2-py, H-contentH, 0);
-    CAMY+= (want-CAMY)*0.18; if(Math.abs(want-CAMY)<0.3) CAMY=want; }
+  /* v2.87 카메라 이동은 없앤다 — 확대(가로 꽉 채우기)는 그대로 두고, 전장이 화면 세로 가운데에 오도록 고정.
+     전장 높이(760×0.62)×확대가 화면보다 아주 조금 커서, 위아래 끝이 몇 픽셀만 잘린다 (플레이 영역은 다 보임) */
+  CAMY = ZK<=1.0001 ? 0 : (H - WORLD.h*SQUASH*ZK)/2 - OY*ZK;
   ctx.setTransform(DPR*ZK,0,0,DPR*ZK,0,CAMY*DPR);   // v2.85 전장: 가로 꽉 채우기 + 세로 카메라
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
@@ -3105,6 +3111,8 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.87',['카메라가 플레이어를 따라 움직이던 것을 없앰 — 화면을 꽉 채우는 확대는 그대로, 전장을 화면 가운데에 고정']],
+ ['2.86',['조준(패링 범위)이 커서와 어긋나며 미끄러지던 문제 수정 — 카메라가 움직여도 항상 커서 아래 지점을 조준','되돌린 탄환이 지나가던 옆의 적에게 갑자기 꺾이던 문제 — 패링 때 노린 적을 끝까지 따라가고, 꺾이는 속도에 상한']],
  ['2.85',['전체화면 양 끝에 남던 빈 공간 제거 — 전장을 확대해 화면 가로를 꽉 채우고, 위아래는 카메라가 플레이어를 따라감','점수 · 왕복 등 HUD를 실제 화면 끝에 맞춤','고정 조이스틱 기본 자리를 브롤스타즈처럼 화면 양쪽 아래 구석으로']],
  ['2.84',['전체화면을 진짜 꽉 차게 — 가로가 긴 화면은 양옆 검은 띠 없이 채우고 전장 양옆을 더 보여 줌','큰 화면 · 폰에서 그림이 흐릿하던 것 — 기기 해상도에 맞춰 선명하게','패링한 탄환이 엉뚱한 곳으로 튀던 문제 — 조준 방향에 가장 가까운 적을 노리고, 추가 탄환도 조준 쪽 적에게만']],
  ['2.83',['적 체력의 사이클 배율을 복리(×1.15/사이클, 상한 없음)에서 로그형으로 변경 — 초반 체감은 그대로, 후반(10사이클+) 증가폭을 완만하게',
