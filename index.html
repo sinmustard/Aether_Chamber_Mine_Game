@@ -178,38 +178,38 @@ body.touch #title .ver{display:none}
 #result .btns button.primary{border-color:var(--cyan);color:var(--cyan)}
 
 /* PAUSE / OPTIONS */
-#reward{position:absolute;inset:0;background:rgba(8,12,17,.94);z-index:7;display:none}
-#reward.on{display:block}
-#reward .hd{position:absolute;top:0;left:0;right:0;z-index:2;pointer-events:none;
-  padding:14px 16px 12px;text-align:center;font-size:11.5px;letter-spacing:.26em;color:var(--dim);
-  background:linear-gradient(rgba(8,12,17,.95),rgba(8,12,17,0))}
+/* v2.75 전체화면 3분할 대신, 가운데에 작은 창으로 */
+#reward{position:absolute;inset:0;background:rgba(8,12,17,.82);z-index:7;display:none;
+  align-items:center;justify-content:center;padding:20px}
+#reward.on{display:flex}
+#reward .box{position:relative;width:min(620px,100%);max-height:100%;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 18px 16px}
+#reward .hd{text-align:center;padding:0 72px 14px;font-size:11.5px;letter-spacing:.26em;color:var(--dim)}
 #reward .hd b{color:var(--cyan);font-weight:600}
-#reward .own{position:absolute;bottom:0;left:0;right:0;z-index:2;pointer-events:none;
-  padding:10px 16px 12px;text-align:center;font-size:10.5px;color:var(--dim);line-height:1.7;
-  background:linear-gradient(rgba(8,12,17,0),rgba(8,12,17,.95))}
+#reward .own{text-align:center;padding-top:14px;font-size:10.5px;color:var(--dim);line-height:1.7}
 #reward .own b{color:var(--fg)}
-/* v2.1 — 화면을 세로 3분할. 한 칸 전체가 선택 버튼이다 */
-#reward .row{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr)}
+#reward .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:560px){#reward .row{grid-template-columns:1fr}}
 #reward .bc.sp{border-color:var(--warn)!important;box-shadow:0 0 0 1px var(--warn) inset}
 .bc.sp .k{color:var(--warn)}
 .bc{position:relative;min-width:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:10px;padding:64px 18px;text-align:center;
-  border-right:1px solid var(--line);
-  background:linear-gradient(180deg,rgba(255,255,255,.012),rgba(255,255,255,0));
-  transition:background .12s}
-#reward .bc:last-child{border-right:0}
-#reward .bc::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;
+  gap:8px;padding:20px 14px;text-align:center;
+  border:1px solid var(--line);border-radius:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,0));
+  transition:background .12s,border-color .12s}
+#reward .bc::before{content:'';position:absolute;left:10px;right:10px;top:0;height:2px;
   background:var(--cyan);opacity:0;transition:opacity .12s}
-#reward .bc:hover{background:rgba(47,227,208,.10)}
+#reward .bc:hover{background:rgba(47,227,208,.10);border-color:var(--cyan)}
 #reward .bc:hover::before{opacity:1}
 #reward .bc .num{font-size:11px;letter-spacing:.3em;color:var(--dim);
   border:1px solid var(--line);border-radius:5px;padding:4px 10px}
 #reward .bc:hover .num{color:var(--cyan);border-color:var(--cyan)}
 #reward .bc .k{font-size:10px;letter-spacing:.2em;color:var(--dim)}
-#reward .bc .n{font-size:clamp(17px,2.6vw,25px);letter-spacing:.06em;color:var(--cyan);font-weight:700}
-#reward .bc .d{font-size:clamp(11px,1.3vw,13px);line-height:1.8;color:var(--fg);max-width:230px}
-#reward .bc .st{font-size:10px;letter-spacing:.1em;color:var(--dim);margin-top:4px}
+#reward .bc .n{font-size:clamp(15px,2.2vw,19px);letter-spacing:.06em;color:var(--cyan);font-weight:700}
+#reward .bc .d{font-size:clamp(10.5px,1.2vw,12px);line-height:1.6;color:var(--fg)}
+#reward .bc .st{font-size:10px;letter-spacing:.1em;color:var(--dim);margin-top:2px}
+@media (max-height:560px){#reward .box{padding:14px 14px 12px}#reward .hd{padding:0 64px 10px}.bc{padding:14px 10px}}
 #modal{position:absolute;inset:0;background:rgba(8,12,17,.93);z-index:50;   /* v2.26 일시정지 메뉴(40)보다 위 */
   display:none;align-items:center;justify-content:center;padding:20px}
 #modal.on{display:flex}
@@ -272,7 +272,7 @@ body.touch #title .ver{display:none}
 #respec{margin-right:10px;padding:4px 9px;font:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;
   background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:6px}
 #respec:hover{color:var(--warn);border-color:var(--warn)}
-#rwReroll{position:absolute;right:14px;top:12px;z-index:3;padding:8px 13px;font:inherit;font-size:11.5px;letter-spacing:.06em;
+#rwReroll{position:absolute;right:14px;top:14px;z-index:3;padding:7px 12px;font:inherit;font-size:11px;letter-spacing:.06em;
   cursor:pointer;background:rgba(8,12,17,.8);color:var(--cyan);border:1px solid var(--cyan);border-radius:7px}
 #rwReroll:disabled{opacity:.35;cursor:default;color:var(--dim);border-color:var(--line)}
 #rBoons{max-width:520px;font-size:10.5px;line-height:1.7;color:var(--dim);text-align:center;margin:0 0 8px;padding:0 10px}
@@ -442,7 +442,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.75</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.77</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -513,10 +513,12 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
     <div class="tb-btns" id="tbBtns"></div>
   </div>
   <div id="reward">
-    <div class="hd" id="rwHd"></div>
-    <div class="row" id="rwRow"></div>
-    <div class="own" id="rwOwn"></div>
-    <button id="rwReroll">새로고침</button>
+    <div class="box">
+      <button id="rwReroll">새로고침</button>
+      <div class="hd" id="rwHd"></div>
+      <div class="row" id="rwRow"></div>
+      <div class="own" id="rwOwn"></div>
+    </div>
   </div>
   <div id="modal"><div class="box" id="modalBox"></div></div>
   <div id="confirm">
@@ -1643,7 +1645,7 @@ function openReward(afterBoss){
   const rr=$('#rwReroll'); rr.textContent='새로고침 R · 남은 '+(run.rerolls||0); rr.disabled=!(run.rerolls>0);
   run.phase='reward';
   $('#rwHd').innerHTML=(afterBoss?'알레테이아 격파 · <b>사이클 '+run.cycle+'</b>'
-                                 :(run.wave===0?'선행 보급':'웨이브 '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요  <b>1 2 3</b>';
+                                 :(run.wave===0?'선행 보급':'웨이브 '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요';
   $('#rwRow').innerHTML=rwPicks.map((b,i)=>
     '<div class="bc'+(b.sp?' sp':'')+'" data-i="'+i+'">'+
     '<div class="num">'+(i+1)+'</div>'+
@@ -3000,6 +3002,8 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.77',['웨이브 보상 창 "하나를 고르세요" 옆의 "1 2 3" 표시 제거']],
+ ['2.76',['웨이브 보상 선택 창을 전체화면 3분할 대신 화면 가운데의 작은 창으로 변경']],
  ['2.75',['폰 가로 화면에서 타이틀 메뉴가 잘리던 문제 수정 — 시작 버튼 아래 나머지 버튼을 3칸 격자로, 낮은 화면에선 글자·여백 축소','폰 · 낮은 화면에선 키보드 안내와 바깥 설명글 숨김']],
  ['2.74',['적 체력바 숫자가 실제보다 1 많게 나오던 문제 수정 (처치 판정 기준과 안 맞았음)']],
  ['2.73',['타이틀 배경을 실제 게임 그림에 맞게 변경 — 적 쪽은 실제 몹 스프라이트로, 부딪힐 때 패링 스파크 연출 (플레이어 쪽은 그대로 민짜 원)']],
