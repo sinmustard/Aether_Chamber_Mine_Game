@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.0</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.01</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1175,6 +1175,21 @@ const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
 let P,ens,bullets,queue,msgs,shake,run,paused=false,screen='title';
 let t0=0,raf=0;
 let parts=[],hitstop=0,dmgNums=[];   // v2.68 피해 숫자
+/* v3.00 디버그 — 내 탄환이 방향을 바꾼 이유를 그 자리에 잠깐 글자로 남긴다 (개발자 디버그 모드에서만 보임) */
+let bMarks=[];
+function bMark(x,y,txt,col){ if(!debug) return; bMarks.push({x,y,txt,col:col||'#ffd34d',t:performance.now()}); if(bMarks.length>40) bMarks.shift(); }
+function drawBulletDebug(){
+  if(!debug) return; const now=performance.now();
+  bMarks=bMarks.filter(m=>now-m.t<1800);
+  ctx.save(); ctx.font='700 11px ui-monospace,monospace'; ctx.textAlign='center';
+  bMarks.forEach(m=>{ const p=proj(m.x,m.y), k=1-(now-m.t)/1800; ctx.globalAlpha=k;
+    ctx.fillStyle=m.col; ctx.beginPath(); ctx.arc(p[0],p[1],4,0,TAU); ctx.fill(); ctx.fillText(m.txt,p[0],p[1]-9); });
+  /* 내 탄환 → 노리는 적 연결선 */
+  ctx.globalAlpha=.55; ctx.setLineDash([4,5]); ctx.lineWidth=1.2;
+  bullets.forEach(b=>{ if(b.owner!=='player'||!b.htg||!ens.includes(b.htg)) return; const a=proj(b.x,b.y), c=proj(b.htg.x,b.htg.y);
+    ctx.strokeStyle='#5fe3d0'; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(c[0],c[1]); ctx.stroke(); });
+  ctx.restore();
+}
 function burst(x,y,col,n,sp){ if(OPT.lowfx) n=Math.ceil(n*0.3);   // v2.52 저사양 모드
   for(let i=0;i<n;i++){const a=Math.random()*TAU,v=(sp||160)*(0.4+Math.random()*0.8);
   parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0.35+Math.random()*0.25,col});} }
@@ -1591,7 +1606,12 @@ function doParry(force){
     let tgt=byAim.length&&ang(byAim[0])<=(touchMode?100:24)*Math.PI/180?byAim[0]:null;
     if(!tgt&&touchMode&&soft.length) tgt=soft.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
     if(!tgt&&byAim.length&&wallBetween(P.x,P.y,P.x+Math.cos(P.face)*160,P.y+Math.sin(P.face)*160)) tgt=byAim[0];
-    const mainDir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):P.face;
+    /* v3.00 적은 늘 흔들리며 움직여서, 지금 위치로 쏘면 도착할 즈음엔 비껴 있다(빗나간 탄이 뒤쪽 벽에 튕겨 돌아오는 주원인).
+       → 탄환이 도착할 시간만큼 앞을 내다보고 겨눈다 */
+    const lead=(e,sx,sy,spd)=>{ if(!e) return null; const d=dist(sx,sy,e.x,e.y), tt=Math.min(1.2,d/Math.max(120,spd)); return [e.x+(e.vx||0)*tt, e.y+(e.vy||0)*tt]; };
+    const shotSpd=Math.min((ts[0]?ts[0].spd:CFG.spd)*CFG.accel,cap());
+    const lp=lead(tgt,P.x,P.y,shotSpd);
+    const mainDir=lp?Math.atan2(lp[1]-P.y,lp[0]-P.x):P.face;
     const foes=[tgt].concat(byAim.filter(e=>e!==tgt&&ang(e)<=70*Math.PI/180)).filter(Boolean);
     let maxRet=0;
     const echoes=[];
@@ -1602,7 +1622,7 @@ function doParry(force){
       t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       t.htg=(i===0?tgt:foes[i])||null;   // v2.86 이 탄환이 노리는 적을 기억
       if(i===0) t.dir=mainDir;
-      else if(foes[i]) t.dir=Math.atan2(foes[i].y-P.y,foes[i].x-P.x);   // 추가 탄환은 조준 쪽 다른 적에게 (v2.84)
+      else if(foes[i]){ const q=lead(foes[i],P.x,P.y,shotSpd); t.dir=Math.atan2(q[1]-P.y,q[0]-P.x); }   // 추가 탄환은 조준 쪽 다른 적에게 (v2.84)
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
       maxRet=Math.max(maxRet,t.returns);
       burst(t.x,t.y,'cyan',10,180);
@@ -1697,8 +1717,11 @@ function doR(){
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
-      const tgt=all.length?all[i%all.length]:null;
-      t.dir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):t.dir; t.htg=tgt;   // v2.86
+      /* v3.00 예전엔 플레이어 기준 가까운 순서로 돌려가며 노려서, 탄환 자리에서 벽 · 방패 뒤인 적에게도 쏴 벽에 튕겼다 → 탄환 자리에서 보이는 적 우선 */
+      const seen=all.filter(e=>!G(e).shield&&!wallBetween(t.x,t.y,e.x,e.y)).sort((a,b)=>dist(a.x,a.y,t.x,t.y)-dist(b.x,b.y,t.x,t.y));
+      const pool=seen.length?seen:all;
+      const tgt=pool.length?pool[i%pool.length]:null;
+      t.dir=tgt?Math.atan2(tgt.y-t.y,tgt.x-t.x):t.dir; t.htg=tgt;   // v2.86 · v3.00 탄환 자리에서 겨눔
     });
     say('덮어쓰기 ×'+ts.length,'warn'); sfx('overwrite'); shake=10;
     P.rChg=0;
@@ -1952,6 +1975,7 @@ function update(dt){
     [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+40);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
     e.x=e.ax+Math.cos(e.drift*0.8)*36;
     e.y=e.ay+Math.sin(e.drift)*54;
+    if(dt>0){ e.vx=(e.lx==null?0:(e.x-e.lx)/dt); e.vy=(e.ly==null?0:(e.y-e.ly)/dt); } e.lx=e.x; e.ly=e.y;   // v3.00 이동 속도 (패링 조준 예측용)
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
     if(e.grade==='tracker' && e.lungePhase==='dash' && !e.lungeHit && dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER){
       e.lungeHit=true;
@@ -2072,6 +2096,7 @@ function update(dt){
            한 프레임에 꺾이는 각도에도 상한을 둬서 자연스러운 곡선으로 */
         const angTo=e=>Math.abs(norm(Math.atan2(e.y-b.y,e.x-b.x)-b.dir));
         let tg=(b.htg&&ens.includes(b.htg)&&angTo(b.htg)<Math.PI*0.5&&!wallBetween(b.x,b.y,b.htg.x,b.htg.y))?b.htg:null;   // v2.89 벽에 가리면 포기
+        if(b.htg&&!tg){ bMark(b.x,b.y,!ens.includes(b.htg)?'목표 사라짐':angTo(b.htg)>=Math.PI*0.5?'목표 지나침':'목표 벽에 가림','#9aa6ff'); b.htg=null; }   // v3.00
         if(!tg){ let bd=1e9; for(const e of ens){ const d=dist(b.x,b.y,e.x,e.y); if(d<bd&&angTo(e)<Math.PI*0.2&&!wallBetween(b.x,b.y,e.x,e.y)){ bd=d; tg=e; } } }
         if(tg){
           const close=dist(b.x,b.y,tg.x,tg.y)<140?2:1;
@@ -2090,7 +2115,7 @@ function update(dt){
           if(Math.random()<seizeChance(e,b)){
             b.owner='enemy'; b.tried=[];
             b.dir=Math.atan2(P.y-b.y,P.x-b.x);
-            e.seizeFx=0.35; say('빼앗김','red'); sfx('seize'); burst(b.x,b.y,'red',8);
+            e.seizeFx=0.35; say('빼앗김','red'); sfx('seize'); burst(b.x,b.y,'red',8); bMark(b.x,b.y,'재탈취 · '+(e===b.htg?'노린 적':'옆의 적'),'#ff5d6c');   // v3.00
           }
           break;
         }
@@ -2115,6 +2140,7 @@ function update(dt){
         let vx=Math.cos(b.dir), vy=Math.sin(b.dir);
         if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0){ vx=-vx; b.x=h.dx>=0?o.x+o.w+R_BULLET+.5:o.x-R_BULLET-.5; }
         else { vy=-vy; b.y=h.dy>=0?o.y+o.h+R_BULLET+.5:o.y-R_BULLET-.5; }
+        if(b.owner==='player') bMark(b.x,b.y,'벽 반사','#ffd34d');   // v3.00
         b.dir=Math.atan2(vy,vx); b.trail.length=0; b.htg=null; break;   // v2.89
       }
       if(gone) continue;
@@ -2152,7 +2178,7 @@ function update(dt){
         const d=norm((e.sa!=null?e.sa:out)-out);
         e.sa=(e.sa!=null?e.sa:out)+(d>=0?1:-1)*0.42;
         e.saStun=1.1; e.shieldFx=0.3;   // v2.2 막은 뒤 방패가 다시 돌아오기까지 더 오래 걸리게 (0.55 -> 1.1)
-        say('방패에 막힘','red'); sfx('block'); shake=5; burst(b.x,b.y,'red',6,120);
+        say('방패에 막힘','red'); sfx('block'); shake=5; burst(b.x,b.y,'red',6,120); bMark(b.x,b.y,'방패 반사','#ff9f43');   // v3.00
         continue;
       }
       if(hitIdx>=0){
@@ -2799,7 +2825,7 @@ function render(){
   ctx.setTransform(DPR*ZK,0,0,DPR*ZK,0,CAMY*DPR);   // v2.85 전장: 가로 꽉 채우기 + 세로 카메라
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
-  drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();drawBulletDebug();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
@@ -3202,6 +3228,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.01',['패링 조준이 적의 움직임을 내다보고 겨눔 — 흔들리는 적을 빗나가 뒤쪽 벽에 튕겨 돌아오던 경우 감소','R 덮어쓰기로 빼앗은 탄환이 벽·방패 뒤 적을 노려 엉뚱하게 튕기던 문제 — 각 탄환 자리에서 보이는 적을 노림','디버그 모드에서 내 탄환이 방향을 바꾼 이유를 그 자리에 표시 (재탈취 · 벽 반사 · 방패 반사 · 목표 잃음) + 노리는 적 연결선']],
  ['3.0',['화면 아래쪽 끝에서 플레이어가 HUD 글자("사이클·웨이브·시간")에 가려 안 보이던 문제 — 글자 뒤에 반투명 패널 추가',
          '게임 안 공개 랭킹(이름만으로 등록)이 아무 닉네임이나 사칭 등록할 수 있던 문제 — 로그인 계정 이름으로만 자동 등록되게 변경',
          '캐릭터 이미지 회전 켜고 끌 때 그림 크기가 달라 보이던 문제 수정',
