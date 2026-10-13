@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 저격수 — 분열체(splinter) 실루엣을 레일건처럼 확장. 분열체보다 크고 두꺼운 쐐기 + 쌍을 이루는 레일 + 중앙 에너지 채널 + 포구 축전구 -->
+  <defs>
+    <linearGradient id="rock" x1="20%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#3a2a18"/><stop offset="55%" stop-color="#1e150d"/><stop offset="100%" stop-color="#0a0705"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="38%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#fff0d0"/><stop offset="35%" stop-color="#ffab5c"/><stop offset="75%" stop-color="#ff7a3d"/><stop offset="100%" stop-color="#7a3310"/>
+    </radialGradient>
+    <filter id="halo" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="11" result="b"/><feMerge><feMergeNode in="b"/></feMerge>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <ellipse cx="110" cy="100" rx="92" ry="34" fill="#ff7a3d" opacity="0.32" filter="url(#halo)"/>
+  <!-- 본체(분열체보다 크고 두꺼운 쐐기) -->
+  <polygon points="5,100 30,58 84,79 123,46 165,70 198,100 165,130 123,154 84,121 30,142"
+    fill="url(#rock)" stroke="#000" stroke-opacity="0.5" stroke-width="1"/>
+  <!-- 표면 결 -->
+  <path d="M30,58 L84,79 L123,46" fill="none" stroke="#000" stroke-width="1.4" opacity="0.4"/>
+  <path d="M30,142 L84,121 L123,154" fill="none" stroke="#000" stroke-width="1.4" opacity="0.4"/>
+  <!-- 레일(위/아래 쌍) -->
+  <path d="M22,62 L30,58 L84,79 L123,46 L165,70 L172,66" fill="none" stroke="#ffab5c" stroke-width="3" stroke-linecap="round" opacity="0.85" filter="url(#glow)"/>
+  <path d="M22,138 L30,142 L84,121 L123,154 L165,130 L172,134" fill="none" stroke="#ffab5c" stroke-width="3" stroke-linecap="round" opacity="0.85" filter="url(#glow)"/>
+  <!-- 중앙 에너지 채널 -->
+  <path d="M14,100 L100,100 L186,100" fill="none" stroke="#ff6a2f" stroke-width="5" stroke-linecap="round" opacity="0.95" filter="url(#glow)"/>
+  <!-- 전기 스파크 -->
+  <g stroke="#fff0d0" stroke-width="1.6" stroke-linecap="round" opacity="0.8" filter="url(#glow)">
+    <path d="M62,100 L70,90 L76,100"/>
+    <path d="M138,100 L132,110 L126,100"/>
+  </g>
+  <!-- 포구 축전구(발사 직전 충전) -->
+  <circle cx="178" cy="100" r="20" fill="url(#gem)"/>
+  <circle cx="178" cy="100" r="20" fill="none" stroke="#5c2a0c" stroke-width="2" opacity="0.7"/>
+  <circle cx="178" cy="100" r="23" fill="none" stroke="#ffab5c" stroke-width="1" opacity="0.4" stroke-dasharray="2,6"/>
+  <ellipse cx="170" cy="92" rx="7" ry="4" fill="#fff6e6" opacity="0.5"/>
+  <!-- 떨어진 파편 -->
+  <polygon points="2,86 10,82 12,92 4,96" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+  <polygon points="2,114 10,110 12,120 4,124" fill="url(#rock)" stroke="#000" stroke-opacity="0.4"/>
+</svg>

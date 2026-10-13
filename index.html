@@ -320,6 +320,9 @@ body.in-game #topPause{display:block}
 .achList .rw{color:var(--warn);font-size:10.5px} .achList .dd{grid-column:1/3;font-size:10.5px}
 .achList .bar{grid-column:1/2;height:4px;background:rgba(255,255,255,.07);border-radius:3px;align-self:center;overflow:hidden}
 .achList .bar i{display:block;height:100%;background:var(--cyan)} .achList .pc{font-size:10px}
+.achList .pips{grid-column:1/3;display:flex;gap:4px;margin:1px 0}
+.achList .pips i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.12);display:block}
+.achList .pips i.on{background:var(--cyan)}
 .statGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
 .statGrid div{display:flex;flex-direction:column;gap:2px;padding:8px;border:1px solid var(--line);border-radius:7px}
 .statGrid span{font-size:10px;color:var(--dim)} .statGrid b{font-size:14px;color:var(--fg)}
@@ -423,7 +426,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.69</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.73</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1263,7 +1266,7 @@ function killEnemy(e){
     ens.slice().forEach(o=>{ if(o.inv>0) return;
       if(dist(e.x,e.y,o.x,o.y)>=80+o.r) return;
       o.hp-=dmg*(shielded(o,{x:e.x,y:e.y})?0.5:1); o.hurt=.18;
-      if(o.hp<=0) killEnemy(o);
+      if(o.hp<=HIT_UNIT*0.25) killEnemy(o);   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
     });
     burst(e.x,e.y,'warn',10,200);
   }
@@ -1441,11 +1444,11 @@ function doParry(force){
         if(dist(lunger.x,lunger.y,o.x,o.y)>=90+o.r) return;
         o.hp-=base*(shielded(o,{x:lunger.x,y:lunger.y})?0.5:1);
         o.hurt=.18;
-        if(o.hp<=0) killEnemy(o);
+        if(o.hp<=HIT_UNIT*0.25) killEnemy(o);   // v2.71
       });
       burst(lunger.x,lunger.y,'warn',10,200);
     }
-    if(lunger.hp<=0) killEnemy(lunger);
+    if(lunger.hp<=HIT_UNIT*0.25) killEnemy(lunger);   // v2.71
     P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1 — 돌진 패링도 똑같이 충전된다
     /* v1.7 D-2 / 무결 보너스와 동일하게 처리한다 — 돌진 패링만 회복 경직이 남는 건 형평에 안 맞는다 */
     P.lock=boonLv('flow')?0:0.12; P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
@@ -2035,12 +2038,13 @@ function update(dt){
         const gl=boonLv('grit');
         const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1);
         e.hp-=dmgv;
-        if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:e.hp<=0,big:dmgv>HIT_UNIT});   // v2.68
+        const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
+        if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68
         e.hurt=.22; e.inv=ENEMY_IFRAME; shake=8; run.hits++; sfx('hit'); burst(b.x,b.y,'cyan',8);
         if(e.grade==='boss'&&!e.p2&&e.hp>0&&e.hp<=e.hpMax/2){ e.p2=true; announce('과부하','red'); sfx('boss'); shake=16; }
         const pts=Math.round(10*Math.max(1,b.returns)*CFG.scoreMul);
         run.score+=pts; say('+'+pts+(b.returns>1?'  ×'+b.returns:''),'warn');
-        if(e.hp<=0) killEnemy(e);
+        if(willKill) killEnemy(e);
         /* v2.0 파편 — 명중 지점 주변에 추가 피해 */
         const sh=boonLv('shard');
         if(sh){
@@ -2050,7 +2054,7 @@ function update(dt){
             /* v2.2 방패가 폭발 지점을 향하면 절반만 들어간다 */
             o.hp-=base*(shielded(o,{x:b.x,y:b.y})?0.5:1);
             o.hurt=.18;
-            if(o.hp<=0) killEnemy(o);   // v2.2 파편으로도 죽는다
+            if(o.hp<=HIT_UNIT*0.25) killEnemy(o);   // v2.2 파편으로도 죽는다 / v2.71 애매한 체력 한 조각 처리
           });
           burst(b.x,b.y,'warn',10,200);
         }
@@ -2174,7 +2178,7 @@ loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 �
 loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
-['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer']
+['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer','sniper']
   .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
 /* v3.10.1 분열체는 항상 플레이어 쪽을 보고 회전한다(계속 다가붙는 적이라 방향이 보이는 게 자연스럽다) */
 function enemyFacing(e){
@@ -2256,13 +2260,18 @@ function drawShield(e){
 }
 function drawHpBar(e){
   const p=proj(e.x,e.y), w=e.r*1.7, hg=4, top=p[1]-e.r*1.3-16;
-  const seg=G(e).hits;
   ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(p[0]-w/2-1,top-1,w+2,hg+2);
   ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(p[0]-w/2,top,w,hg);
   ctx.fillStyle=C.red;ctx.fillRect(p[0]-w/2,top,w*Math.max(0,e.hp/e.hpMax),hg);
-  ctx.strokeStyle='rgba(8,12,17,.9)';ctx.lineWidth=1.5;
-  for(let k=1;k<seg;k++){const gx=p[0]-w/2+w*k/seg;
-    ctx.beginPath();ctx.moveTo(gx,top);ctx.lineTo(gx,top+hg);ctx.stroke();}
+  /* v2.72 칸 구분선 대신 남은 타격 수를 숫자로 표시 */
+  if(e.hp>HIT_UNIT*0.25){
+    const left=Math.max(1,Math.ceil(e.hp/HIT_UNIT));
+    ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='800 9px ui-monospace,monospace';
+    ctx.lineWidth=2.5; ctx.strokeStyle='rgba(8,12,17,.9)'; ctx.strokeText(left,p[0],top+hg/2);
+    ctx.fillStyle='#fff'; ctx.fillText(left,p[0],top+hg/2);
+    ctx.restore();
+  }
 }
 /* v1.9 플레이어 체력 — 발밑 링에서 좌상단 바로 변경 */
 function drawHpBarPlayer(){
@@ -2974,6 +2983,10 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.73',['타이틀 배경을 실제 게임 그림에 맞게 변경 — 적 쪽은 실제 몹 스프라이트로, 부딪힐 때 패링 스파크 연출 (플레이어 쪽은 그대로 민짜 원)']],
+ ['2.72',['적 체력바 칸 구분선을 지우고 남은 타격 수를 숫자로 표시']],
+ ['2.71',['적 체력이 난이도 배율 탓에 애매하게 한 조각 남던 문제 수정 — 한 대 분량의 25% 이하로 남으면 바로 처치 처리']],
+ ['2.70',['업적을 단계별로 개편 — 한 번에 큰 목표 대신 10·30·50·100식으로 점진 증가, 단계마다 재화 지급 (기존 12종 → 11개 항목·53단계)']],
  ['2.69',['가장자리 위험 띠 두께를 절반으로 (90 → 45)']],
  ['2.68',['여러 기기 저장 덮어쓰기 방지 — 다른 기기가 더 늦게 저장했으면 HUB에 들어갈 때 먼저 불러옴','랭킹 점수 검증 — 처치 수·사이클에 비해 말이 안 되는 점수는 서버가 거절','하드 모드 (적 체력 ×1.5 · 탄속 · 발사 빨라짐 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5) + 하드 랭킹','사이클마다 다른 보스 — 수호형(정면 방패 + 잡졸 소환) · 환영형(순간이동 + 페인트·우회)','업적 12종 (달성 시 재화)','데일리 챌린지 — 하루 동안 모두 같은 맵·적, 기본 능력치 + 오늘의 랭킹','설정 창을 게임 · 조작 · 소리 · 계정 탭으로','누적 기록 화면','보스전 배경음','피해 숫자 표시 (설정에서 끌 수 있음)']],
  ['2.67',['게임 랭킹을 한 번 직접 등록하면 다음 판부터 같은 이름으로 자동 등록 (더 높을 때만 갱신, 결과 화면에서 끌 수 있음)']],
@@ -3244,29 +3257,94 @@ $('#rkSend').onclick=async()=>{
   }catch(e){ btn.disabled=false; msg.textContent='등록하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; }
 };
 $('#rkName').addEventListener('keydown',e=>{ e.stopPropagation(); if(e.key==='Enter') $('#rkSend').click(); });
-/* v2.68 ⑤ 업적 */
-const ACHS=[
- ['first_boss','첫 보스 격파','보스를 처음으로 쓰러뜨리기',500,s=>s.bossKills>=1, s=>[s.bossKills||0,1]],
- ['parry500','패링 500회','누적 패링 500회',800,s=>s.parries>=500, s=>[s.parries||0,500]],
- ['parry3000','패링 장인','누적 패링 3,000회',2000,s=>s.parries>=3000, s=>[s.parries||0,3000]],
- ['kill1000','처치 1,000','누적 처치 1,000',1500,s=>s.kills>=1000, s=>[s.kills||0,1000]],
- ['cycle3','3사이클 도달','한 판에서 3사이클 도달',1500,()=>META.bestCycle>=3, ()=>[META.bestCycle||1,3]],
- ['ret10','왕복 ×10','한 탄환으로 왕복 10번',1000,s=>s.bestRet>=10, s=>[s.bestRet||0,10]],
- ['nohit10','무결','피격 없이 넘긴 웨이브 10번',1200,s=>s.noHit>=10, s=>[s.noHit||0,10]],
- ['score50k','5만 점','한 판 50,000점',2000,s=>s.bestScore>=50000, s=>[s.bestScore||0,50000]],
- ['hardboss','하드 정복','하드 모드에서 보스 격파',3000,s=>s.hardBoss>=1, s=>[s.hardBoss||0,1]],
- ['daily5','데일리 5회','데일리 챌린지 5판',1000,s=>s.dailyRuns>=5, s=>[s.dailyRuns||0,5]],
- ['special5','특수 특전 수집가','특수 특전 5번 획득',800,s=>s.specials>=5, s=>[s.specials||0,5]],
- ['play1h','한 시간','총 플레이 1시간',1500,s=>s.playTime>=3600, s=>[Math.floor((s.playTime||0)/60),60]]
+/* v2.70 ⑤ 업적 — 한 번에 큰 목표 대신 단계별로 점진 증가 (10·30·50·100식) */
+const ACH_GROUPS=[
+ {id:'boss', name:'보스 격파', get:s=>s.bossKills||0, tiers:[
+   {n:1,  r:300, d:'보스를 처음으로 쓰러뜨리기'},
+   {n:5,  r:600, d:'보스 5회 격파'},
+   {n:15, r:1200,d:'보스 15회 격파'},
+   {n:30, r:2000,d:'보스 30회 격파'}]},
+ {id:'parry', name:'패링', get:s=>s.parries||0, tiers:[
+   {n:10,  r:150, d:'누적 패링 10회'},
+   {n:30,  r:250, d:'누적 패링 30회'},
+   {n:50,  r:350, d:'누적 패링 50회'},
+   {n:100, r:500, d:'누적 패링 100회'},
+   {n:300, r:900, d:'누적 패링 300회'},
+   {n:1000,r:1600,d:'누적 패링 1,000회'},
+   {n:3000,r:2500,d:'누적 패링 3,000회'}]},
+ {id:'kill', name:'처치', get:s=>s.kills||0, tiers:[
+   {n:50,   r:150, d:'누적 처치 50'},
+   {n:150,  r:300, d:'누적 처치 150'},
+   {n:500,  r:600, d:'누적 처치 500'},
+   {n:1000, r:1000,d:'누적 처치 1,000'},
+   {n:3000, r:1800,d:'누적 처치 3,000'},
+   {n:10000,r:3000,d:'누적 처치 10,000'}]},
+ {id:'cycle', name:'사이클 도달', get:()=>META.bestCycle||1, tiers:[
+   {n:2, r:200, d:'한 판에서 2사이클 도달'},
+   {n:3, r:400, d:'한 판에서 3사이클 도달'},
+   {n:4, r:700, d:'한 판에서 4사이클 도달'},
+   {n:5, r:1100,d:'한 판에서 5사이클 도달'},
+   {n:7, r:1800,d:'한 판에서 7사이클 도달'}]},
+ {id:'ret', name:'왕복', get:s=>s.bestRet||0, tiers:[
+   {n:3,  r:150, d:'한 탄환으로 왕복 3번'},
+   {n:5,  r:250, d:'한 탄환으로 왕복 5번'},
+   {n:10, r:450, d:'한 탄환으로 왕복 10번'},
+   {n:20, r:800, d:'한 탄환으로 왕복 20번'},
+   {n:30, r:1200,d:'한 탄환으로 왕복 30번'}]},
+ {id:'nohit', name:'무결 웨이브', get:s=>s.noHit||0, tiers:[
+   {n:10, r:200, d:'피격 없이 넘긴 웨이브 10번'},
+   {n:30, r:400, d:'피격 없이 넘긴 웨이브 30번'},
+   {n:50, r:650, d:'피격 없이 넘긴 웨이브 50번'},
+   {n:100,r:1100,d:'피격 없이 넘긴 웨이브 100번'},
+   {n:300,r:2200,d:'피격 없이 넘긴 웨이브 300번'}]},
+ {id:'score', name:'점수', get:s=>s.bestScore||0, tiers:[
+   {n:10000, r:200, d:'한 판 10,000점'},
+   {n:25000, r:450, d:'한 판 25,000점'},
+   {n:50000, r:800, d:'한 판 50,000점'},
+   {n:100000,r:1500,d:'한 판 100,000점'},
+   {n:200000,r:2800,d:'한 판 200,000점'}]},
+ {id:'hardboss', name:'하드 보스 격파', get:s=>s.hardBoss||0, tiers:[
+   {n:1, r:500, d:'하드 모드에서 보스 격파'},
+   {n:3, r:900, d:'하드 모드 보스 3회 격파'},
+   {n:10,r:1800,d:'하드 모드 보스 10회 격파'}]},
+ {id:'daily', name:'데일리', get:s=>s.dailyRuns||0, tiers:[
+   {n:5, r:200, d:'데일리 챌린지 5판'},
+   {n:10,r:350, d:'데일리 챌린지 10판'},
+   {n:30,r:800, d:'데일리 챌린지 30판'},
+   {n:50,r:1300,d:'데일리 챌린지 50판'}]},
+ {id:'special', name:'특수 특전', get:s=>s.specials||0, tiers:[
+   {n:5, r:150, d:'특수 특전 5번 획득'},
+   {n:15,r:350, d:'특수 특전 15번 획득'},
+   {n:30,r:650, d:'특수 특전 30번 획득'},
+   {n:50,r:1000,d:'특수 특전 50번 획득'}]},
+ {id:'play', name:'플레이 시간', get:s=>Math.floor((s.playTime||0)/60), tiers:[   // 분 단위
+   {n:60,  r:250, d:'총 플레이 1시간'},
+   {n:180, r:600, d:'총 플레이 3시간'},
+   {n:300, r:1000,d:'총 플레이 5시간'},
+   {n:600, r:1800,d:'총 플레이 10시간'},
+   {n:1200,r:3200,d:'총 플레이 20시간'}]}
 ];
 function checkAch(){ const s=META.stats||{}; META.ach=META.ach||{}; const got=[];
-  ACHS.forEach(([id,n,d,r,ok])=>{ if(!META.ach[id]&&ok(s)){ META.ach[id]=Date.now(); got.push({id,n,r}); } }); return got; }
+  ACH_GROUPS.forEach(g=>{ const v=g.get(s);
+    g.tiers.forEach(t=>{ const id=g.id+'_'+t.n;
+      if(!META.ach[id]&&v>=t.n){ META.ach[id]=Date.now(); got.push({id,n:t.d,r:t.r}); } }); });
+  return got; }
 function openAch(){ const s=META.stats||{}; META.ach=META.ach||{};
-  const done=ACHS.filter(a=>META.ach[a[0]]).length;
-  $('#modalBox').innerHTML='<div class="logHd"><h4>업적 '+done+' / '+ACHS.length+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
-    '<ul class="achList">'+ACHS.map(([id,n,d,r,ok,pr])=>{ const [c,m]=pr(s), on=!!META.ach[id];
-      return '<li class="'+(on?'on':'')+'"><b>'+(on?'✓ ':'')+n+'</b><span class="rw">◆ '+r.toLocaleString()+'</span><span class="dd">'+d+'</span>'+
-        '<span class="bar"><i style="width:'+Math.min(100,Math.round(c/m*100))+'%"></i></span><span class="pc">'+Math.min(c,m).toLocaleString()+' / '+m.toLocaleString()+'</span></li>'; }).join('')+'</ul>';
+  let totalDone=0, totalTiers=0;
+  const rows=ACH_GROUPS.map(g=>{
+    const v=g.get(s);
+    totalTiers+=g.tiers.length;
+    const next=g.tiers.find(t=>!META.ach[g.id+'_'+t.n]);
+    const doneN=g.tiers.filter(t=>META.ach[g.id+'_'+t.n]).length; totalDone+=doneN;
+    const last=g.tiers[g.tiers.length-1];
+    const goal=next?next.n:last.n, cur=Math.min(v,goal);
+    const pips=g.tiers.map(t=>'<i class="'+(META.ach[g.id+'_'+t.n]?'on':'')+'" title="'+t.n.toLocaleString()+'"></i>').join('');
+    return '<li class="'+(next?'':'on')+'"><b>'+g.name+' · '+doneN+'/'+g.tiers.length+'</b>'+
+      '<span class="rw">'+(next?'◆ '+next.r.toLocaleString():'전 단계 완료')+'</span>'+
+      '<span class="dd">'+(next?next.d:last.d)+'</span><span class="pips">'+pips+'</span>'+
+      '<span class="bar"><i style="width:'+Math.min(100,Math.round(cur/goal*100))+'%"></i></span><span class="pc">'+cur.toLocaleString()+' / '+goal.toLocaleString()+'</span></li>'; }).join('');
+  $('#modalBox').innerHTML='<div class="logHd"><h4>업적 '+totalDone+' / '+totalTiers+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<ul class="achList">'+rows+'</ul>';
   $('#modal').classList.add('on'); }
 /* v2.68 ⑧ 누적 기록 */
 function openStats(){ const s=META.stats||{}; const h=Math.floor((s.playTime||0)/3600), mi=Math.floor((s.playTime||0)%3600/60);
@@ -3571,31 +3649,57 @@ function syncUI(){
 }
 
 /* ================= 타이틀 배경 ================= */
+/* v2.73 실제 플레이와 같은 그림으로 — 플레이어는 여전히 민짜 원(스프라이트 없음), 적은 실제 mob 스프라이트.
+   탄환이 왕복하다 부딪힐 때마다 패링 스파크가 튄다 */
 const bcv=$('#bgcv'),bx=bcv.getContext('2d');
-let BW=0,BH=0,bt=0,bpos=0,bdir=1,btrail=[];
+let BW=0,BH=0,bt=0,bpos=0,bdir=1,btrail=[],bFlashT=0,bFlashSide=1,bSpark=[];
 function bresize(){const r=bcv.getBoundingClientRect();const d=Math.min(2,devicePixelRatio||1);
   BW=r.width;BH=r.height;bcv.width=BW*d;bcv.height=BH*d;bx.setTransform(d,0,0,d,0,0);}
 addEventListener('resize',bresize);
+function bDot(cx,cy,r,color){   // 플레이어와 같은 레이어 방식(그림자+원) — 스프라이트 없는 민짜 원
+  bx.fillStyle='rgba(0,0,0,.45)';
+  bx.beginPath();bx.ellipse(cx,cy+2,r*.92,r*.58,0,0,TAU);bx.fill();
+  bx.fillStyle=color;
+  bx.beginPath();bx.arc(cx,cy,r*.82,0,TAU);bx.fill();
+}
+function bSparkBurst(x,y,color){
+  for(let i=0;i<10;i++){ const a=TAU*Math.random(), sp=60+Math.random()*90;
+    bSpark.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,t:1,color}); }
+}
 function bgFrame(ts){
   const dt=Math.min(.033,(ts-bt)/1000||0);bt=ts;
   if($('#bgcv').style.display!=='none'){
     if(!BW)bresize();
-    bpos+=bdir*dt*.42; if(bpos>1){bpos=1;bdir=-1;} if(bpos<0){bpos=0;bdir=1;}
+    bpos+=bdir*dt*.42;
+    if(bpos>1){bpos=1;bdir=-1;bFlashT=1;bFlashSide=1;bSparkBurst(BW*.84,BH*.6,'#ff6a52');}
+    if(bpos<0){bpos=0;bdir=1;bFlashT=1;bFlashSide=0;bSparkBurst(BW*.16,BH*.6,'#2fe3d0');}
     const ax=BW*.16,bxx=BW*.84,y=BH*.6,x=ax+(bxx-ax)*bpos;
     const col=bdir>0?'#2fe3d0':'#ff3b52';
     btrail.push([x,y]);if(btrail.length>26)btrail.shift();
     bx.clearRect(0,0,BW,BH);
-    [[ax,'#2fe3d0'],[bxx,'#ff3b52']].forEach(([nx,c])=>{
-      bx.globalAlpha=.14;bx.fillStyle=c;
-      bx.beginPath();bx.ellipse(nx,y,26,16,0,0,TAU);bx.fill();
-      bx.globalAlpha=.45;bx.strokeStyle=c;bx.lineWidth=1;
-      bx.beginPath();bx.ellipse(nx,y,26,16,0,0,TAU);bx.stroke();bx.globalAlpha=1;
-    });
+    /* 플레이어 — 민짜 원(halo만 은은하게) */
+    bx.globalAlpha=.16+(bFlashT>0&&bFlashSide===0?bFlashT*.3:0);bx.fillStyle='#2fe3d0';
+    bx.beginPath();bx.arc(ax,y,30,0,TAU);bx.fill();bx.globalAlpha=1;
+    bDot(ax,y,24,'#2fe3d0');
+    /* 적 — 실제 몹 스프라이트(없으면 예전처럼 민짜 원으로 대체) */
+    const mob=SPRITES.mob;
+    bx.globalAlpha=.16+(bFlashT>0&&bFlashSide===1?bFlashT*.3:0);bx.fillStyle='#ff3b52';
+    bx.beginPath();bx.ellipse(bxx,y,30,22,0,0,TAU);bx.fill();bx.globalAlpha=1;
+    if(mob){ const s=64; bx.drawImage(mob,bxx-s/2,y-s/2,s,s); }
+    else bDot(bxx,y,24,'#ff3b52');
     btrail.forEach((p,i)=>{bx.globalAlpha=(i/btrail.length)*.3;bx.fillStyle=col;
       bx.beginPath();bx.arc(p[0],p[1],5*(i/btrail.length)+1,0,TAU);bx.fill();});
     bx.globalAlpha=1;bx.fillStyle=col;
     bx.beginPath();bx.arc(x,y,7,0,TAU);bx.fill();
+    bx.strokeStyle='#fff';bx.globalAlpha=.6;bx.lineWidth=1.2;bx.stroke();bx.globalAlpha=1;
     bx.globalAlpha=.22;bx.beginPath();bx.arc(x,y,20,0,TAU);bx.fill();bx.globalAlpha=1;
+    /* 부딪힐 때 스파크(패링 연출과 같은 느낌) */
+    bSpark=bSpark.filter(s=>s.t>0);
+    bSpark.forEach(s=>{ s.x+=s.vx*dt; s.y+=s.vy*dt; s.vx*=.92; s.vy*=.92; s.t-=dt*1.6;
+      bx.globalAlpha=Math.max(0,s.t);bx.fillStyle=s.color;
+      bx.beginPath();bx.arc(s.x,s.y,2.4*Math.max(0,s.t)+.6,0,TAU);bx.fill(); });
+    bx.globalAlpha=1;
+    if(bFlashT>0) bFlashT=Math.max(0,bFlashT-dt*3);
   }
   requestAnimationFrame(bgFrame);
 }
