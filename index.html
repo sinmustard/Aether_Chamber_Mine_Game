@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="에테르 챔버">
 <meta name="theme-color" content="#0b0f14">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%EC%97%90%ED%85%8C%EB%A5%B4%20%EC%B1%94%EB%B2%84%22%2C%22short_name%22%3A%22%EC%97%90%ED%85%8C%EB%A5%B4%20%EC%B1%94%EB%B2%84%22%2C%22display%22%3A%22fullscreen%22%2C%22orientation%22%3A%22landscape%22%2C%22background_color%22%3A%22%230b0f14%22%2C%22theme_color%22%3A%22%230b0f14%22%2C%22start_url%22%3A%22https%3A%2F%2Fsinmustard.github.io%2FAether_Chamber_Mine_Game%2F%22%7D">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%EC%97%90%ED%85%8C%EB%A5%B4%20%EC%B1%94%EB%B2%84%22%2C%22short_name%22%3A%22%EC%97%90%ED%85%8C%EB%A5%B4%20%EC%B1%94%EB%B2%84%22%2C%22display%22%3A%22fullscreen%22%2C%22orientation%22%3A%22landscape%22%2C%22background_color%22%3A%22%230b0f14%22%2C%22theme_color%22%3A%22%230b0f14%22%7D">
 <title>에테르 챔버</title>
 <style>
 :root{
@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.08</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.09</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -3293,6 +3293,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.09',['PWA manifest의 start_url이 고정 주소라 다른 경로로 열면 "ignored" 경고가 뜨던 문제 — 아예 빼서 항상 현재 문서 주소를 쓰게 수정','타이틀 배경 플레이어 자리에 1장짜리 커스텀 캐릭터 이미지를 올렸으면 그 이미지가 표시되게 추가']],
  ['3.08',['캐릭터 이미지 배경 제거 강도 설정 (약 · 보통 · 강) — 배경에 그라데이션이나 빛 효과가 있어 안 지워지면 "강"으로, 바꾸면 보관된 원본으로 바로 다시 처리']],
  ['3.07',['캐릭터 이미지 원본을 같이 보관 — 배경 제거를 켜고 끄면 다시 올리지 않아도 원본으로 다시 처리','배경 제거 허용치를 배경 상태에 맞춤 — 깨끗한 단색 배경이면 어두운 옷·그림자를 덜 지움']],
  ['3.06',['캐릭터 이미지 배경 제거가 그림 안쪽까지 뚫어 버리던 문제 — 테두리에서 배경 대표색을 뽑아 그 색과 가까운 곳만 지우고 경계는 부드럽게, 배경이 복잡하면 지우지 않고 원본 유지 (이미 올린 이미지는 다시 올려야 적용)']],
@@ -4129,8 +4130,10 @@ function bgFrame(ts){
     btrail.push([x,y]);if(btrail.length>26)btrail.shift();
     bx.clearRect(0,0,BW,BH);
     bGrid();   // v3.1 전투 바닥과 같은 대각선 격자
-    /* 플레이어 — 민짜 원 */
-    bDot(ax,y,24,'#2fe3d0');
+    /* 플레이어 — 1장짜리 커스텀 이미지를 올렸으면 그 이미지, 없으면 민짜 원 */
+    const pimg=OPT.pimgMode==='single'?SPRITES.player:null;
+    if(pimg){ const s=64; bx.drawImage(pimg,ax-s/2,y-s/2,s,s); }
+    else bDot(ax,y,24,'#2fe3d0');
     /* 적 — 실제 몹 스프라이트(없으면 예전처럼 민짜 원으로 대체) */
     const mob=SPRITES.mob;
     if(mob){ const s=64; bx.drawImage(mob,bxx-s/2,y-s/2,s,s); }
