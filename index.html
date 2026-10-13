@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.06</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.07</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2364,7 +2364,17 @@ loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 �
 function pimgKey(d){ return 'aether_pimg_'+d; }
 function getPImg(d){ try{ return localStorage.getItem(pimgKey(d)); }catch(e){ return null; } }
 function setPImg(d,dataUrl){ try{ localStorage.setItem(pimgKey(d),dataUrl); }catch(e){} }
-function clearPImg(d){ try{ localStorage.removeItem(pimgKey(d)); }catch(e){} }
+function clearPImg(d){ try{ localStorage.removeItem(pimgKey(d)); localStorage.removeItem(pimgKey(d+'_o')); }catch(e){} }
+/* v3.07 배경 제거를 켜고 끌 때, 보관해 둔 원본으로 다시 처리한다 (다시 올릴 필요 없음) */
+async function reprocessPImgs(){
+  for(const k of ['single','up','down','left','right']){
+    const o=getPImg(k+'_o'); if(!o) continue;
+    const img=await new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=o; }); if(!img) continue;
+    const SZ=192, cv=document.createElement('canvas'); cv.width=cv.height=SZ; const cx=cv.getContext('2d'); cx.drawImage(img,0,0,SZ,SZ);
+    if(OPT.pimgNoBg) stripBg(cx,SZ);
+    const u=cv.toDataURL('image/png'); setPImg(k,u); applyPImg(k,u);
+  }
+}
 function pimgSpriteKey(d){ return d==='single'?'player':'player_'+d; }
 function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[pimgSpriteKey(d)]=img; }; img.src=dataUrl; }
 /* v2.95 배경 제거 — AI 분리 없이 가벼운 방식. 테두리 전체 평균색 하나로 거리 재던 걸
@@ -2380,17 +2390,18 @@ function stripBg(cx,SZ){
   const d2=(a,b)=>{ const r=a[0]-b[0],g=a[1]-b[1],bb=a[2]-b[2]; return r*r+g*g+bb*bb; };
   /* ① 테두리 2픽셀 두께에서 대표색 뽑기 (가장 흔한 색 덩어리 순서) */
   const border=[]; for(let t=0;t<2;t++) for(let i=0;i<SZ;i++){ border.push(t*SZ+i,(SZ-1-t)*SZ+i,i*SZ+t,i*SZ+SZ-1-t); }
-  const refs=[]; let left=border.map(col);
+  const refs=[], spr=[]; let left=border.map(col);
   for(let r=0;r<3&&left.length;r++){
     const c=left.slice().sort((a,b)=>(a[0]+a[1]+a[2])-(b[0]+b[1]+b[2]))[Math.floor(left.length/2)];
     const near=left.filter(p=>d2(p,c)<40*40);
     if(near.length<border.length*0.12) break;
     const m=[0,1,2].map(j=>near.reduce((s,p)=>s+p[j],0)/near.length);
-    refs.push(m); left=left.filter(p=>d2(p,m)>=40*40);
+    refs.push(m); spr.push(Math.sqrt(near.reduce((s,p)=>s+d2(p,m),0)/near.length)); left=left.filter(p=>d2(p,m)>=40*40);
   }
   const covered=border.length-left.length;
   if(!refs.length||covered<border.length*0.7) return {ok:false,why:'complex'};   // 테두리가 여러 색으로 복잡 — 지우지 않음
-  const T=46, T2=T*T;
+  /* v3.07 허용치를 배경이 얼마나 깨끗한지에 맞춘다 — 깨끗한 단색(검정 등) 배경이면 좁게 잡아 어두운 옷·그림자를 지키고, 노이즈 많은 배경이면 넓게 */
+  const T=Math.min(46,Math.max(18,3*Math.max(...spr)+12));
   const dist=k=>{ const c=col(k); let m=1e9; for(const r of refs){ const v=d2(c,r); if(v<m) m=v; } return Math.sqrt(m); };
   /* ② 테두리에서 시작해 '대표색과 가까운' 픽셀만 따라 번진다 (이웃끼리가 아니라 대표색 기준이라 피사체 안으로 새지 않음) */
   const bg=new Uint8Array(n), q=new Int32Array(n); let qt=0;
@@ -2417,6 +2428,7 @@ function readPImgFile(file,removeBg){
         const cv=document.createElement('canvas'); cv.width=cv.height=SZ;
         const cx=cv.getContext('2d');
         cx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,SZ,SZ);
+        readPImgFile.orig=cv.toDataURL('image/png');   // v3.07 배경 제거 전 원본도 보관 (켜고 끌 때 다시 처리)
         const res=removeBg?stripBg(cx,SZ):null;   // v3.06
         resolve(cv.toDataURL('image/png')); readPImgFile.last=res;
       }catch(e){ reject(e); } finally{ URL.revokeObjectURL(url); }
@@ -3275,6 +3287,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.07',['캐릭터 이미지 원본을 같이 보관 — 배경 제거를 켜고 끄면 다시 올리지 않아도 원본으로 다시 처리','배경 제거 허용치를 배경 상태에 맞춤 — 깨끗한 단색 배경이면 어두운 옷·그림자를 덜 지움']],
  ['3.06',['캐릭터 이미지 배경 제거가 그림 안쪽까지 뚫어 버리던 문제 — 테두리에서 배경 대표색을 뽑아 그 색과 가까운 곳만 지우고 경계는 부드럽게, 배경이 복잡하면 지우지 않고 원본 유지 (이미 올린 이미지는 다시 올려야 적용)']],
  ['3.05',['타이틀 배경이 실제 전투 화면이랑 다른 공간처럼 보이던 문제 — 전투 바닥과 같은 대각선 격자 추가','탄환이 캐릭터까지 다 갔다가 돌아오던 걸 — 닿기 전 중간 지점에서 가로채이는 걸로 수정','플레이어·적에 붙어있던 반투명 테두리(halo) 제거','탄환이 돌아올 때 패링 가능 청록 링, 적에게 뺏길 때 빼앗김 빨간 링 — 실제 게임의 b.ready·e.seizeFx와 똑같은 타이밍·반지름·굵기 상수로 맞춤']],
  ['3.04',['시야각 끝에서 패링한 탄이 플레이어 앞을 가로질러 확 꺾여 엉뚱하게 튕기던 문제 — 탄이 있던 쪽에서 ±35°까지만 바로 꺾고, 나머지는 날아가며 노린 적 쪽으로 부드럽게 휘어 감']],
@@ -3762,7 +3775,7 @@ $('#modalBox').addEventListener('click',e=>{
   const pc=e.target.closest('[data-pimgclear]');
   if(pc){ const d=pc.dataset.pimgclear; clearPImg(d); delete SPRITES[pimgSpriteKey(d)]; openAppearance(); sfx('ui'); return; }   // v2.89
   if(e.target.closest('[data-protate]')){ OPT.pimgRotate=OPT.pimgRotate?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.91
-  if(e.target.closest('[data-pnobg]')){ OPT.pimgNoBg=OPT.pimgNoBg?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.93
+  if(e.target.closest('[data-pnobg]')){ OPT.pimgNoBg=OPT.pimgNoBg?0:1; save(); sfx('ui'); reprocessPImgs().then(openAppearance,openAppearance); return; }   // v2.93 · v3.07 원본으로 다시 처리
   if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
     if(getSession()) askConfirm('로그아웃할까요?','지금 진행 상황을 서버에 저장한 뒤, 이 기기에서 계정 연결을 풀어요. 다시 시작할 때 닉네임·비밀번호를 입력해요.','로그아웃',
       async()=>{ await cloudAutoSave(); clearSession(); offlineOK=false; $('#modal').classList.remove('on'); go('title'); });
@@ -3838,6 +3851,7 @@ $('#modalBox').addEventListener('change',async e=>{
     if(r&&!r.ok) pimgErr=r.why==='complex'?'배경이 여러 색이라 지우지 않고 원본 그대로 넣었어요. 단색 배경 이미지를 쓰면 깔끔하게 지워져요.':'캐릭터와 배경 색이 거의 같아서 지우지 않고 원본 그대로 넣었어요.';
     const key=single?'single':dir;
     setPImg(key,dataUrl); applyPImg(key,dataUrl);
+    if(readPImgFile.orig) setPImg(key+'_o',readPImgFile.orig);   // v3.07
     sfx('ui');
   }catch(err){ pimgErr='이미지를 불러오지 못했어요.'; }
   openAppearance();
