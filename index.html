@@ -501,7 +501,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.94</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.95</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2315,20 +2315,26 @@ function setPImg(d,dataUrl){ try{ localStorage.setItem(pimgKey(d),dataUrl); }cat
 function clearPImg(d){ try{ localStorage.removeItem(pimgKey(d)); }catch(e){} }
 function pimgSpriteKey(d){ return d==='single'?'player':'player_'+d; }
 function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[pimgSpriteKey(d)]=img; }; img.src=dataUrl; }
-/* v2.93 배경 제거 — AI 분리 없이 가벼운 방식. 테두리 픽셀 평균을 배경색으로 보고, 비슷한 색을 지운다.
-   단색/단순한 배경일 때만 잘 먹힌다(사람이 그린 캐릭터 그림처럼 배경이 깔끔한 경우에 맞음) */
+/* v2.95 배경 제거 — AI 분리 없이 가벼운 방식. 테두리 전체 평균색 하나로 거리 재던 걸
+   "마법봉" 방식으로 바꿨다 — 테두리에서 시작해서 이웃 픽셀끼리 색이 비슷하면 계속 번져나가고,
+   경계(피사체)에서 색이 확 바뀌면 멈춘다. 그라데이션·그림자가 있어도 잘 따라가고, 단색이 아니어도 된다 */
 function stripBg(cx,SZ){
-  const id=cx.getImageData(0,0,SZ,SZ), d=id.data;
-  let rs=0,gs=0,bs=0,n=0;
-  const add=(y,x)=>{ const i=(y*SZ+x)*4; rs+=d[i]; gs+=d[i+1]; bs+=d[i+2]; n++; };
-  for(let x=0;x<SZ;x+=4){ add(0,x); add(SZ-1,x); }
-  for(let y=0;y<SZ;y+=4){ add(y,0); add(y,SZ-1); }
-  const br=rs/n, bg=gs/n, bb=bs/n, TH=42;
-  for(let i=0;i<d.length;i+=4){
-    const dr=d[i]-br, dg=d[i+1]-bg, db=d[i+2]-bb, dist=Math.sqrt(dr*dr+dg*dg+db*db);
-    if(dist<TH) d[i+3]=0;
-    else if(dist<TH*1.8) d[i+3]=Math.round(d[i+3]*((dist-TH)/(TH*0.8)));
+  const id=cx.getImageData(0,0,SZ,SZ), d=id.data, n=SZ*SZ;
+  const bg=new Uint8Array(n), qx=new Int32Array(n), qy=new Int32Array(n);
+  let qt=0;
+  const idx=(x,y)=>y*SZ+x;
+  const push=(x,y)=>{ const k=idx(x,y); if(!bg[k]){ bg[k]=1; qx[qt]=x; qy[qt]=y; qt++; } };
+  for(let x=0;x<SZ;x++){ push(x,0); push(x,SZ-1); }
+  for(let y=0;y<SZ;y++){ push(0,y); push(SZ-1,y); }
+  const TH2=30*30;   // 이웃 간 허용 색 차이(제곱) — 한 걸음씩 번지므로 전체 그라데이션 폭은 더 커도 된다
+  for(let qh=0;qh<qt;qh++){
+    const x=qx[qh], y=qy[qh], i=idx(x,y)*4, r=d[i], g=d[i+1], b=d[i+2];
+    if(x>0){ const k=idx(x-1,y); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x-1,y); } }
+    if(x<SZ-1){ const k=idx(x+1,y); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x+1,y); } }
+    if(y>0){ const k=idx(x,y-1); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x,y-1); } }
+    if(y<SZ-1){ const k=idx(x,y+1); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x,y+1); } }
   }
+  for(let k=0;k<n;k++) if(bg[k]) d[k*4+3]=0;
   cx.putImageData(id,0,0);
 }
 /* 올린 원본 이미지를 정사각형으로 잘라 작게 줄인 뒤 데이터 URL로 바꾼다 (저장 용량 · 로딩 가볍게) */
@@ -3191,6 +3197,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.95',['배경 제거를 "테두리 평균색과 거리 비교"에서 "마법봉" 방식(테두리에서 비슷한 색을 따라 번져나가기)으로 교체 — 그라데이션·그림자가 있어도 잘 지워짐']],
  ['2.94',['캐릭터 이미지 올릴 때 배경 제거 옵션 추가 — 테두리 색을 기준으로 단색 배경을 지움 (복잡한 배경은 한계 있음)']],
  ['2.93',['캐릭터 이미지가 회전할 때 비스듬히(평행사변형처럼) 보이던 문제 수정']],
  ['2.92',['폰에서 패링한 탄환이 엉뚱한 쪽(화면 밖)으로 날아가던 문제 — 폰은 조준 쪽 100° 안의 적, 없으면 보이는 가장 가까운 적을 자동으로 노림','조준 방향 바로 앞이 벽이면 보이는 적 쪽으로 보정 (벽에 맞고 튕겨 돌아오는 것 방지)','적이 벽에 바짝 붙어 숨지 못하게 벽과 거리 유지']],
@@ -3735,7 +3742,7 @@ function openAppearance(){
     '<div class="opt-desc">4장 다 올려야 적용돼요. 바라보는 방향에 맞는 이미지로 바뀌어 보여요(회전 없음).</div>';
   }
   const bgRow=mode!=='off'?'<div class="opt-row opt-tg" data-pnobg="1"><span>배경 제거</span><i>'+(OPT.pimgNoBg?'켬 · 단색 배경만':'끔')+'</i></div>'+
-    '<div class="opt-desc">올릴 때 테두리 색을 배경으로 보고 지워요. 사진처럼 배경이 복잡하면 잘 안 될 수 있어요 — 배경이 단순한 캐릭터 그림에 잘 맞아요.</div>':'';
+    '<div class="opt-desc">올릴 때 테두리에서부터 비슷한 색을 따라 배경을 지워요. 그라데이션·그림자 정도는 괜찮지만, 배경이 피사체만큼 울긋불긋하면 잘 안 될 수 있어요.</div>':'';
   $('#modalBox').innerHTML='<div class="logHd"><h4>캐릭터 이미지</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
     '<div class="opt-desc">플레이어는 기본적으로 원으로 표시돼요. 이미지를 올리면 바꿀 수 있어요 — 이 브라우저에만 저장되고 다른 기기에는 안 보여요.</div>'+
     modeBtns+bgRow+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
