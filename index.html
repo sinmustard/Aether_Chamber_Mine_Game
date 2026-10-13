@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.09</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.10</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2996,7 +2996,7 @@ function go(id){
   $$('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
   gcv.style.display = id==='game'?'block':'none';
   $('#bgcv').style.display = id==='game'?'none':'block';
-  $('#modal').classList.remove('on'); $('#pause').classList.remove('on'); paused=false;
+  $('#modal').classList.remove('on'); $('#pause').classList.remove('on'); $('#reward').classList.remove('on'); paused=false;   // v3.10 웨이브 보상 받는 중에 HUB로 나가면 보상창이 안 닫히던 문제
   if(id!=='game') unlockMouse();   // v2.12
   if(id!=='game') $('#tutBar').classList.remove('on');   // v2.60
   document.body.classList.remove('ui-cover');   // v2.80
@@ -3293,6 +3293,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.10',['웨이브 보상 고르는 중에 ESC → HUB로 나가면 보상창이 안 닫히고 HUB 위에 그대로 남아있던 문제 수정']],
  ['3.09',['PWA manifest의 start_url이 고정 주소라 다른 경로로 열면 "ignored" 경고가 뜨던 문제 — 아예 빼서 항상 현재 문서 주소를 쓰게 수정','타이틀 배경 플레이어 자리에 1장짜리 커스텀 캐릭터 이미지를 올렸으면 그 이미지가 표시되게 추가']],
  ['3.08',['캐릭터 이미지 배경 제거 강도 설정 (약 · 보통 · 강) — 배경에 그라데이션이나 빛 효과가 있어 안 지워지면 "강"으로, 바꾸면 보관된 원본으로 바로 다시 처리']],
  ['3.07',['캐릭터 이미지 원본을 같이 보관 — 배경 제거를 켜고 끄면 다시 올리지 않아도 원본으로 다시 처리','배경 제거 허용치를 배경 상태에 맞춤 — 깨끗한 단색 배경이면 어두운 옷·그림자를 덜 지움']],
