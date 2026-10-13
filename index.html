@@ -501,7 +501,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.90</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.91</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -734,7 +734,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off'};   // v2.89 커스텀 캐릭터 이미지
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -2367,7 +2367,7 @@ function drawEnemyBody(e){
 }
 /* v3.8 플레이어 — 이미지가 있으면 조준 방향(P.face)으로 회전시켜 그린다. 없으면 기존 원으로 대체 */
 /* v2.89 커스텀 캐릭터 이미지 — '4dir'이면 4장 중 바라보는 방향 이미지를 회전 없이 바꿔 끼우고,
-   'single'이면 기존처럼 한 장을 회전시킨다. 둘 다 없으면 민짜 원 */
+   'single'이면 한 장을 쓰되 회전 여부는 OPT.pimgRotate로 고를 수 있다(v2.91). 둘 다 없으면 민짜 원 */
 function drawPlayerBody(){
   const mode=OPT.pimgMode;
   const dir4=mode==='4dir'&&SPRITES.player_up&&SPRITES.player_down&&SPRITES.player_left&&SPRITES.player_right;
@@ -2378,7 +2378,7 @@ function drawPlayerBody(){
   ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();
   const s=R_PLAYER*2.6;
   ctx.save();
-  ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); if(!dir4) ctx.rotate(P.face);
+  ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); if(!dir4&&OPT.pimgRotate) ctx.rotate(P.face);
   if(P.hurt>0) ctx.filter='brightness('+(1+P.hurt*6)+') saturate('+Math.max(0,1-P.hurt*3)+')';
   else if(P.inv>0) ctx.filter='brightness(1.4) hue-rotate(15deg)';
   ctx.drawImage(img,-s/2,-s/2,s,s);
@@ -3168,6 +3168,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.91',['캐릭터 이미지 1장 모드에 회전 켜고 끄기 선택 추가 — 끄면 방향과 상관없이 이미지가 그대로 고정']],
  ['2.90',['캐릭터 이미지를 직접 올릴 수 있게 — 설정 → 게임 → 캐릭터 이미지. 이미지 1장(바라보는 방향으로 회전) 또는 4방향 이미지(위/아래/왼쪽/오른쪽, 방향마다 교체) 중 선택. 이 기기에만 저장됨']],
  ['2.89',['패링한 탄환이 벽에 맞고 나한테 돌아오던 문제 — 벽 뒤에 숨은 적은 자동 조준·유도 대상에서 제외, 벽에 튕기면 노리던 적을 잊음','폰에서 손가락을 대기만 하고 아직 조준하지 않은 순간엔 자동 패링 안 함 (예전 방향으로 날아가던 문제)','고정 조이스틱은 그 자리 근처를 눌렀을 때만 고정 중심 사용','폰 스킬 버튼을 조금 작고 반투명하게 (뒤의 적·탄환이 보이게)']],
  ['2.88',['신규 대포병 이미지 — 팔각 포탑 + 쌍포신 (마지막까지 민짜 원이던 적)']],
@@ -3650,6 +3651,7 @@ $('#modalBox').addEventListener('click',e=>{
   if(pm){ OPT.pimgMode=pm.dataset.pmode; pimgErr=''; save(); openAppearance(); sfx('ui'); return; }   // v2.89
   const pc=e.target.closest('[data-pimgclear]');
   if(pc){ const d=pc.dataset.pimgclear; clearPImg(d); delete SPRITES[pimgSpriteKey(d)]; openAppearance(); sfx('ui'); return; }   // v2.89
+  if(e.target.closest('[data-protate]')){ OPT.pimgRotate=OPT.pimgRotate?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.91
   if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
     if(getSession()) askConfirm('로그아웃할까요?','지금 진행 상황을 서버에 저장한 뒤, 이 기기에서 계정 연결을 풀어요. 다시 시작할 때 닉네임·비밀번호를 입력해요.','로그아웃',
       async()=>{ await cloudAutoSave(); clearSession(); offlineOK=false; $('#modal').classList.remove('on'); go('title'); });
@@ -3685,7 +3687,7 @@ let pimgErr='';
 function openAppearance(){
   const mode=OPT.pimgMode||'off';
   const modeBtns='<div class="pimgModes">'+
-    [['off','기본 원'],['single','이미지 1장(회전)'],['4dir','4방향 이미지']].map(([k,n])=>
+    [['off','기본 원'],['single','이미지 1장'],['4dir','4방향 이미지']].map(([k,n])=>
       '<button data-pmode="'+k+'" class="'+(mode===k?'on':'')+'">'+n+'</button>').join('')+'</div>';
   let body='';
   if(mode==='single'){
@@ -3693,7 +3695,8 @@ function openAppearance(){
     body='<div class="pimgUp"><label class="buy pimgFileBtn">'+(img?'이미지 바꾸기':'이미지 올리기')+
       '<input type="file" accept="image/*" id="pimgSingle" style="display:none"></label>'+
       (img?'<img src="'+img+'" class="pimgPrev"><button class="ghost" data-pimgclear="single">지우기</button>':'')+'</div>'+
-      '<div class="opt-desc">올린 이미지 한 장을 바라보는 방향으로 회전시켜서 보여줘요.</div>';
+      '<div class="opt-row opt-tg" data-protate="1"><span>회전</span><i>'+(OPT.pimgRotate?'바라보는 방향으로 회전':'회전 안 함 · 그대로 표시')+'</i></div>'+
+      '<div class="opt-desc">회전을 켜면 올린 이미지가 바라보는 방향에 맞춰 계속 돌아가요. 끄면 이미지가 그대로 고정돼요.</div>';
   } else if(mode==='4dir'){
     body='<div class="pimgGrid">'+['up','down','left','right'].map(d=>{
       const lab={up:'위',down:'아래',left:'왼쪽',right:'오른쪽'}[d], img=getPImg(d);
