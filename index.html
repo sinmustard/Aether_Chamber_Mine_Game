@@ -501,7 +501,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.95</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.97</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2404,7 +2404,7 @@ function drawPlayerBody(){
   const p=proj(P.x,P.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();
-  const s=R_PLAYER*2.6;
+  const s=R_PLAYER*3.8;   // v2.97 일반 몹(72px)보다 조금 더 크게 — 판정(히트박스)은 그대로, 그림자도 기존 크기 유지
   const willRotate=!dir4&&OPT.pimgRotate;   // v2.92 회전 중엔 세로압축(SQUASH)을 끈다 — 같이 걸면 이미지가 평행사변형처럼 기울어 보였다
   ctx.save();
   ctx.translate(p[0],p[1]); if(willRotate) ctx.rotate(P.face); else ctx.scale(1,SQUASH);
@@ -3197,6 +3197,8 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.97',['캐릭터 이미지를 일반 몹보다 조금 더 크게']],
+ ['2.96',['캐릭터 이미지가 작아 보이던 문제 — 판정(히트박스)은 그대로 두고 보이는 그림만 키움']],
  ['2.95',['배경 제거를 "테두리 평균색과 거리 비교"에서 "마법봉" 방식(테두리에서 비슷한 색을 따라 번져나가기)으로 교체 — 그라데이션·그림자가 있어도 잘 지워짐']],
  ['2.94',['캐릭터 이미지 올릴 때 배경 제거 옵션 추가 — 테두리 색을 기준으로 단색 배경을 지움 (복잡한 배경은 한계 있음)']],
  ['2.93',['캐릭터 이미지가 회전할 때 비스듬히(평행사변형처럼) 보이던 문제 수정']],
