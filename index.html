@@ -71,6 +71,22 @@ body.in-game #topPause{display:block}
 #title .menu button:hover{border-color:var(--cyan);color:var(--cyan)}
 #title .menu button.primary{border-color:var(--cyan);color:var(--cyan)}
 #title .best{position:absolute;right:16px;bottom:13px;font-size:11px;color:var(--dim);letter-spacing:.1em}
+/* v2.75 타이틀 메뉴가 화면을 넘던 문제 — 시작은 한 줄 전체, 나머지는 3칸 격자 */
+#title .menu{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;width:min(430px,88%)}
+#title .menu button{padding:10px 6px;font-size:12.5px;letter-spacing:.12em;white-space:nowrap}
+#title .menu button.primary{grid-column:1/-1;padding:12px;font-size:14px;letter-spacing:.24em}
+#title .kr{margin-bottom:clamp(12px,4vh,30px)}
+@media (max-height:520px){
+  #title .wordmark{font-size:clamp(20px,8vh,40px);margin-bottom:2px}
+  #title .kr{margin-bottom:10px;font-size:10px}
+  #title .menu{gap:6px}
+  #title .menu button{padding:8px 5px;font-size:11.5px}
+  #title .menu button.primary{padding:10px}
+  #title .ver,#title .best{bottom:8px;font-size:10px}
+}
+/* 폰 · 낮은 화면에서는 키보드 안내와 바깥 설명글을 숨긴다 */
+body.touch #title .ver{display:none}
+@media (max-height:600px){ body > .note{display:none} #title .ver{display:none} }
 #title .ver{position:absolute;left:16px;bottom:13px;font-size:11px;color:var(--dim)}
 
 /* 공통 바 */
@@ -426,7 +442,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.74</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.75</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2984,6 +3000,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.75',['폰 가로 화면에서 타이틀 메뉴가 잘리던 문제 수정 — 시작 버튼 아래 나머지 버튼을 3칸 격자로, 낮은 화면에선 글자·여백 축소','폰 · 낮은 화면에선 키보드 안내와 바깥 설명글 숨김']],
  ['2.74',['적 체력바 숫자가 실제보다 1 많게 나오던 문제 수정 (처치 판정 기준과 안 맞았음)']],
  ['2.73',['타이틀 배경을 실제 게임 그림에 맞게 변경 — 적 쪽은 실제 몹 스프라이트로, 부딪힐 때 패링 스파크 연출 (플레이어 쪽은 그대로 민짜 원)']],
  ['2.72',['적 체력바 칸 구분선을 지우고 남은 타격 수를 숫자로 표시']],
