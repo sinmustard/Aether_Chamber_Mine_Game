@@ -501,7 +501,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.91</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.92</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1588,7 +1588,12 @@ function doParry(force){
     /* v2.89 벽 뒤에 숨은 적은 자동 조준에서 뺀다 — 벽 뒤 적을 노리면 탄환이 벽에 맞고 튕겨 나한테 그대로 돌아왔다 */
     const soft=ens.filter(e=>!G(e).shield&&!wallBetween(P.x,P.y,e.x,e.y));
     const byAim=soft.slice().sort((a,b)=>ang(a)-ang(b)||dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
-    const tgt=byAim.length&&ang(byAim[0])<=24*Math.PI/180?byAim[0]:null;
+    /* v2.92 폰은 엄지로 정확히 겨누기 어렵고(홀드 패링 중엔 엄지가 쉬는 방향이 곧 조준), 영상에서 적이 바로 위에 있는데
+       조준이 아래를 향해 탄환이 화면 밖으로 날아갔다 → 폰은 조준 쪽 100° 안의 적, 없으면 '보이는 가장 가까운 적'을 노린다.
+       PC도 조준 방향 바로 앞(160)이 벽이면 보이는 적 쪽으로 보정한다 (벽에 맞고 튕겨 돌아오는 것 방지) */
+    let tgt=byAim.length&&ang(byAim[0])<=(touchMode?100:24)*Math.PI/180?byAim[0]:null;
+    if(!tgt&&touchMode&&soft.length) tgt=soft.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
+    if(!tgt&&byAim.length&&wallBetween(P.x,P.y,P.x+Math.cos(P.face)*160,P.y+Math.sin(P.face)*160)) tgt=byAim[0];
     const mainDir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):P.face;
     const foes=[tgt].concat(byAim.filter(e=>e!==tgt&&ang(e)<=70*Math.PI/180)).filter(Boolean);
     let maxRet=0;
@@ -1947,7 +1952,7 @@ function update(dt){
         if(e.lungeT<=0) e.lungePhase='chase';
       }
     }
-    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r);   // v2.18 적이 벽을 뚫던 문제
+    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+40);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
     e.x=e.ax+Math.cos(e.drift*0.8)*36;
     e.y=e.ay+Math.sin(e.drift)*54;
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
@@ -3168,6 +3173,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.92',['폰에서 패링한 탄환이 엉뚱한 쪽(화면 밖)으로 날아가던 문제 — 폰은 조준 쪽 100° 안의 적, 없으면 보이는 가장 가까운 적을 자동으로 노림','조준 방향 바로 앞이 벽이면 보이는 적 쪽으로 보정 (벽에 맞고 튕겨 돌아오는 것 방지)','적이 벽에 바짝 붙어 숨지 못하게 벽과 거리 유지']],
  ['2.91',['캐릭터 이미지 1장 모드에 회전 켜고 끄기 선택 추가 — 끄면 방향과 상관없이 이미지가 그대로 고정']],
  ['2.90',['캐릭터 이미지를 직접 올릴 수 있게 — 설정 → 게임 → 캐릭터 이미지. 이미지 1장(바라보는 방향으로 회전) 또는 4방향 이미지(위/아래/왼쪽/오른쪽, 방향마다 교체) 중 선택. 이 기기에만 저장됨']],
  ['2.89',['패링한 탄환이 벽에 맞고 나한테 돌아오던 문제 — 벽 뒤에 숨은 적은 자동 조준·유도 대상에서 제외, 벽에 튕기면 노리던 적을 잊음','폰에서 손가락을 대기만 하고 아직 조준하지 않은 순간엔 자동 패링 안 함 (예전 방향으로 날아가던 문제)','고정 조이스틱은 그 자리 근처를 눌렀을 때만 고정 중심 사용','폰 스킬 버튼을 조금 작고 반투명하게 (뒤의 적·탄환이 보이게)']],
