@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.98</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.99</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -3198,6 +3198,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.99',['캐릭터 이미지 업로드 창에 "캐릭터가 이미지의 80% 이상 차지하게 잘라서 올려주세요" 안내 추가']],
  ['2.98',['업적 진행 게이지가 채워지지 않던 문제 수정 (다른 화면의 스타일이 겹쳐서 두꺼운 빈 칸으로 보였음)']],
  ['2.97',['캐릭터 이미지를 일반 몹보다 조금 더 크게']],
  ['2.96',['캐릭터 이미지가 작아 보이던 문제 — 판정(히트박스)은 그대로 두고 보이는 그림만 키움']],
@@ -3745,11 +3746,12 @@ function openAppearance(){
     }).join('')+'</div>'+
     '<div class="opt-desc">4장 다 올려야 적용돼요. 바라보는 방향에 맞는 이미지로 바뀌어 보여요(회전 없음).</div>';
   }
+  const tipRow=mode!=='off'?'<div class="opt-desc"><b>올리기 전에</b> — 캐릭터가 이미지의 80% 이상을 차지하도록 가깝게 자른 사진을 올려주세요. 배경이 많이 남으면 가운데를 정사각형으로 잘라서 캐릭터가 작게 나오거나 잘릴 수 있어요.</div>':'';
   const bgRow=mode!=='off'?'<div class="opt-row opt-tg" data-pnobg="1"><span>배경 제거</span><i>'+(OPT.pimgNoBg?'켬 · 단색 배경만':'끔')+'</i></div>'+
     '<div class="opt-desc">올릴 때 테두리에서부터 비슷한 색을 따라 배경을 지워요. 그라데이션·그림자 정도는 괜찮지만, 배경이 피사체만큼 울긋불긋하면 잘 안 될 수 있어요.</div>':'';
   $('#modalBox').innerHTML='<div class="logHd"><h4>캐릭터 이미지</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
     '<div class="opt-desc">플레이어는 기본적으로 원으로 표시돼요. 이미지를 올리면 바꿀 수 있어요 — 이 브라우저에만 저장되고 다른 기기에는 안 보여요.</div>'+
-    modeBtns+bgRow+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
+    modeBtns+tipRow+bgRow+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
   $('#modal').classList.add('on');
 }
 $('#modalBox').addEventListener('change',async e=>{
