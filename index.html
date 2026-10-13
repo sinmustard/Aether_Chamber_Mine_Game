@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.05</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.06</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2371,23 +2371,41 @@ function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[p
    "마법봉" 방식으로 바꿨다 — 테두리에서 시작해서 이웃 픽셀끼리 색이 비슷하면 계속 번져나가고,
    경계(피사체)에서 색이 확 바뀌면 멈춘다. 그라데이션·그림자가 있어도 잘 따라가고, 단색이 아니어도 된다 */
 function stripBg(cx,SZ){
+  /* v3.06 배경 제거 다시 만듦 — 예전 마법봉은 '이웃 픽셀끼리' 색 차이만 봐서, 조금씩 비슷한 색을 따라
+     피사체 안쪽까지 번져 그림이 군데군데 뚫렸다(검은 옷·그림자·JPG 노이즈). 이제는
+     ① 테두리 색에서 배경 대표색(최대 3개)을 뽑고  ② 테두리와 이어진 픽셀 중 '대표색과 가까운' 것만 지우며
+     ③ 경계는 부드럽게 반투명 처리하고  ④ 배경이 복잡하거나 너무 많이 지워지면 아예 지우지 않는다 */
   const id=cx.getImageData(0,0,SZ,SZ), d=id.data, n=SZ*SZ;
-  const bg=new Uint8Array(n), qx=new Int32Array(n), qy=new Int32Array(n);
-  let qt=0;
-  const idx=(x,y)=>y*SZ+x;
-  const push=(x,y)=>{ const k=idx(x,y); if(!bg[k]){ bg[k]=1; qx[qt]=x; qy[qt]=y; qt++; } };
-  for(let x=0;x<SZ;x++){ push(x,0); push(x,SZ-1); }
-  for(let y=0;y<SZ;y++){ push(0,y); push(SZ-1,y); }
-  const TH2=30*30;   // 이웃 간 허용 색 차이(제곱) — 한 걸음씩 번지므로 전체 그라데이션 폭은 더 커도 된다
-  for(let qh=0;qh<qt;qh++){
-    const x=qx[qh], y=qy[qh], i=idx(x,y)*4, r=d[i], g=d[i+1], b=d[i+2];
-    if(x>0){ const k=idx(x-1,y); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x-1,y); } }
-    if(x<SZ-1){ const k=idx(x+1,y); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x+1,y); } }
-    if(y>0){ const k=idx(x,y-1); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x,y-1); } }
-    if(y<SZ-1){ const k=idx(x,y+1); if(!bg[k]){ const j=k*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b; if(dr*dr+dg*dg+db*db<TH2) push(x,y+1); } }
+  const col=k=>[d[k*4],d[k*4+1],d[k*4+2]];
+  const d2=(a,b)=>{ const r=a[0]-b[0],g=a[1]-b[1],bb=a[2]-b[2]; return r*r+g*g+bb*bb; };
+  /* ① 테두리 2픽셀 두께에서 대표색 뽑기 (가장 흔한 색 덩어리 순서) */
+  const border=[]; for(let t=0;t<2;t++) for(let i=0;i<SZ;i++){ border.push(t*SZ+i,(SZ-1-t)*SZ+i,i*SZ+t,i*SZ+SZ-1-t); }
+  const refs=[]; let left=border.map(col);
+  for(let r=0;r<3&&left.length;r++){
+    const c=left.slice().sort((a,b)=>(a[0]+a[1]+a[2])-(b[0]+b[1]+b[2]))[Math.floor(left.length/2)];
+    const near=left.filter(p=>d2(p,c)<40*40);
+    if(near.length<border.length*0.12) break;
+    const m=[0,1,2].map(j=>near.reduce((s,p)=>s+p[j],0)/near.length);
+    refs.push(m); left=left.filter(p=>d2(p,m)>=40*40);
   }
+  const covered=border.length-left.length;
+  if(!refs.length||covered<border.length*0.7) return {ok:false,why:'complex'};   // 테두리가 여러 색으로 복잡 — 지우지 않음
+  const T=46, T2=T*T;
+  const dist=k=>{ const c=col(k); let m=1e9; for(const r of refs){ const v=d2(c,r); if(v<m) m=v; } return Math.sqrt(m); };
+  /* ② 테두리에서 시작해 '대표색과 가까운' 픽셀만 따라 번진다 (이웃끼리가 아니라 대표색 기준이라 피사체 안으로 새지 않음) */
+  const bg=new Uint8Array(n), q=new Int32Array(n); let qt=0;
+  const tryPush=k=>{ if(!bg[k]&&dist(k)<T){ bg[k]=1; q[qt++]=k; } };
+  for(const k of border) tryPush(k);
+  for(let h=0;h<qt;h++){ const k=q[h], x=k%SZ, y=(k-x)/SZ;
+    if(x>0) tryPush(k-1); if(x<SZ-1) tryPush(k+1); if(y>0) tryPush(k-SZ); if(y<SZ-1) tryPush(k+SZ); }
+  if(qt>n*0.92) return {ok:false,why:'too-much'};   // 거의 다 지워지면 피사체가 배경과 같은 색 — 지우지 않음
+  /* ③ 지우기 + 경계 부드럽게 (지운 곳 바로 옆 픽셀은 대표색과의 거리만큼 반투명) */
   for(let k=0;k<n;k++) if(bg[k]) d[k*4+3]=0;
+  for(let k=0;k<n;k++){ if(bg[k]) continue; const x=k%SZ, y=(k-x)/SZ;
+    const edge=(x>0&&bg[k-1])||(x<SZ-1&&bg[k+1])||(y>0&&bg[k-SZ])||(y<SZ-1&&bg[k+SZ]); if(!edge) continue;
+    const a=Math.max(0,Math.min(1,(dist(k)-T*0.9)/(T*0.9))); d[k*4+3]=Math.round(d[k*4+3]*(0.35+0.65*a)); }
   cx.putImageData(id,0,0);
+  return {ok:true,removed:qt/n};
 }
 /* 올린 원본 이미지를 정사각형으로 잘라 작게 줄인 뒤 데이터 URL로 바꾼다 (저장 용량 · 로딩 가볍게) */
 function readPImgFile(file,removeBg){
@@ -2399,8 +2417,8 @@ function readPImgFile(file,removeBg){
         const cv=document.createElement('canvas'); cv.width=cv.height=SZ;
         const cx=cv.getContext('2d');
         cx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,SZ,SZ);
-        if(removeBg) stripBg(cx,SZ);
-        resolve(cv.toDataURL('image/png'));
+        const res=removeBg?stripBg(cx,SZ):null;   // v3.06
+        resolve(cv.toDataURL('image/png')); readPImgFile.last=res;
       }catch(e){ reject(e); } finally{ URL.revokeObjectURL(url); }
     };
     img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('이미지를 읽지 못했어요')); };
@@ -3257,6 +3275,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.06',['캐릭터 이미지 배경 제거가 그림 안쪽까지 뚫어 버리던 문제 — 테두리에서 배경 대표색을 뽑아 그 색과 가까운 곳만 지우고 경계는 부드럽게, 배경이 복잡하면 지우지 않고 원본 유지 (이미 올린 이미지는 다시 올려야 적용)']],
  ['3.05',['타이틀 배경이 실제 전투 화면이랑 다른 공간처럼 보이던 문제 — 전투 바닥과 같은 대각선 격자 추가','탄환이 캐릭터까지 다 갔다가 돌아오던 걸 — 닿기 전 중간 지점에서 가로채이는 걸로 수정','플레이어·적에 붙어있던 반투명 테두리(halo) 제거','탄환이 돌아올 때 패링 가능 청록 링, 적에게 뺏길 때 빼앗김 빨간 링 — 실제 게임의 b.ready·e.seizeFx와 똑같은 타이밍·반지름·굵기 상수로 맞춤']],
  ['3.04',['시야각 끝에서 패링한 탄이 플레이어 앞을 가로질러 확 꺾여 엉뚱하게 튕기던 문제 — 탄이 있던 쪽에서 ±35°까지만 바로 꺾고, 나머지는 날아가며 노린 적 쪽으로 부드럽게 휘어 감']],
  ['3.03',['폰에서 패링 직후 탄이 나한테 되돌아오던 문제 — 조준 쪽에 적이 없으면 일단 앞으로 날아간 뒤 앞쪽의 가까운 적을 찾아 휘어 감 (내 뒤의 적을 노려 나를 관통하듯 돌아오던 것 — 이제 뒤쪽 적은 쫓지 않음)']],
@@ -3815,6 +3834,8 @@ $('#modalBox').addEventListener('change',async e=>{
   pimgErr='';
   try{
     const dataUrl=await readPImgFile(file,!!OPT.pimgNoBg);
+    const r=readPImgFile.last;   // v3.06 배경을 못 지웠으면 이유 안내 (그림은 원본 그대로 저장)
+    if(r&&!r.ok) pimgErr=r.why==='complex'?'배경이 여러 색이라 지우지 않고 원본 그대로 넣었어요. 단색 배경 이미지를 쓰면 깔끔하게 지워져요.':'캐릭터와 배경 색이 거의 같아서 지우지 않고 원본 그대로 넣었어요.';
     const key=single?'single':dir;
     setPImg(key,dataUrl); applyPImg(key,dataUrl);
     sfx('ui');
