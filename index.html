@@ -505,7 +505,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.14</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.15</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1068,6 +1068,22 @@ function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가
 }
 const wallBetween=(x1,y1,x2,y2)=>allWalls().some(({col:o})=>segHitsRect(x1,y1,x2,y2,o));
 const rectGap=(a,b)=>Math.max(a.x-(b.x+b.w), b.x-(a.x+a.w), a.y-(b.y+b.h), b.y-(a.y+a.h));
+/* v3.15 탄환 이동 경로(x0,y0→x1,y1)가 벽(반지름만큼 넓힌 사각형)에 처음 닿는 면과 그 직전 자리.
+   이미 안에서 시작했으면 진행 반대 방향(온 쪽)으로 빠져나가는 면을 돌려준다. 안 닿으면 null */
+function sweepRect(x0,y0,x1,y1,o,r){
+  const L=o.x-r, Rr=o.x+o.w+r, T=o.y-r, B=o.y+o.h+r, dx=x1-x0, dy=y1-y0;
+  if(x0>L&&x0<Rr&&y0>T&&y0<B){
+    let bx=-dx, by=-dy; if(!bx&&!by) bx=-1;
+    const tx=bx>0?(Rr-x0)/bx:bx<0?(L-x0)/bx:Infinity, ty=by>0?(B-y0)/by:by<0?(T-y0)/by:Infinity;
+    return tx<ty?{axis:'x',x:x0+bx*tx+(bx>0?.5:-.5),y:y0+by*tx}:{axis:'y',x:x0+bx*ty,y:y0+by*ty+(by>0?.5:-.5)};
+  }
+  let tmin=0,tmax=1,axis=null;
+  if(dx===0){ if(x0<=L||x0>=Rr) return null; } else { let a=(L-x0)/dx,c=(Rr-x0)/dx; if(a>c){const q=a;a=c;c=q;} if(a>tmin){tmin=a;axis='x';} tmax=Math.min(tmax,c); }
+  if(dy===0){ if(y0<=T||y0>=B) return null; } else { let a=(T-y0)/dy,c=(B-y0)/dy; if(a>c){const q=a;a=c;c=q;} if(a>tmin){tmin=a;axis='y';} tmax=Math.min(tmax,c); }
+  if(!axis||tmin>tmax) return null;
+  const x=x0+dx*tmin, y=y0+dy*tmin;
+  return {axis, x:axis==='x'?x+(dx>0?-.5:.5):x, y:axis==='y'?y+(dy>0?-.5:.5):y};
+}
 function rectHit(cx,cy,r,o){
   const nx=clamp(cx,o.x,o.x+o.w), ny=clamp(cy,o.y,o.y+o.h);
   const dx=cx-nx, dy=cy-ny;
@@ -2161,20 +2177,24 @@ function update(dt){
     const obstacles=allWalls();
     if(obstacles.length){
       let gone=false;
+      /* v3.15 벽 관통 수정 — 예전엔 한 프레임에 벽을 건너뛰면 '벽 가운데 기준' 방향으로 면을 골라서,
+         긴 벽의 끝 근처를 맞으면 벽 위/아래 끝으로 순간이동해 그대로 지나갔고, 벽 안에서 생긴 탄(벽에 붙은 적)은
+         무조건 오른쪽 면으로 밀려나 반대편으로 빠져나갔다. → 이동 경로(이전→지금)가 처음 닿는 면을 정확히 계산하고,
+         이미 벽 안이면 '온 쪽'으로 되돌려 내보낸다. 여러 벽 중 가장 먼저 닿는 벽을 쓴다 */
+      let best=null, bestD=1e9, bestO=null;
       for(const {col:o} of obstacles){
-        /* v2.18 한 프레임에 벽을 건너뛰는 경우까지 잡는다. 관통 보상이 있어도 벽은 통과하지 못한다 */
-        let h=rectHit(b.x,b.y,R_BULLET,o);
-        if(!h && segHitsRect(prevX,prevY,b.x,b.y,o)){
-          b.x=prevX; b.y=prevY;
-          h=rectHit(b.x,b.y,R_BULLET,o)||{dx:b.x-(o.x+o.w/2), dy:b.y-(o.y+o.h/2)};
+        const hit=sweepRect(prevX,prevY,b.x,b.y,o,R_BULLET); if(!hit) continue;
+        const d=Math.hypot(hit.x-prevX,hit.y-prevY); if(d<bestD){ bestD=d; best=hit; bestO=o; }
+      }
+      if(best){
+        if(!CFG.bounce){ bullets.splice(i,1); gone=true; }
+        else {
+          let vx=Math.cos(b.dir), vy=Math.sin(b.dir);
+          if(best.axis==='x') vx=-vx; else vy=-vy;
+          b.x=best.x; b.y=best.y;
+          if(b.owner==='player') bMark(b.x,b.y,'벽 반사','#ffd34d');   // v3.00
+          b.dir=Math.atan2(vy,vx); b.trail.length=0; b.htg=null;   // v2.89
         }
-        if(!h)continue;
-        if(!CFG.bounce){ bullets.splice(i,1); gone=true; break; }
-        let vx=Math.cos(b.dir), vy=Math.sin(b.dir);
-        if(Math.abs(h.dx)>Math.abs(h.dy)||h.dy===0){ vx=-vx; b.x=h.dx>=0?o.x+o.w+R_BULLET+.5:o.x-R_BULLET-.5; }
-        else { vy=-vy; b.y=h.dy>=0?o.y+o.h+R_BULLET+.5:o.y-R_BULLET-.5; }
-        if(b.owner==='player') bMark(b.x,b.y,'벽 반사','#ffd34d');   // v3.00
-        b.dir=Math.atan2(vy,vx); b.trail.length=0; b.htg=null; break;   // v2.89
       }
       if(gone) continue;
     }
@@ -3366,6 +3386,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.15',['탄환이 벽을 뚫고 지나가던 문제 수정 — 빠른 탄환이 긴 벽의 끝 근처를 맞으면 벽 끝으로 순간이동해 지나가던 것, 벽에 붙은 적이 쏜 탄이 벽 반대편으로 빠져나가던 것. 이동 경로가 처음 닿는 면을 정확히 계산해서 반사']],
  ['3.14',['구속 중에도 적이 제자리 흔들림(idle wobble)으로 살짝씩 움직이던 문제 — 구속 중엔 완전히 고정되게 수정','구속 대상을 사거리 안 가장 가까운 적 1명 → 거리 상관없이 필드의 모든 적으로 확장']],
  ['3.13',['폰 스킬 버튼(F · Q · R) 자리도 직접 옮길 수 있게 — 설정 → 조작 → 조이스틱 자리 편집에서 끌기, 옮기지 않은 버튼은 패링 조이스틱을 따라감, "기본 자리"로 되돌리기']],
  ['3.12',['캐릭터에 영상 · 움짤도 올릴 수 있게 — 최대 3초 · 12장으로 잘라 반복 재생, 이미지 1장 · 4방향 모두 가능 (프레임마다 배경 제거)','설정: 영상 캐릭터 재생 — 항상 반복 / 움직일 때만','타이틀 배경 캐릭터도 영상이면 움직이게']],
