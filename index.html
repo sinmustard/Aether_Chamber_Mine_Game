@@ -485,7 +485,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.87</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.88</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2287,7 +2287,7 @@ loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 �
 loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
-['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer','sniper']
+['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer','sniper','cannon']
   .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
 /* v3.10.1 분열체는 항상 플레이어 쪽을 보고 회전한다(계속 다가붙는 적이라 방향이 보이는 게 자연스럽다) */
 function enemyFacing(e){
@@ -3111,6 +3111,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.88',['신규 대포병 이미지 — 팔각 포탑 + 쌍포신 (마지막까지 민짜 원이던 적)']],
  ['2.87',['카메라가 플레이어를 따라 움직이던 것을 없앰 — 화면을 꽉 채우는 확대는 그대로, 전장을 화면 가운데에 고정']],
  ['2.86',['조준(패링 범위)이 커서와 어긋나며 미끄러지던 문제 수정 — 카메라가 움직여도 항상 커서 아래 지점을 조준','되돌린 탄환이 지나가던 옆의 적에게 갑자기 꺾이던 문제 — 패링 때 노린 적을 끝까지 따라가고, 꺾이는 속도에 상한']],
  ['2.85',['전체화면 양 끝에 남던 빈 공간 제거 — 전장을 확대해 화면 가로를 꽉 채우고, 위아래는 카메라가 플레이어를 따라감','점수 · 왕복 등 HUD를 실제 화면 끝에 맞춤','고정 조이스틱 기본 자리를 브롤스타즈처럼 화면 양쪽 아래 구석으로']],
