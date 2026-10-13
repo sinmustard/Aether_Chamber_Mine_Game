@@ -286,6 +286,8 @@ body.touch #title .ver{display:none}
 .pimgLab{font-size:10.5px;color:var(--dim);letter-spacing:.1em;margin-bottom:6px}
 .pimgEmpty{width:72px;height:72px;margin:0 auto;border:1px dashed var(--line);border-radius:8px;
   display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--dim)}
+.pimgAnim{position:relative;background-repeat:no-repeat;background-position:0 0}
+.pimgAnim b{position:absolute;right:4px;bottom:3px;font-size:9px;color:#fff;background:rgba(0,0,0,.55);padding:1px 4px;border-radius:4px}   /* v3.12 */
 .pimgSlot .pimgPrev{width:72px;height:72px;margin:0 auto}
 .pimgSlot .pimgFileBtn{display:block;margin-top:6px;font-size:10.5px;padding:6px}
 .pimgSlot .ghost{display:block;width:100%;margin-top:5px;padding:5px;font-size:10px}
@@ -502,7 +504,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.11</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.12</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -731,7 +733,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1};   // v2.89 커스텀 캐릭터 이미지
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1, pimgAnimMove:0};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -1859,6 +1861,7 @@ function update(dt){
     if(ms&&(ms.dx||ms.dy)){ ax=ms.dx; ay=ms.dy; spdMul=Math.min(1,ms.len/TOUCH_MAX); }
     P.x=clamp(P.x+ax*CFG.moveSpd*spdMul*dt,30,WORLD.w-30);
     P.y=clamp(P.y+ay*CFG.moveSpd*spdMul*dt,30,WORLD.h-30);
+    P.moving=!!(ax||ay);   // v3.12 영상 캐릭터 '움직일 때만 재생'용
   }
   if(P.phase<=0) allWalls().forEach(({col:o})=>{
     const h=rectHit(P.x,P.y,R_PLAYER,o); if(!h)return;
@@ -2358,20 +2361,73 @@ loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 �
    단일 이미지(회전)나 4방향 이미지(위/아래/왼쪽/오른쪽, 방향에 맞춰 교체) 중 고를 수 있다 */
 function pimgKey(d){ return 'aether_pimg_'+d; }
 function getPImg(d){ try{ return localStorage.getItem(pimgKey(d)); }catch(e){ return null; } }
-function setPImg(d,dataUrl){ try{ localStorage.setItem(pimgKey(d),dataUrl); }catch(e){} }
-function clearPImg(d){ try{ localStorage.removeItem(pimgKey(d)); localStorage.removeItem(pimgKey(d+'_o')); }catch(e){} }
+function setPImg(d,dataUrl){ try{ localStorage.setItem(pimgKey(d),dataUrl); return true; }catch(e){ return false; } }   // v3.12 저장 실패(용량 초과)를 알 수 있게
+function clearPImg(d){ try{ localStorage.removeItem(pimgKey(d)); localStorage.removeItem(pimgKey(d+'_o')); localStorage.removeItem(pimgKey(d+'_n')); }catch(e){} delete PANIM[pimgSpriteKey(d)]; }
 /* v3.07 배경 제거를 켜고 끌 때, 보관해 둔 원본으로 다시 처리한다 (다시 올릴 필요 없음) */
 async function reprocessPImgs(){
   for(const k of ['single','up','down','left','right']){
     const o=getPImg(k+'_o'); if(!o) continue;
     const img=await new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>r(null); i.src=o; }); if(!img) continue;
+    const m=pimgMeta(k);
+    if(m){ const pr=processSheet(img,m.n,!!OPT.pimgNoBg); const u=sheetUrl(pr.cv); setPImg(k,u); applyPImg(k,u); continue; }   // v3.12 영상 캐릭터
     const SZ=192, cv=document.createElement('canvas'); cv.width=cv.height=SZ; const cx=cv.getContext('2d'); cx.drawImage(img,0,0,SZ,SZ);
     if(OPT.pimgNoBg) stripBg(cx,SZ);
     const u=cv.toDataURL('image/png'); setPImg(k,u); applyPImg(k,u);
   }
 }
 function pimgSpriteKey(d){ return d==='single'?'player':'player_'+d; }
-function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[pimgSpriteKey(d)]=img; }; img.src=dataUrl; }
+/* v3.12 영상 캐릭터 — 영상(또는 움짤)을 프레임 여러 장으로 잘라 가로로 이어 붙인 한 장(스프라이트 시트)으로 저장한다.
+   프레임 수 · 초당 프레임은 '_n' 키에 "프레임수,fps"로 따로 저장 */
+const PANIM={};
+function pimgMeta(d){ const m=getPImg(d+'_n'); if(!m) return null; const [n,fps]=m.split(',').map(Number); return n>1?{n,fps:fps||8}:null; }
+function applyPImg(d,dataUrl){ const img=new Image(); img.onload=()=>{ SPRITES[pimgSpriteKey(d)]=img; const m=pimgMeta(d); if(m) PANIM[pimgSpriteKey(d)]=m; else delete PANIM[pimgSpriteKey(d)]; }; img.src=dataUrl; }
+const PFS=112, PMAXF=12;   // 프레임 한 장 크기 · 최대 프레임 수 (저장 용량 때문에 작게)
+/* 시트 → 프레임마다 배경 제거 → 다시 시트 */
+function processSheet(src,n,removeBg){
+  const out=document.createElement('canvas'); out.width=PFS*n; out.height=PFS; const ox=out.getContext('2d');
+  const f=document.createElement('canvas'); f.width=f.height=PFS; const fx=f.getContext('2d');
+  let res=null;
+  for(let i=0;i<n;i++){ fx.clearRect(0,0,PFS,PFS); fx.drawImage(src,i*PFS,0,PFS,PFS,0,0,PFS,PFS);
+    if(removeBg){ const r=stripBg(fx,PFS); if(i===0) res=r; } ox.drawImage(f,i*PFS,0); }
+  return {cv:out,res};
+}
+const sheetUrl=cv=>{ const w=cv.toDataURL('image/webp',0.86); return w.startsWith('data:image/webp')?w:cv.toDataURL('image/png'); };
+/* 영상 파일 → 프레임 시트 (최대 3초, 최대 12장) */
+function readPVideoFile(file,removeBg){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file), v=document.createElement('video');
+    v.muted=true; v.playsInline=true; v.setAttribute('playsinline',''); v.preload='auto'; v.src=url;
+    const fail=m=>{ URL.revokeObjectURL(url); reject(new Error(m)); };
+    const seek=t=>new Promise(r=>{ const done=()=>{ v.removeEventListener('seeked',done); r(); }; v.addEventListener('seeked',done); v.currentTime=t; setTimeout(done,1500); });
+    v.onerror=()=>fail('영상을 읽지 못했어요');
+    v.onloadeddata=async()=>{
+      try{
+        try{ await v.play(); v.pause(); }catch(e){}   // 아이폰은 한 번 재생해야 프레임이 그려진다
+        const dur=Math.min(isFinite(v.duration)?v.duration:0,3); if(!(dur>0.2)) return fail('영상이 너무 짧아요');
+        const n=Math.max(4,Math.min(PMAXF,Math.round(dur*8))), fps=Math.min(12,Math.max(4,n/dur));
+        const side=Math.min(v.videoWidth,v.videoHeight); if(!side) return fail('영상을 읽지 못했어요');
+        const raw=document.createElement('canvas'); raw.width=PFS*n; raw.height=PFS; const rx=raw.getContext('2d');
+        for(let i=0;i<n;i++){ await seek((i+0.5)*dur/n); rx.drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,i*PFS,0,PFS,PFS); }
+        const pr=processSheet(raw,n,removeBg);
+        URL.revokeObjectURL(url);
+        resolve({url:sheetUrl(pr.cv),orig:raw.toDataURL('image/jpeg',0.85),n,fps:Math.round(fps*10)/10,res:pr.res});
+      }catch(e){ fail('영상을 읽지 못했어요'); }
+    };
+  });
+}
+/* 움짤(GIF) → 프레임 시트. 브라우저가 ImageDecoder를 지원할 때만 (안 되면 첫 장만 이미지로) */
+async function readPGifFile(file,removeBg){
+  if(!('ImageDecoder' in window)) return null;
+  const dec=new ImageDecoder({data:await file.arrayBuffer(),type:file.type}); await dec.tracks.ready;
+  const total=dec.tracks.selectedTrack.frameCount; if(!(total>1)) return null;
+  const n=Math.min(PMAXF,total);
+  const raw=document.createElement('canvas'); raw.width=PFS*n; raw.height=PFS; const rx=raw.getContext('2d');
+  let durSum=0;
+  for(let i=0;i<n;i++){ const {image}=await dec.decode({frameIndex:Math.floor(i*total/n)}); const w=image.displayWidth,h=image.displayHeight,side=Math.min(w,h);
+    rx.drawImage(image,(w-side)/2,(h-side)/2,side,side,i*PFS,0,PFS,PFS); durSum+=(image.duration||100000)/1e6*(total/n); image.close(); }
+  const pr=processSheet(raw,n,removeBg);
+  return {url:sheetUrl(pr.cv),orig:raw.toDataURL('image/jpeg',0.85),n,fps:Math.round(Math.min(12,Math.max(4,n/Math.max(0.2,durSum)))*10)/10,res:pr.res};
+}
 /* v2.95 배경 제거 — AI 분리 없이 가벼운 방식. 테두리 전체 평균색 하나로 거리 재던 걸
    "마법봉" 방식으로 바꿨다 — 테두리에서 시작해서 이웃 픽셀끼리 색이 비슷하면 계속 번져나가고,
    경계(피사체)에서 색이 확 바뀌면 멈춘다. 그라데이션·그림자가 있어도 잘 따라가고, 단색이 아니어도 된다 */
@@ -2487,7 +2543,8 @@ function drawEnemyBody(e){
 function drawPlayerBody(){
   const mode=OPT.pimgMode;
   const dir4=mode==='4dir'&&SPRITES.player_up&&SPRITES.player_down&&SPRITES.player_left&&SPRITES.player_right;
-  const img=dir4?dirSprite(P.face):(mode==='single'?SPRITES.player:null);
+  const skey=dir4?dirKey(P.face):(mode==='single'?'player':null);   // v3.12
+  const img=skey?SPRITES[skey]:null;
   if(!img){ drawBody(P.x,P.y,R_PLAYER,P.inv>0?'#9fd8ff':C.cyan,P.hurt); return; }
   const p=proj(P.x,P.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
@@ -2499,8 +2556,18 @@ function drawPlayerBody(){
   ctx.translate(p[0],p[1]); if(willRotate) ctx.rotate(P.face);
   if(P.hurt>0) ctx.filter='brightness('+(1+P.hurt*6)+') saturate('+Math.max(0,1-P.hurt*3)+')';
   else if(P.inv>0) ctx.filter='brightness(1.4) hue-rotate(15deg)';
-  ctx.drawImage(img,-s/2,-s/2,s,s);
+  const an=PANIM[skey];
+  if(an){ /* v3.12 영상 캐릭터 — 시트에서 지금 프레임만 잘라 그린다. '움직일 때만 재생'이면 멈췄을 때 첫 프레임 */
+    const fw=img.width/an.n, f=(OPT.pimgAnimMove&&!P.moving)?0:Math.floor(performance.now()/1000*an.fps)%an.n;
+    ctx.drawImage(img,f*fw,0,fw,img.height,-s/2,-s/2,s,s);
+  } else ctx.drawImage(img,-s/2,-s/2,s,s);
   ctx.restore();
+}
+function dirKey(a){
+  if(a>-Math.PI/4&&a<=Math.PI/4) return 'player_right';
+  if(a>Math.PI/4&&a<=Math.PI*3/4) return 'player_down';
+  if(a>-Math.PI*3/4&&a<=-Math.PI/4) return 'player_up';
+  return 'player_left';
 }
 function dirSprite(a){
   if(a>-Math.PI/4&&a<=Math.PI/4) return SPRITES.player_right;
@@ -3293,6 +3360,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.12',['캐릭터에 영상 · 움짤도 올릴 수 있게 — 최대 3초 · 12장으로 잘라 반복 재생, 이미지 1장 · 4방향 모두 가능 (프레임마다 배경 제거)','설정: 영상 캐릭터 재생 — 항상 반복 / 움직일 때만','타이틀 배경 캐릭터도 영상이면 움직이게']],
  ['3.11',['Q 스킬 "견인"을 "구속"으로 교체 — 적을 끌어당기는 대신 제자리에서 이동만 못 하게 묶음(공격은 그대로), 레벨업할수록 구속 시간도 늘어남, 걸린 동안 보이는 청록 링 추가']],
  ['3.10',['웨이브 보상 고르는 중에 ESC → HUB로 나가면 보상창이 안 닫히고 HUB 위에 그대로 남아있던 문제 수정']],
  ['3.09',['PWA manifest의 start_url이 고정 주소라 다른 경로로 열면 "ignored" 경고가 뜨던 문제 — 아예 빼서 항상 현재 문서 주소를 쓰게 수정','타이틀 배경 플레이어 자리에 1장짜리 커스텀 캐릭터 이미지를 올렸으면 그 이미지가 표시되게 추가']],
@@ -3785,6 +3853,7 @@ $('#modalBox').addEventListener('click',e=>{
   const pc=e.target.closest('[data-pimgclear]');
   if(pc){ const d=pc.dataset.pimgclear; clearPImg(d); delete SPRITES[pimgSpriteKey(d)]; openAppearance(); sfx('ui'); return; }   // v2.89
   if(e.target.closest('[data-protate]')){ OPT.pimgRotate=OPT.pimgRotate?0:1; save(); openAppearance(); sfx('ui'); return; }   // v2.91
+  if(e.target.closest('[data-panim]')){ OPT.pimgAnimMove=OPT.pimgAnimMove?0:1; save(); openAppearance(); sfx('ui'); return; }   // v3.12
   if(e.target.closest('[data-pbglv]')){ OPT.pimgBgLv=((OPT.pimgBgLv|0)+1)%3; save(); sfx('ui'); reprocessPImgs().then(openAppearance,openAppearance); return; }   // v3.08
   if(e.target.closest('[data-pnobg]')){ OPT.pimgNoBg=OPT.pimgNoBg?0:1; save(); sfx('ui'); reprocessPImgs().then(openAppearance,openAppearance); return; }   // v2.93 · v3.07 원본으로 다시 처리
   if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
@@ -3819,6 +3888,11 @@ $('#modalBox').addEventListener('click',e=>{
 });
 /* v2.89 캐릭터 이미지 — 단일 이미지(회전) 또는 4방향 이미지 중 골라서 올린다. 이 기기에만 저장됨 */
 let pimgErr='';
+function pimgPrevHTML(d,img,cls){   // v3.12 영상이면 시트의 첫 프레임만 보이게 + 프레임 수 배지
+  const m=pimgMeta(d);
+  if(!m) return '<img src="'+img+'" class="pimgPrev">';
+  return '<div class="pimgPrev pimgAnim" style="background-image:url('+img+');background-size:'+(m.n*100)+'% 100%"><b>▶ '+m.n+'</b></div>';
+}
 function openAppearance(){
   const mode=OPT.pimgMode||'off';
   const modeBtns='<div class="pimgModes">'+
@@ -3828,27 +3902,30 @@ function openAppearance(){
   if(mode==='single'){
     const img=getPImg('single');
     body='<div class="pimgUp"><label class="buy pimgFileBtn">'+(img?'이미지 바꾸기':'이미지 올리기')+
-      '<input type="file" accept="image/*" id="pimgSingle" style="display:none"></label>'+
-      (img?'<img src="'+img+'" class="pimgPrev"><button class="ghost" data-pimgclear="single">지우기</button>':'')+'</div>'+
+      '<input type="file" accept="image/*,video/*" id="pimgSingle" style="display:none"></label>'+
+      (img?pimgPrevHTML('single',img)+'<button class="ghost" data-pimgclear="single">지우기</button>':'')+'</div>'+
       '<div class="opt-row opt-tg" data-protate="1"><span>회전</span><i>'+(OPT.pimgRotate?'바라보는 방향으로 회전':'회전 안 함 · 그대로 표시')+'</i></div>'+
       '<div class="opt-desc">회전을 켜면 올린 이미지가 바라보는 방향에 맞춰 계속 돌아가요. 끄면 이미지가 그대로 고정돼요.</div>';
   } else if(mode==='4dir'){
     body='<div class="pimgGrid">'+['up','down','left','right'].map(d=>{
       const lab={up:'위',down:'아래',left:'왼쪽',right:'오른쪽'}[d], img=getPImg(d);
       return '<div class="pimgSlot"><div class="pimgLab">'+lab+'</div>'+
-        (img?'<img src="'+img+'" class="pimgPrev">':'<div class="pimgEmpty">없음</div>')+
-        '<label class="buy pimgFileBtn">'+(img?'바꾸기':'올리기')+'<input type="file" accept="image/*" data-pimgdir="'+d+'" style="display:none"></label>'+
+        (img?pimgPrevHTML(d,img):'<div class="pimgEmpty">없음</div>')+
+        '<label class="buy pimgFileBtn">'+(img?'바꾸기':'올리기')+'<input type="file" accept="image/*,video/*" data-pimgdir="'+d+'" style="display:none"></label>'+
         (img?'<button class="ghost" data-pimgclear="'+d+'">지우기</button>':'')+'</div>';
     }).join('')+'</div>'+
     '<div class="opt-desc">4장 다 올려야 적용돼요. 바라보는 방향에 맞는 이미지로 바뀌어 보여요(회전 없음).</div>';
   }
+  const hasAnim=['single','up','down','left','right'].some(k=>pimgMeta(k)&&getPImg(k));
+  const animRow=mode!=='off'?'<div class="opt-row opt-tg" data-panim="1"><span>영상 캐릭터 재생</span><i>'+(OPT.pimgAnimMove?'움직일 때만':'항상 반복')+'</i></div>'+
+    '<div class="opt-desc">이미지 대신 <b>짧은 영상(최대 3초)</b>이나 움짤도 올릴 수 있어요 — 최대 12장으로 잘라서 반복 재생해요.'+(hasAnim?'':' 단색 배경에서 제자리 동작을 찍은 영상이 가장 깔끔해요.')+'</div>':'';
   const tipRow=mode!=='off'?'<div class="opt-desc"><b>올리기 전에</b> — 캐릭터가 이미지의 80% 이상을 차지하도록 가깝게 자른 사진을 올려주세요. 배경이 많이 남으면 가운데를 정사각형으로 잘라서 캐릭터가 작게 나오거나 잘릴 수 있어요.</div>':'';
   const bgRow=mode!=='off'?'<div class="opt-row opt-tg" data-pnobg="1"><span>배경 제거</span><i>'+(OPT.pimgNoBg?'켬':'끔')+'</i></div>'+
     (OPT.pimgNoBg?'<div class="opt-row opt-tg" data-pbglv="1"><span>배경 제거 강도</span><i>'+(['약 · 덜 지움','보통','강 · 그라데이션·빛 효과도'][OPT.pimgBgLv|0]||'보통')+'</i></div>':'')+   // v3.08
     '<div class="opt-desc">올릴 때 테두리에서부터 비슷한 색을 따라 배경을 지워요. 그라데이션·그림자 정도는 괜찮지만, 배경이 피사체만큼 울긋불긋하면 잘 안 될 수 있어요.</div>':'';
   $('#modalBox').innerHTML='<div class="logHd"><h4>캐릭터 이미지</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
     '<div class="opt-desc">플레이어는 기본적으로 원으로 표시돼요. 이미지를 올리면 바꿀 수 있어요 — 이 브라우저에만 저장되고 다른 기기에는 안 보여요.</div>'+
-    modeBtns+tipRow+bgRow+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
+    modeBtns+tipRow+bgRow+animRow+body+(pimgErr?'<div style="font-size:10.5px;color:var(--red);padding:6px 0">'+pimgErr+'</div>':'');
   $('#modal').classList.add('on');
 }
 $('#modalBox').addEventListener('change',async e=>{
@@ -3857,7 +3934,22 @@ $('#modalBox').addEventListener('change',async e=>{
   if(!single&&!dir) return;
   const file=e.target.files&&e.target.files[0]; if(!file) return;
   pimgErr='';
+  const key0=single?'single':dir;
+  /* v3.12 영상 · 움짤이면 프레임 시트로 */
+  if(/^video\//.test(file.type)||file.type==='image/gif'){
+    try{
+      const v=/^video\//.test(file.type)?await readPVideoFile(file,!!OPT.pimgNoBg):await readPGifFile(file,!!OPT.pimgNoBg);
+      if(v){
+        clearPImg(key0);
+        const ok=setPImg(key0,v.url)&&setPImg(key0+'_n',v.n+','+v.fps); setPImg(key0+'_o',v.orig);
+        if(!ok){ clearPImg(key0); pimgErr='저장 공간이 부족해요 — 다른 방향의 영상을 지우거나 더 짧은 영상을 써 주세요.'; }
+        else { applyPImg(key0,v.url); if(v.res&&!v.res.ok) pimgErr='배경이 복잡해서 지우지 않고 원본 그대로 넣었어요.'; sfx('ui'); }
+        openAppearance(); return;
+      }
+    }catch(err){ pimgErr=err&&err.message||'영상을 불러오지 못했어요.'; openAppearance(); return; }
+  }
   try{
+    try{ localStorage.removeItem(pimgKey(key0+'_n')); }catch(e){}   // 이미지로 바꾸면 영상 정보 지움
     const dataUrl=await readPImgFile(file,!!OPT.pimgNoBg);
     const r=readPImgFile.last;   // v3.06 배경을 못 지웠으면 이유 안내 (그림은 원본 그대로 저장)
     if(r&&!r.ok) pimgErr=r.why==='complex'?'배경이 여러 색이라 지우지 않고 원본 그대로 넣었어요. 단색 배경 이미지를 쓰면 깔끔하게 지워져요.':'캐릭터와 배경 색이 거의 같아서 지우지 않고 원본 그대로 넣었어요.';
@@ -4134,7 +4226,9 @@ function bgFrame(ts){
     bGrid();   // v3.1 전투 바닥과 같은 대각선 격자
     /* 플레이어 — 1장짜리 커스텀 이미지를 올렸으면 그 이미지, 없으면 민짜 원 */
     const pimg=OPT.pimgMode==='single'?SPRITES.player:null;
-    if(pimg){ const s=64; bx.drawImage(pimg,ax-s/2,y-s/2,s,s); }
+    if(pimg){ const s=64, an=PANIM.player;   // v3.12 영상 캐릭터면 시트에서 지금 프레임만
+      if(an){ const fw=pimg.width/an.n, f=Math.floor(performance.now()/1000*an.fps)%an.n; bx.drawImage(pimg,f*fw,0,fw,pimg.height,ax-s/2,y-s/2,s,s); }
+      else bx.drawImage(pimg,ax-s/2,y-s/2,s,s); }
     else bDot(ax,y,24,'#2fe3d0');
     /* 적 — 실제 몹 스프라이트(없으면 예전처럼 민짜 원으로 대체) */
     const mob=SPRITES.mob;
