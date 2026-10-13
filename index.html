@@ -173,6 +173,23 @@ body.touch #title .ver{display:none}
 .rkList li.me .nm{color:var(--cyan)}
 .rkNote{font-size:10.5px;color:var(--dim);margin:6px 0 10px}
 #result .btns{display:flex;gap:9px}
+/* v2.76 결과 화면이 낮은 화면에서 넘치면 위아래가 잘리고 버튼이 글을 가렸다 — 넘치면 위부터 스크롤, 낮은 화면은 촘촘하게 */
+#result{justify-content:safe center}
+#result>*{flex-shrink:0}
+@media (max-height:560px){
+  #result{padding-top:8px;padding-bottom:8px}
+  #result .over{margin-bottom:2px;font-size:11px}
+  #result .score{font-size:clamp(24px,9vh,44px)}
+  #result .new{margin-top:1px;min-height:12px}
+  #result .stats{margin:5px 0 3px;gap:1px 18px}
+  #result .stats b{font-size:12.5px;margin-top:0}
+  #result .gain{margin-bottom:3px}
+  #cloudStat,#discStat{margin:0 0 1px;min-height:0}
+  #achStat{margin:0 0 4px}
+  #rBoons{margin:0 0 3px}
+  #rankBox{margin:0 0 5px}
+  #result .btns button{padding:7px 16px}
+}
 #result .btns button{padding:clamp(8px,1.6vw,11px) clamp(16px,3vw,26px);font:inherit;font-size:11.5px;letter-spacing:.18em;
   background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;cursor:pointer}
 #result .btns button.primary{border-color:var(--cyan);color:var(--cyan)}
@@ -402,6 +419,10 @@ body.touch.in-game .pads{display:flex;position:fixed;z-index:45;
 body.touch.in-game .pads button{background:rgba(8,12,17,.72);backdrop-filter:blur(2px);
   padding:13px 6px;font-size:12px}
 @media (max-height:560px){ .pads button{padding:11px;font-size:12px} }
+/* v2.76 아래 버튼 줄이 화면 전체 폭이라, 이동하려고 왼쪽 아래에 엄지를 대면 패링 버튼이 눌렸다.
+   가운데로 좁혀서 양쪽 아래 구석(이동 · 조준 자리)을 비운다 */
+body.touch.in-game .pads{width:min(48vw,470px);gap:6px}
+body.touch.in-game.pads-top .pads{width:min(48vw,470px)}
 /* v2.63 폰 버튼 위치 — 아래(기본) · 위 · 오른쪽 · 왼쪽 */
 body.touch.in-game.pads-top .pads{bottom:auto;top:calc(52px + env(safe-area-inset-top,0px))}
 body.touch.in-game.pads-right .pads,body.touch.in-game.pads-left .pads{flex-direction:column;width:auto;gap:7px;
@@ -442,7 +463,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.77</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.78</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2864,7 +2885,8 @@ function endRun(){
   $('#rBoons').innerHTML=Object.keys(run.boons).length? '받은 보상 — '+Object.keys(run.boons).map(k=>{ const b=boonDef(k);
       return b? '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'') : ''; }).join(' · ') : '';   // v2.52
   $('#cloudStat').textContent=getSession()?'☁ 자동 저장 중…':'';   // v2.58
-  if(getSession()) cloudAutoSave().then(ok=>{ $('#cloudStat').textContent= ok?'☁ '+getSession().name+' 계정에 자동 저장했어요':'☁ 자동 저장 실패 — 다음 판에 다시 시도해요'; });
+  if(getSession()){ const nm=getSession().name; cloudAutoSave().then(ok=>{ $('#cloudStat').textContent= ok==='badpin'?'☁ 비밀번호가 계정과 달라 저장 못 했어요 — 다시 로그인해 주세요'
+      : ok?'☁ '+nm+' 계정에 자동 저장했어요':'☁ 자동 저장 실패 — 다음 판에 다시 시도해요'; }); }   // v2.76
   /* v2.62 디스코드 랭킹 — 로그인 계정으로만 자동 기록 (게임 안 랭킹과 별개, 이름을 바꿔 올릴 수 없음) */
   $('#discStat').textContent='';
   if(run.mode==='hard'||run.mode==='daily'){   // v2.68 하드 · 데일리는 각자 랭킹으로 (로그인 계정만)
@@ -2877,7 +2899,7 @@ function endRun(){
       cloudCall(run.mode==='hard'?'aether_submit_hard':'aether_submit_daily',body)
         .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
           $('#discStat').textContent=nm+' 랭킹 '+(r.updated?'기록 갱신 · ':'최고 '+Number(r.best).toLocaleString()+'점 유지 · ')+r.rank+'위'; })
-        .catch(e=>{ $('#discStat').textContent=nm+' 랭킹 기록 실패'+(/점수/.test(String(e.message))?' (점수 확인 실패)':''); });
+        .catch(e=>{ $('#discStat').textContent=nm+' 랭킹 기록 실패'+(badSession(e)?' (다시 로그인 필요)':/점수/.test(String(e.message))?' (점수 확인 실패)':''); });
     }
   } else
   if(getSession()&&!run.cheat&&!run.tut&&run.score>0){
@@ -2885,7 +2907,7 @@ function endRun(){
     cloudCall('aether_submit_verified',{p_name:ss.name,p_pin:ss.pin,p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:BUILD})
       .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
         $('#discStat').textContent= r.updated? '디스코드 랭킹 기록 갱신 · '+r.rank+'위' : '디스코드 랭킹 · 최고 기록 '+Number(r.best).toLocaleString()+'점 유지 · '+r.rank+'위'; })
-      .catch(()=>{ $('#discStat').textContent='디스코드 랭킹 기록 실패 — 다음 판에 다시 시도해요'; });
+      .catch(e=>{ $('#discStat').textContent='디스코드 랭킹 기록 실패'+(badSession(e)?' (다시 로그인 필요)':' — 다음 판에 다시 시도해요'); });
   } else if(getSession()&&run.cheat) $('#discStat').textContent='디버그를 쓴 판은 디스코드 랭킹에 기록되지 않아요';
   $('#achStat').innerHTML=newAch.length?'업적 달성 — '+newAch.map(a=>'<b>'+a.n+'</b>').join(' · ')+'  ◆ +'+achGold.toLocaleString():'';   // v2.68
   setupRankBox();   // v2.48
@@ -3002,6 +3024,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.78',['폰에서 이동하려고 왼쪽 아래를 누르면 패링 버튼이 눌려 멈추던 문제 수정 — 아래 버튼 줄을 가운데로 좁혀 양쪽 구석을 비움','결과 화면이 낮은 화면에서 버튼에 가려지던 문제 수정 — 촘촘하게, 넘치면 스크롤','기기에 기억된 비밀번호가 계정과 다르면 계속 저장 실패만 하던 문제 — 로그인을 풀고 다시 입력하게 안내']],
  ['2.77',['웨이브 보상 창 "하나를 고르세요" 옆의 "1 2 3" 표시 제거']],
  ['2.76',['웨이브 보상 선택 창을 전체화면 3분할 대신 화면 가운데의 작은 창으로 변경']],
  ['2.75',['폰 가로 화면에서 타이틀 메뉴가 잘리던 문제 수정 — 시작 버튼 아래 나머지 버튼을 3칸 격자로, 낮은 화면에선 글자·여백 축소','폰 · 낮은 화면에선 키보드 안내와 바깥 설명글 숨김']],
@@ -3105,7 +3128,7 @@ async function cloudAutoSave(){
     const at=await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:ss.pin,p_data:data});
     if(at){ META.cloudAt=String(at); try{ const d2=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'); d2.meta=META; localStorage.setItem(SAVE_KEY,JSON.stringify(d2)); }catch(e){} }   // v2.68
     return true; }
-  catch(e){ return false; }
+  catch(e){ return badSession(e)?'badpin':false; }
 }
 function openLogin(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>시작하기</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
@@ -3161,14 +3184,21 @@ async function syncFromCloud(){
         if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
         toast('다른 기기에서 진행한 최신 기록을 불러왔어요'); }
     }
-  }catch(e){} finally{ syncing=false; }
+  }catch(e){ badSession(e); } finally{ syncing=false; }
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&screen!=='game') syncFromCloud(); });
 async function cloudCall(fn,body){
   const r=await fetch(RANK.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
   const txt=await r.text(); let d=null; try{ d=JSON.parse(txt); }catch(e){}
-  if(!r.ok) throw new Error((d&&d.message)||('HTTP '+r.status));
+  if(!r.ok){ const er=new Error((d&&d.message)||('HTTP '+r.status)); er.status=r.status; er.code=d&&d.code; throw er; }
   return d;
+}
+/* v2.76 이 기기에 기억된 비밀번호가 서버와 다르면(28P01 / 403) 계속 실패만 했다 → 로그인을 풀고 다시 입력하게 */
+function badSession(e){
+  if(!e||!(e.code==='28P01'||(e.status===403&&/비밀번호/.test(String(e.message))))) return false;
+  clearSession(); offlineOK=false;
+  toast('이 기기에 기억된 비밀번호가 계정과 달라요. HUB에 들어갈 때 다시 로그인해 주세요.');
+  return true;
 }
 function openCloud(){
   $('#modalBox').innerHTML='<div class="logHd"><h4>클라우드 저장</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
