@@ -201,7 +201,7 @@ body.touch #title .ver{display:none}
 #reward.on{display:flex}
 #reward .box{position:relative;width:min(620px,100%);max-height:100%;overflow:auto;
   background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 18px 16px}
-#reward .hd{text-align:center;padding:0 72px 14px;font-size:11.5px;letter-spacing:.26em;color:var(--dim)}
+#reward .hd{text-align:center;padding:0 8px 14px;font-size:11.5px;letter-spacing:.26em;color:var(--dim)}
 #reward .hd b{color:var(--cyan);font-weight:600}
 #reward .own{text-align:center;padding-top:14px;font-size:10.5px;color:var(--dim);line-height:1.7}
 #reward .own b{color:var(--fg)}
@@ -289,7 +289,8 @@ body.touch #title .ver{display:none}
 #respec{margin-right:10px;padding:4px 9px;font:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;
   background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:6px}
 #respec:hover{color:var(--warn);border-color:var(--warn)}
-#rwReroll{position:absolute;right:14px;top:14px;z-index:3;padding:7px 12px;font:inherit;font-size:11px;letter-spacing:.06em;
+/* v2.82 새로고침 버튼이 오른쪽 위에 떠서 작은 화면에서 3번 카드를 가렸다 → 카드 아래 가운데로 */
+#rwReroll{position:static;display:block;margin:12px auto 0;z-index:3;padding:7px 12px;font:inherit;font-size:11px;letter-spacing:.06em;
   cursor:pointer;background:rgba(8,12,17,.8);color:var(--cyan);border:1px solid var(--cyan);border-radius:7px}
 #rwReroll:disabled{opacity:.35;cursor:default;color:var(--dim);border-color:var(--line)}
 #rBoons{max-width:520px;font-size:10.5px;line-height:1.7;color:var(--dim);text-align:center;margin:0 0 8px;padding:0 10px}
@@ -420,6 +421,19 @@ body.touch.in-game.ring-on .ring{display:block}
   touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .ring button:active{background:rgba(47,227,208,.25)}
 body.touch.in-game.ring-on .pads{display:none!important}
+/* v2.80 일시정지 · 설정 · 보상 창이 떠 있으면 스킬 버튼과 아래 버튼 줄을 숨긴다 (창 위에 겹쳐 보였다) */
+body.ui-cover .ring,body.ui-cover .pads{display:none!important}
+/* v2.81 조이스틱 자리 편집 */
+#stickEdit{position:fixed;inset:0;z-index:92;display:none;background:rgba(5,8,12,.72);touch-action:none}
+#stickEdit.on{display:block}
+#stickEdit .se-note{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+  font-size:12px;color:var(--fg);text-align:center;width:92vw}
+#stickEdit .se-dot{position:absolute;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;cursor:grab;border:2px dashed currentColor;background:rgba(255,255,255,.04)}
+#stickEdit .se-dot.mv{color:var(--cyan)} #stickEdit .se-dot.am{color:var(--warn)}
+#stickEdit .se-btns{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px}
+#stickEdit .se-btns button{padding:10px 16px;font:inherit;font-size:12px;border-radius:7px;cursor:pointer;background:rgba(8,12,17,.9);color:var(--dim);border:1px solid var(--line)}
+#stickEdit .se-btns button.go{color:var(--cyan);border-color:var(--cyan)}
 body.touch.in-game .pads{display:flex;position:fixed;z-index:45;
   left:50%;transform:translateX(-50%);
   bottom:calc(8px + env(safe-area-inset-bottom,0px));
@@ -471,7 +485,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.79</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.82</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -543,9 +557,9 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   </div>
   <div id="reward">
     <div class="box">
-      <button id="rwReroll">새로고침</button>
       <div class="hd" id="rwHd"></div>
       <div class="row" id="rwRow"></div>
+      <button id="rwReroll">새로고침</button>
       <div class="own" id="rwOwn"></div>
     </div>
   </div>
@@ -704,7 +718,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -1145,8 +1159,11 @@ const keys={}; let mouse={x:600,y:380};
    화면 좌표(px)로 받아서 세로 눌림(SQUASH)을 보정해 월드 방향으로 바꾼다 */
 const TOUCH_DEAD=14, TOUCH_MAX=70;
 /* v2.79 고정 조이스틱 — 켜면 이동·패링 조이스틱 중심이 화면 아래 양쪽 고정 자리에 있다 (좌우 바꾸기도 따른다) */
-const FIX_L=[130,412], FIX_R=[870,412];
-const fixCenter=side=>((side==='move')!==!!OPT.swapSticks)?FIX_L:FIX_R;
+/* v2.81 기본 자리를 화면 끝 쪽으로 옮기고, 직접 옮긴 자리(posMove / posAim)가 있으면 그걸 쓴다 */
+const FIX_L=[92,440], FIX_R=[908,440];
+const fixCenter=side=>{ const c=side==='move'?OPT.posMove:OPT.posAim; if(c&&c.length===2) return c;
+  return ((side==='move')!==!!OPT.swapSticks)?FIX_L:FIX_R; };
+const isFixed=side=>side==='move'?!!OPT.fixMove:!!OPT.fixAim;
 const stick={move:null, aim:null};   // {id, ox, oy, x, y, dx, dy, len}
 let touchMode=false;
 
@@ -1414,7 +1431,7 @@ gcv.addEventListener('touchstart',e=>{
     const [x,y]=tPos(t);
     const side = ((x < W/2) !== !!OPT.swapSticks) ? 'move' : 'aim';   // v2.63 좌우 바꾸기
     if(stick[side]) continue;                      // 같은 쪽은 먼저 닿은 손가락 우선
-    if(OPT.fixedSticks){ const c=fixCenter(side); stick[side]={id:t.identifier, ox:c[0], oy:c[1], x, y, dx:0, dy:0, len:0}; setStick(stick[side],x,y); }   // v2.79
+    if(isFixed(side)){ /* v2.81 이동 · 패링 따로 */ const c=fixCenter(side); stick[side]={id:t.identifier, ox:c[0], oy:c[1], x, y, dx:0, dy:0, len:0}; setStick(stick[side],x,y); }   // v2.79
     else stick[side]={id:t.identifier, ox:x, oy:y, x, y, dx:0, dy:0, len:0};
   }
 },{passive:false});
@@ -2578,8 +2595,8 @@ function drawDmgNums(){
 }
 function drawSticks(){
   /* v2.79 고정 조이스틱은 손을 안 대고 있어도 자리를 보여 준다 */
-  if(OPT.fixedSticks&&touchMode) [['move',C.cyan,'이동'],['aim',C.warn,'패링']].forEach(([k,col,lb])=>{
-    if(stick[k]) return; const c=fixCenter(k);
+  if(touchMode) [['move',C.cyan,'이동'],['aim',C.warn,'패링']].forEach(([k,col,lb])=>{
+    if(stick[k]||!isFixed(k)) return; const c=fixCenter(k);
     ctx.save(); ctx.globalAlpha=.22; ctx.strokeStyle=col; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(c[0],c[1],TOUCH_MAX,0,TAU); ctx.stroke();
     ctx.globalAlpha=.3; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(c[0],c[1],16,0,TAU); ctx.fill();
@@ -2766,6 +2783,7 @@ function go(id){
   $('#modal').classList.remove('on'); $('#pause').classList.remove('on'); paused=false;
   if(id!=='game') unlockMouse();   // v2.12
   if(id!=='game') $('#tutBar').classList.remove('on');   // v2.60
+  document.body.classList.remove('ui-cover');   // v2.80
   if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs();
     if(!OPT.tutSeen) openModal('tutorial'); }   // v3.4 처음 HUB에 들어오면 튜토리얼
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
@@ -3056,6 +3074,9 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.82',['웨이브 보상 창의 새로고침 버튼이 3번 카드를 가리던 문제 — 카드 아래 가운데로 옮김']],
+ ['2.81',['조이스틱 고정을 이동 · 패링 따로 켜고 끄기','고정 조이스틱 기본 자리를 화면 끝 쪽으로','조이스틱 자리 편집 — 설정에서 원을 끌어 원하는 자리로 (스킬 버튼도 따라감)']],
+ ['2.80',['일시정지 · 설정 · 보상 창 위에 폰 스킬 버튼이 겹쳐 보이던 문제 수정']],
  ['2.79',['폰 조이스틱 고정 설정 — 이동 · 패링 조이스틱을 화면 아래 양쪽 고정 자리에 (손을 안 대도 자리 표시)','폰 스킬 버튼을 패링 조이스틱 옆(F · Q · R 둥근 버튼)에 둘 수 있는 설정 — 켜면 아래 버튼 줄은 숨김','둘 다 설정 → 조작에서 켜고 끔']],
  ['2.78',['폰에서 이동하려고 왼쪽 아래를 누르면 패링 버튼이 눌려 멈추던 문제 수정 — 아래 버튼 줄을 가운데로 좁혀 양쪽 구석을 비움','결과 화면이 낮은 화면에서 버튼에 가려지던 문제 수정 — 촘촘하게, 넘치면 스크롤','기기에 기억된 비밀번호가 계정과 다르면 계속 저장 실패만 하던 문제 — 로그인을 풀고 다시 입력하게 안내']],
  ['2.77',['웨이브 보상 창 "하나를 고르세요" 옆의 "1 2 3" 표시 제거']],
@@ -3489,7 +3510,8 @@ function openModal(kind){
               .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링'],
                 ['버튼 위치 (폰)','padPos',({bottom:'아래',top:'위',right:'오른쪽',left:'왼쪽'})[OPT.padPos]||'아래'],
                 ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔'],
-                ['조이스틱 고정 (폰)','fixedSticks',OPT.fixedSticks?'켬 · 아래 양쪽 고정':'끔 · 누른 곳에서 시작'],
+                ['이동 조이스틱 고정 (폰)','fixMove',OPT.fixMove?'켬 · 정해진 자리':'끔 · 누른 곳에서 시작'],
+                ['패링 조이스틱 고정 (폰)','fixAim',OPT.fixAim?'켬 · 정해진 자리':'끔 · 누른 곳에서 시작'],
                 ['스킬 버튼 위치 (폰)','skillRing',OPT.skillRing?'패링 조이스틱 옆':'아래 버튼 줄']]:[]);   // v2.79   // v2.63   // v2.42 · v2.49
   /* v2.68 ⑦ 설정을 탭으로 — 게임 · 조작 · 소리 · 계정 */
   const R2=ks=>ks.map(k=>rows.find(r=>r[1]===k)).filter(Boolean).map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('');
@@ -3503,7 +3525,8 @@ function openModal(kind){
     '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+(bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'');
   const acct='<div class="opt-row opt-tg" data-cloud="1"><span>계정</span><i>'+(getSession()?escH(getSession().name)+' · 로그아웃':'로그인 안 됨 · 로그인')+'</i></div>'+
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
-  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixedSticks','skillRing','padPos','swapSticks'])+phoneDesc+keyRows
+  const stickEditRow=isTouchDev()?'<div class="opt-row opt-tg" data-stickedit="1"><span>조이스틱 자리 편집 (폰)</span><i>'+((OPT.posMove||OPT.posAim)?'직접 지정함 · ':'')+'끌어서 옮기기</i></div>':'';   // v2.81
+  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixMove','fixAim'])+stickEditRow+R2(['skillRing','padPos','swapSticks'])+phoneDesc+keyRows
            : optTab==='sound'? R2(['vol','bgm'])
            : optTab==='acct'? acct
            : R2(['shake','lowfx','cb','inputBuf','dmgNum'])+fsRow;
@@ -3516,6 +3539,7 @@ $('#modalBox').addEventListener('click',e=>{
   const kb=e.target.closest('[data-bind]');
   const fs=e.target.closest('[data-fs]');
   if(fs){ toggleFullscreen(); setTimeout(openModal,150); sfx('ui'); return; }
+  if(e.target.closest('[data-stickedit]')){ sfx('ui'); $('#modal').classList.remove('on'); openStickEdit(); return; }   // v2.81
   if(e.target.closest('[data-cloud]')){ sfx('ui');   // v2.58 계정 — 로그아웃 / 로그인
     if(getSession()) askConfirm('로그아웃할까요?','지금 진행 상황을 서버에 저장한 뒤, 이 기기에서 계정 연결을 풀어요. 다시 시작할 때 닉네임·비밀번호를 입력해요.','로그아웃',
       async()=>{ await cloudAutoSave(); clearSession(); offlineOK=false; $('#modal').classList.remove('on'); go('title'); });
@@ -3720,6 +3744,35 @@ const TOGS=[{k:'bounce',on:'충돌: 반사',off:'충돌: 소멸'},
   });
 })();
 /* v2.63 폰 버튼 위치 적용 */
+/* v2.81 예전 한 개짜리 조이스틱 고정 설정은 둘 다 켠 것으로 옮긴다 */
+if(OPT.fixedSticks){ OPT.fixMove=1; OPT.fixAim=1; OPT.fixedSticks=0; }
+/* v2.81 조이스틱 자리 편집 — 게임 화면 위에서 두 원을 끌어 옮기고 완료하면 저장 */
+function openStickEdit(){
+  let box=document.getElementById('stickEdit');
+  if(!box){ box=document.createElement('div'); box.id='stickEdit';
+    box.innerHTML='<div class="se-note">원을 끌어서 조이스틱 자리를 옮기세요 · 스킬 버튼은 패링 조이스틱을 따라가요</div>'+
+      '<div class="se-dot mv" data-k="move">이동</div><div class="se-dot am" data-k="aim">패링</div>'+
+      '<div class="se-btns"><button id="seReset">기본 자리</button><button id="seDone" class="go">완료</button></div>';
+    document.body.appendChild(box);
+    const st=box._st={drag:null,pos:null,fr:null,sc:1};
+    st.place=()=>box.querySelectorAll('.se-dot').forEach(d=>{ const c=st.pos[d.dataset.k];
+      d.style.width=d.style.height=(TOUCH_MAX*2*st.sc)+'px'; d.style.left=(st.fr.left+c[0]*st.sc)+'px'; d.style.top=(st.fr.top+c[1]*st.sc)+'px'; });
+    box.querySelectorAll('.se-dot').forEach(d=>d.addEventListener('pointerdown',e=>{ st.drag=d.dataset.k; try{ d.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); }));
+    box.addEventListener('pointermove',e=>{ if(!st.drag) return;
+      const x=clamp((e.clientX-st.fr.left)/st.sc, TOUCH_MAX+6, W-TOUCH_MAX-6), y=clamp((e.clientY-st.fr.top)/st.sc, TOUCH_MAX+40, H-TOUCH_MAX-6);
+      st.pos[st.drag]=[Math.round(x),Math.round(y)]; st.place(); });
+    const end=()=>{ st.drag=null; }; box.addEventListener('pointerup',end); box.addEventListener('pointercancel',end);
+    box.querySelector('#seReset').addEventListener('click',()=>{ OPT.posMove=null; OPT.posAim=null; st.pos={move:fixCenter('move').slice(),aim:fixCenter('aim').slice()}; st.place(); sfx('ui'); });
+    box.querySelector('#seDone').addEventListener('click',()=>{
+      OPT.posMove=null; OPT.posAim=null; const dm=fixCenter('move'), da=fixCenter('aim');
+      OPT.posMove=(st.pos.move[0]!==dm[0]||st.pos.move[1]!==dm[1])?st.pos.move:null;
+      OPT.posAim=(st.pos.aim[0]!==da[0]||st.pos.aim[1]!==da[1])?st.pos.aim:null;
+      save(); ringKey=''; box.classList.remove('on'); sfx('ui'); optTab='ctrl'; openModal(); });
+  }
+  const st=box._st; st.fr=$('#frame').getBoundingClientRect(); st.sc=st.fr.width/W;
+  st.pos={move:fixCenter('move').slice(), aim:fixCenter('aim').slice()}; st.drag=null;
+  st.place(); box.classList.add('on');
+}
 function applyPadPos(){ ['top','right','left'].forEach(p=>document.body.classList.toggle('pads-'+p,OPT.padPos===p));
   document.body.classList.toggle('ring-on',!!OPT.skillRing); }   // v2.79
 function syncUI(){
@@ -3814,6 +3867,8 @@ function loop(ts){
     try{ update(dt); }catch(e){ reportErr('update',e); }
     try{ render(); }catch(e){ reportErr('render',e); }
     if(OPT.skillRing&&touchMode) placeRing();   // v2.79
+    { const cover=paused||$('#modal').classList.contains('on')||$('#confirm').classList.contains('on')||(run&&run.phase==='reward');
+      if(cover!==document.body.classList.contains('ui-cover')) document.body.classList.toggle('ui-cover',cover); }   // v2.80
     /* 멈춰 있는데 메뉴도 창도 안 보이면 일시정지 메뉴를 다시 띄운다 */
     if(paused&&!$('#pause').classList.contains('on')&&!$('#modal').classList.contains('on')&&!$('#confirm').classList.contains('on'))
       $('#pause').classList.add('on');
