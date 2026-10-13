@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.01</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.02</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1105,28 +1105,31 @@ const BOSS_PATTERNS=[
  {n:'TRAP',    d:'양쪽 우회로 가두고 정면 고속 한 발',
   specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.55,fast:0.9}]},
  /* v2.62 추가 */
- {n:'CROSS',   d:'넓게 벌어진 4발 — 자리를 옮겨야 한다',
+ {late:1, n:'CROSS',   d:'넓게 벌어진 4발 — 자리를 옮겨야 한다',
   specs:[{t:0,ang:-1.15},{t:0,ang:-0.4},{t:0,ang:0.4},{t:0,ang:1.15}]},
- {n:'SHELL VOLLEY', d:'장갑탄 2발 시차 — 각각 패링 2번',
+ {late:1, n:'SHELL VOLLEY', d:'장갑탄 2발 시차 — 각각 패링 2번',
   specs:[{t:0,heavy:1,ang:-0.28},{t:0.55,heavy:1,ang:0.28}]},
- {n:'FEINT RAIN', d:'느리게 오다 갑자기 빨라지는 3발',
+ {late:1, n:'FEINT RAIN', d:'느리게 오다 갑자기 빨라지는 3발',
   specs:[{t:0,feint:1,ang:-0.3},{t:0.25,feint:1},{t:0.5,feint:1,ang:0.3}]},
- {n:'ORBIT CAGE', d:'양쪽에서 두 번 감싸는 우회탄 4발',
+ {late:1, n:'ORBIT CAGE', d:'양쪽에서 두 번 감싸는 우회탄 4발',
   specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.6,orbit:1,odir:1},{t:0.6,orbit:1,odir:-1}]}
 ];
 /* 체력 50% 이하 2페이즈 전용 */
 const BOSS_P2S=[
  {n:'OVERDRIVE', d:'고속 + 우회 혼합', specs:[{t:0,fast:0.8},{t:0.5,orbit:1},{t:1.0,fast:0.8}]},
  /* v2.62 2페이즈 전용 추가 */
- {n:'MELTDOWN',  d:'고속 3연사 뒤 장갑탄', specs:[{t:0,fast:0.85,ang:-0.22},{t:0.22,fast:0.85},{t:0.44,fast:0.85,ang:0.22},{t:0.9,heavy:1}]},
- {n:'TEMPEST',   d:'우회 + 페인트 + 고속이 한꺼번에', specs:[{t:0,orbit:1,odir:1},{t:0.15,feint:1},{t:0.3,orbit:1,odir:-1},{t:0.7,fast:0.9}]}
+ {late:1, n:'MELTDOWN',  d:'고속 3연사 뒤 장갑탄', specs:[{t:0,fast:0.85,ang:-0.22},{t:0.22,fast:0.85},{t:0.44,fast:0.85,ang:0.22},{t:0.9,heavy:1}]},
+ {late:1, n:'TEMPEST',   d:'우회 + 페인트 + 고속이 한꺼번에', specs:[{t:0,orbit:1,odir:1},{t:0.15,feint:1},{t:0.3,orbit:1,odir:-1},{t:0.7,fast:0.9}]}
 ];
 function pickPattern(e){
   if(e.grade==='boss'){
-    if(e.p2&&Math.random()<0.45) return BOSS_P2S[Math.floor(Math.random()*BOSS_P2S.length)];   // v2.62
-    if(e.variant==='phantom'){ const ph=BOSS_PATTERNS.filter(p=>p.specs.some(sp=>sp.feint||sp.orbit)); return ph[Math.floor(Math.random()*ph.length)]; }   // v2.68
-    return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)]
-                              : BOSS_PATTERNS[Math.floor(Math.random()*BOSS_PATTERNS.length)];
+    /* v3.02 노멀 1사이클에서는 나중에 추가한 어려운 보스 패턴(late)을 빼고, 2사이클부터 섞는다. 하드는 처음부터 전부 */
+    const early=run.mode!=='hard'&&run.cycle<2, ok=p=>!(early&&p.late);
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    const p2=BOSS_P2S.filter(ok), base=BOSS_PATTERNS.filter(ok);
+    if(e.p2&&p2.length&&Math.random()<0.45) return pick(p2);   // v2.62
+    if(e.variant==='phantom'){ const ph=base.filter(p=>p.specs.some(sp=>sp.feint||sp.orbit)); return pick(ph.length?ph:base); }   // v2.68
+    return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)] : pick(base);
   }
   const key = G(e).pool;
   const pool = (key==='mob' && run.wave<=2) ? POOL.mobEarly : (POOL[key]||POOL.mob);
@@ -3228,6 +3231,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.02',['노멀 1사이클 보스에서는 나중에 추가한 어려운 패턴(CROSS · SHELL VOLLEY · FEINT RAIN · ORBIT CAGE · MELTDOWN · TEMPEST)이 안 나오고 2사이클부터 섞임 (하드는 처음부터 전부)']],
  ['3.01',['패링 조준이 적의 움직임을 내다보고 겨눔 — 흔들리는 적을 빗나가 뒤쪽 벽에 튕겨 돌아오던 경우 감소','R 덮어쓰기로 빼앗은 탄환이 벽·방패 뒤 적을 노려 엉뚱하게 튕기던 문제 — 각 탄환 자리에서 보이는 적을 노림','디버그 모드에서 내 탄환이 방향을 바꾼 이유를 그 자리에 표시 (재탈취 · 벽 반사 · 방패 반사 · 목표 잃음) + 노리는 적 연결선']],
  ['3.0',['화면 아래쪽 끝에서 플레이어가 HUD 글자("사이클·웨이브·시간")에 가려 안 보이던 문제 — 글자 뒤에 반투명 패널 추가',
          '게임 안 공개 랭킹(이름만으로 등록)이 아무 닉네임이나 사칭 등록할 수 있던 문제 — 로그인 계정 이름으로만 자동 등록되게 변경',
