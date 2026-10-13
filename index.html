@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.02</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.03</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1607,14 +1607,23 @@ function doParry(force){
        조준이 아래를 향해 탄환이 화면 밖으로 날아갔다 → 폰은 조준 쪽 100° 안의 적, 없으면 '보이는 가장 가까운 적'을 노린다.
        PC도 조준 방향 바로 앞(160)이 벽이면 보이는 적 쪽으로 보정한다 (벽에 맞고 튕겨 돌아오는 것 방지) */
     let tgt=byAim.length&&ang(byAim[0])<=(touchMode?100:24)*Math.PI/180?byAim[0]:null;
-    if(!tgt&&touchMode&&soft.length) tgt=soft.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
-    if(!tgt&&byAim.length&&wallBetween(P.x,P.y,P.x+Math.cos(P.face)*160,P.y+Math.sin(P.face)*160)) tgt=byAim[0];
+    /* v3.03 폰에서 조준 쪽에 적이 없을 때 '보이는 가장 가까운 적'으로 곧장 쏘면, 그 적이 내 뒤쪽일 때 탄이 나를 향해 되돌아왔다.
+       → 일단 앞(나에게서 멀어지는 쪽)으로 보내고, 잠깐 뒤에 그 적을 찾아 휘어 가게 한다 */
+    const seekTgt=(!tgt&&touchMode)?soft.filter(e=>ang(e)<=120*Math.PI/180).sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0]||null:null;   // 앞쪽 120° 안의 적만 — 내 뒤의 적은 쫓지 않는다 (쫓으면 결국 나를 지나쳐 돌아옴)
+    /* v3.03 조준 바로 앞이 벽일 때 — 예전엔 '보이는 적 아무나'(내 뒤의 적 포함)로 돌려서 탄이 나를 지나 되돌아왔다.
+       → 앞쪽 120° 안의 적만, 없으면 벽을 피한 앞쪽 빈 방향으로 */
+    let clearDir=null;
+    if(!tgt&&wallBetween(P.x,P.y,P.x+Math.cos(P.face)*160,P.y+Math.sin(P.face)*160)){
+      const fwdT=byAim.find(e=>ang(e)<=120*Math.PI/180);
+      if(fwdT) tgt=fwdT;
+      else for(const off of [0.5,-0.5,1.0,-1.0,1.45,-1.45]){ const a=P.face+off; if(!wallBetween(P.x,P.y,P.x+Math.cos(a)*200,P.y+Math.sin(a)*200)){ clearDir=a; break; } }
+    }
     /* v3.00 적은 늘 흔들리며 움직여서, 지금 위치로 쏘면 도착할 즈음엔 비껴 있다(빗나간 탄이 뒤쪽 벽에 튕겨 돌아오는 주원인).
        → 탄환이 도착할 시간만큼 앞을 내다보고 겨눈다 */
     const lead=(e,sx,sy,spd)=>{ if(!e) return null; const d=dist(sx,sy,e.x,e.y), tt=Math.min(1.2,d/Math.max(120,spd)); return [e.x+(e.vx||0)*tt, e.y+(e.vy||0)*tt]; };
     const shotSpd=Math.min((ts[0]?ts[0].spd:CFG.spd)*CFG.accel,cap());
     const lp=lead(tgt,P.x,P.y,shotSpd);
-    const mainDir=lp?Math.atan2(lp[1]-P.y,lp[0]-P.x):P.face;
+    const mainDir=lp?Math.atan2(lp[1]-P.y,lp[0]-P.x):(clearDir!=null?clearDir:P.face);
     const foes=[tgt].concat(byAim.filter(e=>e!==tgt&&ang(e)<=70*Math.PI/180)).filter(Boolean);
     let maxRet=0;
     const echoes=[];
@@ -1624,7 +1633,9 @@ function doParry(force){
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
       t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       t.htg=(i===0?tgt:foes[i])||null;   // v2.86 이 탄환이 노리는 적을 기억
-      if(i===0) t.dir=mainDir;
+      if(i===0){ t.dir=mainDir;
+        if(seekTgt){ const away=Math.hypot(t.x-P.x,t.y-P.y)>8?Math.atan2(t.y-P.y,t.x-P.x):P.face;   // v3.03 앞으로 → 적 찾기
+          t.dir=angDiff(away,P.face)<Math.PI*0.6?P.face:away; t.htg=seekTgt; t.seekT=0.22; t.seekLeft=1.6; } }
       else if(foes[i]){ const q=lead(foes[i],P.x,P.y,shotSpd); t.dir=Math.atan2(q[1]-P.y,q[0]-P.x); }   // 추가 탄환은 조준 쪽 다른 적에게 (v2.84)
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
       maxRet=Math.max(maxRet,t.returns);
@@ -2092,7 +2103,15 @@ function update(dt){
          ② 시간이 지나면 유도가 꺼지므로 궤도에 갇히지 않는다
          ③ 가까워질수록 더 세게 꺾어서 스치지 않고 맞힌다 */
       if(b.homeT===undefined) b.homeT=CFG.homeTime;
-      if(CFG.homing>0&&ens.length&&b.homeT>0){
+      /* v3.03 적 찾기 — 앞으로 잠깐(0.22초) 날아간 뒤 노린 적 쪽으로 휘어 간다 (유도 강화와 별개, 폰 자동 조준용) */
+      if(b.seekLeft>0){
+        if(b.seekT>0) b.seekT-=dt;
+        else{ b.seekLeft-=dt; const e=b.htg;
+          if(e&&ens.includes(e)&&!wallBetween(b.x,b.y,e.x,e.y)){
+            const diff=norm(Math.atan2(e.y-b.y,e.x-b.x)-b.dir), lim=dt*4.5;
+            if(Math.abs(diff)>2.1){ b.seekLeft=0; } else { b.dir+=clamp(diff,-lim,lim); if(Math.abs(diff)<0.1) b.seekLeft=0; }   // 너무 뒤로 돌아야 하면 포기
+          } else { b.seekLeft=0; } } }
+      if(CFG.homing>0&&ens.length&&b.homeT>0&&!(b.seekLeft>0)){
         b.homeT-=dt;
         /* v2.86 예전엔 매 프레임 '앞쪽 108° 안에서 가장 가까운 적'으로 목표를 바꿔서, 지나가던 옆의 적에게 확 꺾였다.
            → 패링 때 노린 적을 끝까지 따라가고(뒤로 넘어가면 포기), 노린 적이 없을 때만 앞쪽 36° 안의 적을 살짝 쫓는다.
@@ -3231,6 +3250,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.03',['폰에서 패링 직후 탄이 나한테 되돌아오던 문제 — 조준 쪽에 적이 없으면 일단 앞으로 날아간 뒤 앞쪽의 가까운 적을 찾아 휘어 감 (내 뒤의 적을 노려 나를 관통하듯 돌아오던 것 — 이제 뒤쪽 적은 쫓지 않음)']],
  ['3.02',['노멀 1사이클 보스에서는 나중에 추가한 어려운 패턴(CROSS · SHELL VOLLEY · FEINT RAIN · ORBIT CAGE · MELTDOWN · TEMPEST)이 안 나오고 2사이클부터 섞임 (하드는 처음부터 전부)']],
  ['3.01',['패링 조준이 적의 움직임을 내다보고 겨눔 — 흔들리는 적을 빗나가 뒤쪽 벽에 튕겨 돌아오던 경우 감소','R 덮어쓰기로 빼앗은 탄환이 벽·방패 뒤 적을 노려 엉뚱하게 튕기던 문제 — 각 탄환 자리에서 보이는 적을 노림','디버그 모드에서 내 탄환이 방향을 바꾼 이유를 그 자리에 표시 (재탈취 · 벽 반사 · 방패 반사 · 목표 잃음) + 노리는 적 연결선']],
  ['3.0',['화면 아래쪽 끝에서 플레이어가 HUD 글자("사이클·웨이브·시간")에 가려 안 보이던 문제 — 글자 뒤에 반투명 패널 추가',
