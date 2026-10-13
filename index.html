@@ -412,6 +412,14 @@ body:not(.in-game) .pads{display:none}
 @media (min-width:760px) and (pointer:fine){ .pads{display:none} }
 /* v2.33 터치 기기에서는 버튼을 화면 위에 띄운다.
    전체화면에서는 프레임이 화면을 다 채워서, 프레임 아래에 있던 버튼이 화면 밖으로 밀려 안 눌렸다 */
+/* v2.79 패링 조이스틱 옆 스킬 버튼 — 켜면 아래 버튼 줄은 숨긴다 */
+.ring{display:none;position:fixed;inset:0;pointer-events:none;z-index:46}
+body.touch.in-game.ring-on .ring{display:block}
+.ring button{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;pointer-events:auto;
+  font:inherit;font-size:14px;font-weight:700;background:rgba(8,12,17,.72);color:var(--cyan);border:1px solid var(--cyan);
+  touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.ring button:active{background:rgba(47,227,208,.25)}
+body.touch.in-game.ring-on .pads{display:none!important}
 body.touch.in-game .pads{display:flex;position:fixed;z-index:45;
   left:50%;transform:translateX(-50%);
   bottom:calc(8px + env(safe-area-inset-bottom,0px));
@@ -463,7 +471,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.78</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.79</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -586,6 +594,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <p>가로로 해야 게임 화면이 제대로 보입니다.<br>회전 잠금이 켜져 있으면 풀어주세요.</p>
   <button id="goFs">전체화면으로 보기</button>
 </div>
+<div class="ring" id="skillRing"><button id="rgF">F</button><button id="rgQ">Q</button><button id="rgR">R</button></div>
 <div class="pads">
   <button id="padParry">E · 패링</button>
   <button id="padSkill">F · F 스킬</button>
@@ -695,7 +704,7 @@ function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(MET
 let sel=0;
 
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -1135,6 +1144,9 @@ const keys={}; let mouse={x:600,y:380};
 /* v2.3 모바일 — 왼쪽 절반 드래그: 이동 / 오른쪽 절반 드래그: 조준.
    화면 좌표(px)로 받아서 세로 눌림(SQUASH)을 보정해 월드 방향으로 바꾼다 */
 const TOUCH_DEAD=14, TOUCH_MAX=70;
+/* v2.79 고정 조이스틱 — 켜면 이동·패링 조이스틱 중심이 화면 아래 양쪽 고정 자리에 있다 (좌우 바꾸기도 따른다) */
+const FIX_L=[130,412], FIX_R=[870,412];
+const fixCenter=side=>((side==='move')!==!!OPT.swapSticks)?FIX_L:FIX_R;
 const stick={move:null, aim:null};   // {id, ox, oy, x, y, dx, dy, len}
 let touchMode=false;
 
@@ -1402,7 +1414,8 @@ gcv.addEventListener('touchstart',e=>{
     const [x,y]=tPos(t);
     const side = ((x < W/2) !== !!OPT.swapSticks) ? 'move' : 'aim';   // v2.63 좌우 바꾸기
     if(stick[side]) continue;                      // 같은 쪽은 먼저 닿은 손가락 우선
-    stick[side]={id:t.identifier, ox:x, oy:y, x, y, dx:0, dy:0, len:0};
+    if(OPT.fixedSticks){ const c=fixCenter(side); stick[side]={id:t.identifier, ox:c[0], oy:c[1], x, y, dx:0, dy:0, len:0}; setStick(stick[side],x,y); }   // v2.79
+    else stick[side]={id:t.identifier, ox:x, oy:y, x, y, dx:0, dy:0, len:0};
   }
 },{passive:false});
 gcv.addEventListener('touchmove',e=>{
@@ -1446,6 +1459,17 @@ padBind('padParry',doParry);
 padBind('padSkill',doSkill);
 padBind('padWall',doQ);
 padBind('padR',doR);
+padBind('rgF',doSkill); padBind('rgQ',doQ); padBind('rgR',doR);   // v2.79 패링 조이스틱 옆 스킬 버튼
+/* v2.79 스킬 버튼을 패링 조이스틱 자리 둘레(왼쪽 · 왼쪽 위 · 위)에 놓는다 */
+let ringKey='';
+function placeRing(){
+  const r=gcv.getBoundingClientRect(), sc=r.width/W, c=fixCenter('aim');
+  const cx=r.left+c[0]*sc, cy=r.top+c[1]*sc, rad=(TOUCH_MAX+44)*sc, right=c[0]>W/2;
+  const key=[cx,cy,rad,right].map(v=>Math.round(+v)).join(','); if(key===ringKey) return; ringKey=key;
+  const angs=right?[180,228,276]:[0,-48,-96];
+  ['rgF','rgQ','rgR'].forEach((id,i)=>{ const a=angs[i]*Math.PI/180, el=document.getElementById(id); if(!el) return;
+    el.style.left=(cx+Math.cos(a)*rad)+'px'; el.style.top=(cy+Math.sin(a)*rad)+'px'; });
+}
 $('#topPause').onclick=()=>{ if(screen==='game')togglePause(); };
 
 /* v2.42 입력 여유 — 점프 버퍼·코요테 타임처럼 패링 타이밍에 여유를 준다.
@@ -2553,6 +2577,14 @@ function drawDmgNums(){
   ctx.restore();
 }
 function drawSticks(){
+  /* v2.79 고정 조이스틱은 손을 안 대고 있어도 자리를 보여 준다 */
+  if(OPT.fixedSticks&&touchMode) [['move',C.cyan,'이동'],['aim',C.warn,'패링']].forEach(([k,col,lb])=>{
+    if(stick[k]) return; const c=fixCenter(k);
+    ctx.save(); ctx.globalAlpha=.22; ctx.strokeStyle=col; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(c[0],c[1],TOUCH_MAX,0,TAU); ctx.stroke();
+    ctx.globalAlpha=.3; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(c[0],c[1],16,0,TAU); ctx.fill();
+    ctx.globalAlpha=.45; ctx.font='700 10px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillText(lb,c[0],c[1]-TOUCH_MAX-8);
+    ctx.restore(); });
   [['move',C.cyan],['aim',C.warn]].forEach(([k,col])=>{
     const st=stick[k]; if(!st)return;
     ctx.save(); ctx.globalAlpha=.30; ctx.strokeStyle=col; ctx.lineWidth=2;
@@ -3024,6 +3056,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.79',['폰 조이스틱 고정 설정 — 이동 · 패링 조이스틱을 화면 아래 양쪽 고정 자리에 (손을 안 대도 자리 표시)','폰 스킬 버튼을 패링 조이스틱 옆(F · Q · R 둥근 버튼)에 둘 수 있는 설정 — 켜면 아래 버튼 줄은 숨김','둘 다 설정 → 조작에서 켜고 끔']],
  ['2.78',['폰에서 이동하려고 왼쪽 아래를 누르면 패링 버튼이 눌려 멈추던 문제 수정 — 아래 버튼 줄을 가운데로 좁혀 양쪽 구석을 비움','결과 화면이 낮은 화면에서 버튼에 가려지던 문제 수정 — 촘촘하게, 넘치면 스크롤','기기에 기억된 비밀번호가 계정과 다르면 계속 저장 실패만 하던 문제 — 로그인을 풀고 다시 입력하게 안내']],
  ['2.77',['웨이브 보상 창 "하나를 고르세요" 옆의 "1 2 3" 표시 제거']],
  ['2.76',['웨이브 보상 선택 창을 전체화면 3분할 대신 화면 가운데의 작은 창으로 변경']],
@@ -3455,7 +3488,9 @@ function openModal(kind){
               ['피해 숫자','dmgNum',OPT.dmgNum?'켬':'끔']]   // v2.68
               .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링'],
                 ['버튼 위치 (폰)','padPos',({bottom:'아래',top:'위',right:'오른쪽',left:'왼쪽'})[OPT.padPos]||'아래'],
-                ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔']]:[]);   // v2.63   // v2.42 · v2.49
+                ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔'],
+                ['조이스틱 고정 (폰)','fixedSticks',OPT.fixedSticks?'켬 · 아래 양쪽 고정':'끔 · 누른 곳에서 시작'],
+                ['스킬 버튼 위치 (폰)','skillRing',OPT.skillRing?'패링 조이스틱 옆':'아래 버튼 줄']]:[]);   // v2.79   // v2.63   // v2.42 · v2.49
   /* v2.68 ⑦ 설정을 탭으로 — 게임 · 조작 · 소리 · 계정 */
   const R2=ks=>ks.map(k=>rows.find(r=>r[1]===k)).filter(Boolean).map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('');
   const tabH='<div class="optTabs">'+[['game','게임'],['ctrl','조작'],['sound','소리'],['acct','계정']].map(([k,n])=>'<button data-otab="'+k+'" class="'+(optTab===k?'on':'')+'">'+n+'</button>').join('')+'</div>';
@@ -3468,7 +3503,7 @@ function openModal(kind){
     '<div class="opt-row opt-tg" data-bind="reset"><span>키 설정</span><i>기본값으로</i></div>'+(bindMsg?'<div style="font-size:10.5px;color:var(--red);padding:4px 0">'+bindMsg+'</div>':'');
   const acct='<div class="opt-row opt-tg" data-cloud="1"><span>계정</span><i>'+(getSession()?escH(getSession().name)+' · 로그아웃':'로그인 안 됨 · 로그인')+'</i></div>'+
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
-  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','padPos','swapSticks'])+phoneDesc+keyRows
+  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixedSticks','skillRing','padPos','swapSticks'])+phoneDesc+keyRows
            : optTab==='sound'? R2(['vol','bgm'])
            : optTab==='acct'? acct
            : R2(['shake','lowfx','cb','inputBuf','dmgNum'])+fsRow;
@@ -3497,6 +3532,7 @@ $('#modalBox').addEventListener('click',e=>{
     else if(k==='padPos'){ const L=['bottom','top','right','left']; OPT.padPos=L[(L.indexOf(OPT.padPos)+1)%L.length]; applyPadPos(); }   // v2.63
     else if(k==='inputBuf'){ const L=[0,0.08,0.12,0.18]; OPT.inputBuf=L[(L.indexOf(OPT.inputBuf)+1)%L.length]; }   // v2.42
     else OPT[k]=OPT[k]?0:1;
+    if(k==='skillRing'||k==='swapSticks'){ applyPadPos(); ringKey=''; }   // v2.79
     if(k==='lockMouse'&&!OPT.lockMouse) unlockMouse();
     save(); openModal(); sfx('ui'); return; }
   if(e.target.id==='tutClose'){ OPT.tutSeen=1; save(); $('#modal').classList.remove('on'); return; }
@@ -3684,7 +3720,8 @@ const TOGS=[{k:'bounce',on:'충돌: 반사',off:'충돌: 소멸'},
   });
 })();
 /* v2.63 폰 버튼 위치 적용 */
-function applyPadPos(){ ['top','right','left'].forEach(p=>document.body.classList.toggle('pads-'+p,OPT.padPos===p)); }
+function applyPadPos(){ ['top','right','left'].forEach(p=>document.body.classList.toggle('pads-'+p,OPT.padPos===p));
+  document.body.classList.toggle('ring-on',!!OPT.skillRing); }   // v2.79
 function syncUI(){
   applyPadPos(); syncModeUI();   // v2.68
   SPECS.forEach(sp=>{
@@ -3776,6 +3813,7 @@ function loop(ts){
   if(screen==='game'&&run){
     try{ update(dt); }catch(e){ reportErr('update',e); }
     try{ render(); }catch(e){ reportErr('render',e); }
+    if(OPT.skillRing&&touchMode) placeRing();   // v2.79
     /* 멈춰 있는데 메뉴도 창도 안 보이면 일시정지 메뉴를 다시 띄운다 */
     if(paused&&!$('#pause').classList.contains('on')&&!$('#modal').classList.contains('on')&&!$('#confirm').classList.contains('on'))
       $('#pause').classList.add('on');
