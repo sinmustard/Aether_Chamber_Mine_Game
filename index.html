@@ -33,13 +33,13 @@ body{background:var(--bg);color:var(--fg);
    프레임이 가운데 작게 남고 캡션·여백이 그대로 보여서, 전체화면 상태를 body.fullscreen으로 감지해 별도 스타일을 준다 */
 body.fullscreen,body.fsfake{padding:0;gap:0;background:#000}
 body.fullscreen #frame,body.fsfake #frame{max-width:none;border-radius:0;border:0;
-  width:min(100vw, calc(100vh * 1000 / 560));
+  width:100vw;   /* v2.84 가로가 긴 화면은 양옆 검은 띠 없이 꽉 채운다 (넓어진 만큼 전장 양옆을 더 보여 줌) */
   height:min(100vh, calc(100vw * 560 / 1000));}
 body.fullscreen .caption,body.fullscreen #debugSpawn,body.fullscreen details.dev{display:none}
 /* v2.59 아이폰은 전체화면 API가 없어서, 주소창을 뺀 실제 보이는 높이(dvh)에 맞춰 꽉 채우고 바깥 글은 숨긴다 */
 body.fsfake{min-height:100dvh;justify-content:center;
   padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
-body.fsfake #frame{width:min(100vw, calc(100dvh * 1000 / 560));height:min(100dvh, calc(100vw * 560 / 1000))}
+body.fsfake #frame{width:100vw;height:min(100dvh, calc(100vw * 560 / 1000))}
 body.fsfake .caption,body.fsfake #debugSpawn,body.fsfake details.dev,body.fsfake > .note{display:none}
 #iosTip{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:85;display:none;
   max-width:92vw;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;background:rgba(8,12,17,.95);
@@ -485,7 +485,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.83</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.85</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -914,6 +914,11 @@ const CFG={ homeTime:1.4, rangeM:3.2, fov:55, whiff:1.3, dwell:0.35, spd:240, se
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:85, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
+/* v2.84 화면 맞춤 — VW: 실제로 그리는 가로 폭(화면이 넓으면 1000보다 커짐), OFX: 가운데 정렬용 왼쪽 여백, DPR: 기기 해상도 배율.
+   예전엔 캔버스가 1000×560 그대로라 큰 화면에서 흐릿했고, 전체화면도 비율 때문에 양옆이 검게 남았다 */
+let VW=W, OFX=0, DPR=1;
+/* v2.85 넓은 화면은 양옆을 비우지 않고 전장을 확대해서 가로를 꽉 채운다(ZK). 위아래가 넘치면 카메라가 플레이어를 따라간다(CAMY) */
+let ZK=1, CAMY=0;
 const BODY_SQ=0.95;   // v2.8 캐릭터 몸통 세로 비율 (바닥 그림자는 SQUASH 유지)
 const WORLD={w:1000,h:760};
 /* v2.66 가장자리 압박 — 구석에 박혀 앞만 보고 패링하는 플레이를 막는다.
@@ -1167,9 +1172,11 @@ const TOUCH_DEAD=14, TOUCH_MAX=70;
 /* v2.79 고정 조이스틱 — 켜면 이동·패링 조이스틱 중심이 화면 아래 양쪽 고정 자리에 있다 (좌우 바꾸기도 따른다) */
 /* v2.81 기본 자리를 화면 끝 쪽으로 옮기고, 직접 옮긴 자리(posMove / posAim)가 있으면 그걸 쓴다 */
 const FIX_L=[92,440], FIX_R=[908,440];
+const fixL=()=>[Math.round(115-OFX),445], fixR=()=>[Math.round(W+OFX-115),445];   // v2.85 브롤스타즈처럼 화면 양쪽 아래 구석
 const fixCenter=side=>{ const c=side==='move'?OPT.posMove:OPT.posAim; if(c&&c.length===2) return c;
-  return ((side==='move')!==!!OPT.swapSticks)?FIX_L:FIX_R; };
+  return ((side==='move')!==!!OPT.swapSticks)?fixL():fixR(); };
 const isFixed=side=>side==='move'?!!OPT.fixMove:!!OPT.fixAim;
+const fixCenterS=side=>{ const c=fixCenter(side); return [c[0]+OFX,c[1]]; };   // v2.85 화면 좌표
 const stick={move:null, aim:null};   // {id, ox, oy, x, y, dx, dy, len}
 let touchMode=false;
 
@@ -1410,19 +1417,19 @@ gcv.addEventListener('mousemove',e=>{
   if(locked()){
     /* v2.63 한 번에 비정상적으로 큰 움직임은 무시 (크롬 잠금 모드에서 가끔 들어오는 튀는 값) */
     if(Math.abs(e.movementX)>innerWidth*0.3||Math.abs(e.movementY)>innerHeight*0.3) return;
-    mouse.x=clamp(mouse.x+e.movementX*(W/r.width), 0, WORLD.w);
-    mouse.y=clamp(mouse.y+e.movementY*(H/r.height)/SQUASH, 0, WORLD.h);
+    mouse.x=clamp(mouse.x+e.movementX*(VW/r.width)/ZK, 0, WORLD.w);
+    mouse.y=clamp(mouse.y+e.movementY*(H/r.height)/ZK/SQUASH, 0, WORLD.h);
     return;
   }
-  mouse.x=(e.clientX-r.left)*(W/r.width);
-  mouse.y=(((e.clientY-r.top)*(H/r.height))-OY)/SQUASH;
+  mouse.x=(e.clientX-r.left)*(VW/r.width)/ZK;   // v2.85
+  mouse.y=((((e.clientY-r.top)*(H/r.height))-CAMY)/ZK-OY)/SQUASH;   // v2.85
 });
 gcv.addEventListener('mousedown',e=>{e.preventDefault(); if(screen!=='game')return; lockMouse(); doParry();});
 document.addEventListener('pointerlockchange',()=>{ document.body.classList.toggle('locked',locked()); });
 /* ---- v2.3 터치 조작 ---- */
 function tPos(t){
   const r=gcv.getBoundingClientRect();
-  return [ (t.clientX-r.left)*(W/r.width), (t.clientY-r.top)*(H/r.height) ];
+  return [ (t.clientX-r.left)*(VW/r.width), (t.clientY-r.top)*(H/r.height) ];   // v2.85 화면 좌표
 }
 function setStick(st,x,y){
   const dx=x-st.ox, dy=(y-st.oy)/SQUASH;          // 화면 → 월드 방향 보정
@@ -1435,9 +1442,9 @@ gcv.addEventListener('touchstart',e=>{
   e.preventDefault(); touchMode=true; document.body.classList.add('touch');
   for(const t of e.changedTouches){
     const [x,y]=tPos(t);
-    const side = ((x < W/2) !== !!OPT.swapSticks) ? 'move' : 'aim';   // v2.63 좌우 바꾸기
+    const side = ((x < VW/2) !== !!OPT.swapSticks) ? 'move' : 'aim';   // v2.63 좌우 바꾸기
     if(stick[side]) continue;                      // 같은 쪽은 먼저 닿은 손가락 우선
-    if(isFixed(side)){ /* v2.81 이동 · 패링 따로 */ const c=fixCenter(side); stick[side]={id:t.identifier, ox:c[0], oy:c[1], x, y, dx:0, dy:0, len:0}; setStick(stick[side],x,y); }   // v2.79
+    if(isFixed(side)){ /* v2.81 이동 · 패링 따로 */ const c=fixCenterS(side); stick[side]={id:t.identifier, ox:c[0], oy:c[1], x, y, dx:0, dy:0, len:0}; setStick(stick[side],x,y); }   // v2.79
     else stick[side]={id:t.identifier, ox:x, oy:y, x, y, dx:0, dy:0, len:0};
   }
 },{passive:false});
@@ -1486,8 +1493,8 @@ padBind('rgF',doSkill); padBind('rgQ',doQ); padBind('rgR',doR);   // v2.79 패�
 /* v2.79 스킬 버튼을 패링 조이스틱 자리 둘레(왼쪽 · 왼쪽 위 · 위)에 놓는다 */
 let ringKey='';
 function placeRing(){
-  const r=gcv.getBoundingClientRect(), sc=r.width/W, c=fixCenter('aim');
-  const cx=r.left+c[0]*sc, cy=r.top+c[1]*sc, rad=(TOUCH_MAX+44)*sc, right=c[0]>W/2;
+  const r=gcv.getBoundingClientRect(), sc=r.width/VW, c=fixCenterS('aim');   // v2.85
+  const cx=r.left+c[0]*sc, cy=r.top+c[1]*sc, rad=(TOUCH_MAX+44)*sc, right=c[0]>VW/2;
   const key=[cx,cy,rad,right].map(v=>Math.round(+v)).join(','); if(key===ringKey) return; ringKey=key;
   const angs=right?[180,228,276]:[0,-48,-96];
   ['rgF','rgQ','rgR'].forEach((id,i)=>{ const a=angs[i]*Math.PI/180, el=document.getElementById(id); if(!el) return;
@@ -1554,13 +1561,15 @@ function doParry(force){
     return;
   }
   if(ts.length){
-    const all=ens.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
-    /* v1.8 방패병은 정면이 막히므로 자동 조준 대상에서 뺀다. 측면은 직접 겨눠야 한다 */
-    const soft=all.filter(e=>!G(e).shield);
-    const foes=soft.length?soft:all;
-    const tgt=soft.length?soft[0]:null;
-    const toE=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):P.face;
-    const mainDir=(tgt&&angDiff(P.face,toE)<=AIM_ASSIST*Math.PI/180)?toE:P.face;
+    /* v2.84 되돌리는 방향 — 예전엔 '가장 가까운 적'이 조준 방향에서 20° 안일 때만 그쪽, 아니면 그냥 바라보는 쪽이라
+       조준 근처에 다른 적이 있어도 엉뚱한 곳으로 날아가거나, 추가 탄환이 뒤쪽 적에게 튀었다.
+       → 조준 방향과 가장 가까운 적(24° 안)을 고르고, 추가 탄환도 조준 쪽 70° 안의 적에게만 보낸다 */
+    const ang=e=>angDiff(P.face,Math.atan2(e.y-P.y,e.x-P.x));
+    const soft=ens.filter(e=>!G(e).shield);
+    const byAim=soft.slice().sort((a,b)=>ang(a)-ang(b)||dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
+    const tgt=byAim.length&&ang(byAim[0])<=24*Math.PI/180?byAim[0]:null;
+    const mainDir=tgt?Math.atan2(tgt.y-P.y,tgt.x-P.x):P.face;
+    const foes=[tgt].concat(byAim.filter(e=>e!==tgt&&ang(e)<=70*Math.PI/180)).filter(Boolean);
     let maxRet=0;
     const echoes=[];
     ts.forEach((t,i)=>{
@@ -1569,7 +1578,7 @@ function doParry(force){
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
       t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       if(i===0) t.dir=mainDir;
-      else if(foes[i]) t.dir=Math.atan2(foes[i].y-P.y,foes[i].x-P.x);   // 추가 탄환은 다른 적에게
+      else if(foes[i]) t.dir=Math.atan2(foes[i].y-P.y,foes[i].x-P.x);   // 추가 탄환은 조준 쪽 다른 적에게 (v2.84)
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
       maxRet=Math.max(maxRet,t.returns);
       burst(t.x,t.y,'cyan',10,180);
@@ -2205,6 +2214,14 @@ const ctx=gcv.getContext('2d');
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 let C={};
 const proj=(x,y)=>[x,y*SQUASH+OY];
+function fitCanvas(){
+  const fr=document.getElementById('frame').getBoundingClientRect(); if(!fr.width||!fr.height) return;
+  VW=Math.max(W, Math.min(1500, Math.round(H*fr.width/fr.height))); OFX=(VW-W)/2;
+  let d=(window.devicePixelRatio||1)*(fr.height/H); d=Math.max(1, Math.min(d, 2600/VW, 3));
+  DPR=d; const pw=Math.round(VW*d), ph=Math.round(H*d);
+  if(gcv.width!==pw||gcv.height!==ph){ gcv.width=pw; gcv.height=ph; }
+}
+addEventListener('resize',()=>{ fitCanvas(); try{ ringKey=''; }catch(e){} });
 function refreshColors(){C={cyan:css('--cyan'),red:css('--red'),fg:css('--fg'),dim:css('--dim'),warn:css('--warn')};}
 
 /* v2.66 가장자리 위험 띠 — 평소엔 아주 옅게, 들어가 있으면 붉게 깜빡인다 */
@@ -2602,7 +2619,7 @@ function drawDmgNums(){
 function drawSticks(){
   /* v2.79 고정 조이스틱은 손을 안 대고 있어도 자리를 보여 준다 */
   if(touchMode) [['move',C.cyan,'이동'],['aim',C.warn,'패링']].forEach(([k,col,lb])=>{
-    if(stick[k]||!isFixed(k)) return; const c=fixCenter(k);
+    if(stick[k]||!isFixed(k)) return; const c=fixCenterS(k);
     ctx.save(); ctx.globalAlpha=.22; ctx.strokeStyle=col; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(c[0],c[1],TOUCH_MAX,0,TAU); ctx.stroke();
     ctx.globalAlpha=.3; ctx.fillStyle=col; ctx.beginPath(); ctx.arc(c[0],c[1],16,0,TAU); ctx.fill();
@@ -2631,6 +2648,7 @@ function drawCrosshair(){
   ctx.stroke(); ctx.restore();
 }
 function drawHUD(){
+  const W=VW;   // v2.85 HUD는 실제 화면 폭 기준 (점수 · 왕복이 화면 끝에 붙는다)
   drawHpBarPlayer();                       // v1.9 플레이어 체력 바
   if(run.revives>0){ ctx.textAlign='left';ctx.font='700 11px ui-monospace,monospace';ctx.fillStyle=C.cyan;
     ctx.fillText('부활 ×'+run.revives,18,58); }   // v2.37
@@ -2679,7 +2697,12 @@ function drawHUD(){
   }
 }
 function render(){
-  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,gcv.width,gcv.height);
+  ZK=VW/W;
+  { const contentH=(WORLD.h*SQUASH+OY+14)*ZK, py=(P.y*SQUASH+OY)*ZK;
+    const want=contentH<=H?0:clamp(H/2-py, H-contentH, 0);
+    CAMY+= (want-CAMY)*0.18; if(Math.abs(want-CAMY)<0.3) CAMY=want; }
+  ctx.setTransform(DPR*ZK,0,0,DPR*ZK,0,CAMY*DPR);   // v2.85 전장: 가로 꽉 채우기 + 세로 카메라
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
   drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();
@@ -2699,7 +2722,9 @@ function render(){
   parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
     ctx.fillRect(pp[0]-2,pp[1]-2,4,4);});ctx.globalAlpha=1;
   ctx.restore();
-  drawDmgNums(); drawSticks(); drawHeat(); drawCrosshair(); drawHUD();
+  drawDmgNums(); drawHeat(); drawCrosshair();
+  ctx.setTransform(DPR,0,0,DPR,0,0);   // v2.85 HUD · 조이스틱은 화면 기준 (양 끝까지)
+  drawSticks(); drawHUD();
 }
 
 /* ================= 화면 전환 ================= */
@@ -3080,6 +3105,8 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.85',['전체화면 양 끝에 남던 빈 공간 제거 — 전장을 확대해 화면 가로를 꽉 채우고, 위아래는 카메라가 플레이어를 따라감','점수 · 왕복 등 HUD를 실제 화면 끝에 맞춤','고정 조이스틱 기본 자리를 브롤스타즈처럼 화면 양쪽 아래 구석으로']],
+ ['2.84',['전체화면을 진짜 꽉 차게 — 가로가 긴 화면은 양옆 검은 띠 없이 채우고 전장 양옆을 더 보여 줌','큰 화면 · 폰에서 그림이 흐릿하던 것 — 기기 해상도에 맞춰 선명하게','패링한 탄환이 엉뚱한 곳으로 튀던 문제 — 조준 방향에 가장 가까운 적을 노리고, 추가 탄환도 조준 쪽 적에게만']],
  ['2.83',['적 체력의 사이클 배율을 복리(×1.15/사이클, 상한 없음)에서 로그형으로 변경 — 초반 체감은 그대로, 후반(10사이클+) 증가폭을 완만하게',
           '긴 왕복일수록 재탈취가 더 잘 되던 문제 완화 — 탄속이 빨라졌을 때의 재탈취 할인폭을 -25%→-40%로']],
  ['2.82',['웨이브 보상 창의 새로고침 버튼이 3번 카드를 가리던 문제 — 카드 아래 가운데로 옮김']],
@@ -3764,10 +3791,10 @@ function openStickEdit(){
     document.body.appendChild(box);
     const st=box._st={drag:null,pos:null,fr:null,sc:1};
     st.place=()=>box.querySelectorAll('.se-dot').forEach(d=>{ const c=st.pos[d.dataset.k];
-      d.style.width=d.style.height=(TOUCH_MAX*2*st.sc)+'px'; d.style.left=(st.fr.left+c[0]*st.sc)+'px'; d.style.top=(st.fr.top+c[1]*st.sc)+'px'; });
+      d.style.width=d.style.height=(TOUCH_MAX*2*st.sc)+'px'; d.style.left=(st.fr.left+(c[0]+OFX)*st.sc)+'px'; d.style.top=(st.fr.top+c[1]*st.sc)+'px'; });
     box.querySelectorAll('.se-dot').forEach(d=>d.addEventListener('pointerdown',e=>{ st.drag=d.dataset.k; try{ d.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); }));
     box.addEventListener('pointermove',e=>{ if(!st.drag) return;
-      const x=clamp((e.clientX-st.fr.left)/st.sc, TOUCH_MAX+6, W-TOUCH_MAX-6), y=clamp((e.clientY-st.fr.top)/st.sc, TOUCH_MAX+40, H-TOUCH_MAX-6);
+      const x=clamp((e.clientX-st.fr.left)/st.sc-OFX, TOUCH_MAX+6-OFX, W+OFX-TOUCH_MAX-6), y=clamp((e.clientY-st.fr.top)/st.sc, TOUCH_MAX+40, H-TOUCH_MAX-6);
       st.pos[st.drag]=[Math.round(x),Math.round(y)]; st.place(); });
     const end=()=>{ st.drag=null; }; box.addEventListener('pointerup',end); box.addEventListener('pointercancel',end);
     box.querySelector('#seReset').addEventListener('click',()=>{ OPT.posMove=null; OPT.posAim=null; st.pos={move:fixCenter('move').slice(),aim:fixCenter('aim').slice()}; st.place(); sfx('ui'); });
@@ -3777,7 +3804,7 @@ function openStickEdit(){
       OPT.posAim=(st.pos.aim[0]!==da[0]||st.pos.aim[1]!==da[1])?st.pos.aim:null;
       save(); ringKey=''; box.classList.remove('on'); sfx('ui'); optTab='ctrl'; openModal(); });
   }
-  const st=box._st; st.fr=$('#frame').getBoundingClientRect(); st.sc=st.fr.width/W;
+  fitCanvas(); const st=box._st; st.fr=$('#frame').getBoundingClientRect(); st.sc=st.fr.width/VW;
   st.pos={move:fixCenter('move').slice(), aim:fixCenter('aim').slice()}; st.drag=null;
   st.place(); box.classList.add('on');
 }
@@ -3868,10 +3895,12 @@ function reportErr(where,e){
     box.onclick=()=>box.remove(); }
   box.textContent='오류가 났어요 ('+where+'): '+msg+' — 이 화면을 캡처해서 알려주세요. (누르면 닫혀요)';
 }
+let fitTick=0;
 function loop(ts){
   raf=requestAnimationFrame(loop);
   const dt=Math.min(.033,(ts-t0)/1000||0);t0=ts;
   if(screen==='game'&&run){
+    if((fitTick++%20)===0) fitCanvas();   // v2.84
     try{ update(dt); }catch(e){ reportErr('update',e); }
     try{ render(); }catch(e){ reportErr('render',e); }
     if(OPT.skillRing&&touchMode) placeRing();   // v2.79
