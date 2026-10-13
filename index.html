@@ -502,7 +502,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.03</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v3.04</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -1638,6 +1638,13 @@ function doParry(force){
           t.dir=angDiff(away,P.face)<Math.PI*0.6?P.face:away; t.htg=seekTgt; t.seekT=0.22; t.seekLeft=1.6; } }
       else if(foes[i]){ const q=lead(foes[i],P.x,P.y,shotSpd); t.dir=Math.atan2(q[1]-P.y,q[0]-P.x); }   // 추가 탄환은 조준 쪽 다른 적에게 (v2.84)
       else t.dir=mainDir+(i%2?1:-1)*0.14*Math.ceil(i/2);                  // 적이 부족하면 부채꼴로
+      /* v3.04 시야각 끝에서 잡은 탄은 노리는 적이 반대편에 있으면 플레이어 앞을 가로질러 확 꺾여 '이상한 도탄'처럼 보였다.
+         → 탄이 있는 쪽(플레이어→탄 방향)에서 ±35° 넘게는 바로 꺾지 않고, 일단 그쪽으로 나간 뒤 노린 적 쪽으로 부드럽게 휘어 간다 */
+      if(Math.hypot(t.x-P.x,t.y-P.y)>10){
+        const out=Math.atan2(t.y-P.y,t.x-P.x), dd=norm(t.dir-out), LIM=35*Math.PI/180;
+        if(Math.abs(dd)>LIM){ t.dir=out+(dd>0?LIM:-LIM);
+          if(t.htg&&!(t.seekLeft>0)){ t.seekT=0.1; t.seekLeft=1.4; } }
+      }
       maxRet=Math.max(maxRet,t.returns);
       burst(t.x,t.y,'cyan',10,180);
       /* v2.1 메아리 — 지속 시간 동안 패링마다 탄환을 하나 더 복제한다 */
@@ -3250,6 +3257,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['3.04',['시야각 끝에서 패링한 탄이 플레이어 앞을 가로질러 확 꺾여 엉뚱하게 튕기던 문제 — 탄이 있던 쪽에서 ±35°까지만 바로 꺾고, 나머지는 날아가며 노린 적 쪽으로 부드럽게 휘어 감']],
  ['3.03',['폰에서 패링 직후 탄이 나한테 되돌아오던 문제 — 조준 쪽에 적이 없으면 일단 앞으로 날아간 뒤 앞쪽의 가까운 적을 찾아 휘어 감 (내 뒤의 적을 노려 나를 관통하듯 돌아오던 것 — 이제 뒤쪽 적은 쫓지 않음)']],
  ['3.02',['노멀 1사이클 보스에서는 나중에 추가한 어려운 패턴(CROSS · SHELL VOLLEY · FEINT RAIN · ORBIT CAGE · MELTDOWN · TEMPEST)이 안 나오고 2사이클부터 섞임 (하드는 처음부터 전부)']],
  ['3.01',['패링 조준이 적의 움직임을 내다보고 겨눔 — 흔들리는 적을 빗나가 뒤쪽 벽에 튕겨 돌아오던 경우 감소','R 덮어쓰기로 빼앗은 탄환이 벽·방패 뒤 적을 노려 엉뚱하게 튕기던 문제 — 각 탄환 자리에서 보이는 적을 노림','디버그 모드에서 내 탄환이 방향을 바꾼 이유를 그 자리에 표시 (재탈취 · 벽 반사 · 방패 반사 · 목표 잃음) + 노리는 적 연결선']],
