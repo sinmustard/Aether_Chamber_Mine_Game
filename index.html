@@ -426,7 +426,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
 
 <div id="iosTip"><span>아이폰은 Safari 아래 <b>공유</b> → <b>홈 화면에 추가</b>로 열면 주소창 없이 꽉 찬 화면으로 할 수 있어요.</span><button id="iosTipOk">알겠어요</button></div>
 <div id="updBar"><span id="updMsg"></span><button id="updGo">새로고침</button><button id="updX" title="닫기">✕</button></div>
-<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.73</div>
+<div class="caption">에테르 챔버 <b>/</b> 통합 빌드 v2.74</div>
 
 <div id="frame">
   <canvas id="bgcv"></canvas>
@@ -2263,9 +2263,10 @@ function drawHpBar(e){
   ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(p[0]-w/2-1,top-1,w+2,hg+2);
   ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(p[0]-w/2,top,w,hg);
   ctx.fillStyle=C.red;ctx.fillRect(p[0]-w/2,top,w*Math.max(0,e.hp/e.hpMax),hg);
-  /* v2.72 칸 구분선 대신 남은 타격 수를 숫자로 표시 */
+  /* v2.72 칸 구분선 대신 남은 타격 수를 숫자로 표시
+     v2.74 처치 판정(HIT_UNIT*0.25 이하면 죽음)과 같은 기준으로 계산 — 안 그러면 "2"인데 1대에 죽는 경우가 생김 */
   if(e.hp>HIT_UNIT*0.25){
-    const left=Math.max(1,Math.ceil(e.hp/HIT_UNIT));
+    const left=Math.max(1,Math.ceil((e.hp-HIT_UNIT*0.25)/HIT_UNIT));
     ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.font='800 9px ui-monospace,monospace';
     ctx.lineWidth=2.5; ctx.strokeStyle='rgba(8,12,17,.9)'; ctx.strokeText(left,p[0],top+hg/2);
@@ -2983,6 +2984,7 @@ function openTutorial(){
 }
 /* v2.38 업데이트 내역 — 새 버전을 올릴 때 맨 위에 한 줄씩 추가한다 */
 const CHANGELOG=[
+ ['2.74',['적 체력바 숫자가 실제보다 1 많게 나오던 문제 수정 (처치 판정 기준과 안 맞았음)']],
  ['2.73',['타이틀 배경을 실제 게임 그림에 맞게 변경 — 적 쪽은 실제 몹 스프라이트로, 부딪힐 때 패링 스파크 연출 (플레이어 쪽은 그대로 민짜 원)']],
  ['2.72',['적 체력바 칸 구분선을 지우고 남은 타격 수를 숫자로 표시']],
  ['2.71',['적 체력이 난이도 배율 탓에 애매하게 한 조각 남던 문제 수정 — 한 대 분량의 25% 이하로 남으면 바로 처치 처리']],
