@@ -636,7 +636,7 @@ input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-
   <summary>DEBUG — 실시간 튜닝 (` 또는 F1 로 켜고 끄기)</summary>
   <div class="grid" id="grid"></div>
   <div class="toggles" id="toggles"></div>
-  <div id="debugBtns"><button data-dbg="cur">◆ +10,000</button><button data-dbg="max">강화 전부 최대</button><button data-dbg="zero">강화 초기화</button></div>
+  <div id="debugBtns"><button data-dbg="cur">◆ +10,000</button><button data-dbg="max">강화 전부 최대</button><button data-dbg="zero">강화 초기화</button><button data-dbg="restore" id="dbgRestore" disabled>복구 지점 없음</button></div>
   <div class="note" id="derived" style="margin-top:11px"></div>
 </details>
 
@@ -4099,11 +4099,42 @@ async function toggleDebug(){
 }
 function flashDbg(t){ if(screen==='game') say(t,'red'); const el=$('#dbgTag'); if(!el) return; el.textContent=' · '+t; el.style.color='var(--red)';
   clearTimeout(flashDbg._t); flashDbg._t=setTimeout(()=>{ el.textContent=debug?'· DEBUG':''; el.style.color=''; },2200); }
+const DBG_BAK='aether_dbg_backup';
+function dbgBackupGet(){ try{ return JSON.parse(localStorage.getItem(DBG_BAK)||'null'); }catch(e){ return null; } }
+function dbgBackupMake(){
+  const ss=getSession(), cur=dbgBackupGet();
+  if(cur&&(!ss||cur.name===ss.name)) return;
+  save();
+  const cfg={}; SPECS.concat(TOGS).forEach(sp=>cfg[sp.k]=CFG[sp.k]);
+  try{ localStorage.setItem(DBG_BAK,JSON.stringify({at:Date.now(),name:ss?ss.name:'',data:JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'),cfg})); }catch(e){}
+}
+function dbgBackupLabel(){
+  const b=dbgBackupGet(), el=$('#dbgRestore'); if(!el) return;
+  el.disabled=!b;
+  el.textContent=b?'디버그 전으로 복구 ('+new Date(b.at).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+')':'복구 지점 없음';
+}
+async function dbgRestore(){
+  const b=dbgBackupGet(); if(!b) return;
+  const ss=getSession();
+  if(b.name&&ss&&b.name!==ss.name){ flashDbg('다른 계정('+b.name+')의 복구 지점이라 되돌릴 수 없어요'); return; }
+  if(!confirm('디버그를 켜기 전 상태로 되돌릴까요?\n재화 · 강화 · 스킬 · 기록 · 업적이 그때로 돌아가요.\n설정(조작 · 소리 · 캐릭터 이미지 등)은 지금 그대로예요.')) return;
+  const d=JSON.parse(JSON.stringify(b.data||{})), at=META.cloudAt;
+  d.opt=OPT; applySave(d); META.cloudAt=at; save();
+  Object.assign(CFG,b.cfg||{}); syncUI();
+  try{ localStorage.removeItem(DBG_BAK); }catch(e){}
+  setDebug(false);
+  if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
+  const r=await cloudAutoSave();
+  flashDbg(r===true?'디버그 전으로 복구했어요':'복구했어요 (서버 저장은 다음 판에)');
+  $('#dbgTag').style.color='var(--cyan)';
+}
 function setDebug(on){
+  if(on) dbgBackupMake();
   debug=on;
   document.body.classList.toggle('debug',debug);
   const d=$('details.dev'); if(d) d.open=debug;
   $('#dbgTag').textContent=debug?'· DEBUG':'';
+  dbgBackupLabel();
   sfx('ui');
 }
 /* v2.5 몹 확인 모드 — 디버그 중 웨이브 진행과 상관없이 적을 바로 소환해서 스프라이트·크기·패턴을 볼 수 있다 */
@@ -4117,6 +4148,7 @@ $('#debugSpawn').addEventListener('click',e=>{
 $('#debugBtns').addEventListener('click',e=>{
   const b=e.target.closest('[data-dbg]'); if(!b)return;
   const k=b.dataset.dbg;
+  if(k==='restore'){ dbgRestore(); return; }
   if(k==='cur') META.cur+=10000;
   if(k==='max') UPG.forEach(u=>{ u.lv=u.max; });
   if(k==='zero') UPG.forEach(u=>{ u.lv=0; });
