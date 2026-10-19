@@ -1,0 +1,487 @@
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#0b0f14; --panel:#121923; --panel2:#0e151d; --line:#22303f;
+  --fg:#dfe9f2; --dim:#7f929f; --cyan:#2fe3d0; --red:#ff3b52; --warn:#ffcc55;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans KR",monospace;
+  display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 10px 24px}
+.caption{font-size:11px;letter-spacing:.14em;color:var(--dim)}
+.caption b{color:var(--cyan)}
+
+#frame{position:relative;width:100%;max-width:1000px;aspect-ratio:1000/560;
+  background:#080c11;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+/* v3.3 전체화면 — 프레임이 화면 전체를 비율 유지한 채 최대한 채우도록. 브라우저 전체화면만으로는
+   프레임이 가운데 작게 남고 캡션·여백이 그대로 보여서, 전체화면 상태를 body.fullscreen으로 감지해 별도 스타일을 준다 */
+body.fullscreen,body.fsfake{padding:0;gap:0;background:#000}
+body.fullscreen #frame,body.fsfake #frame{max-width:none;border-radius:0;border:0;
+  width:100vw;   /* v2.84 가로가 긴 화면은 양옆 검은 띠 없이 꽉 채운다 (넓어진 만큼 전장 양옆을 더 보여 줌) */
+  height:min(100vh, calc(100vw * 560 / 1000));}
+body.fullscreen .caption,body.fullscreen #debugSpawn,body.fullscreen details.dev{display:none}
+/* v2.59 아이폰은 전체화면 API가 없어서, 주소창을 뺀 실제 보이는 높이(dvh)에 맞춰 꽉 채우고 바깥 글은 숨긴다 */
+body.fsfake{min-height:100dvh;justify-content:center;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+body.fsfake #frame{width:100vw;height:min(100dvh, calc(100vw * 560 / 1000))}
+body.fsfake .caption,body.fsfake #debugSpawn,body.fsfake details.dev,body.fsfake > .note{display:none}
+#iosTip{position:fixed;left:50%;top:calc(8px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:85;display:none;
+  max-width:92vw;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;background:rgba(8,12,17,.95);
+  border:1px solid var(--cyan);color:var(--fg);font-size:11.5px;line-height:1.55}
+#iosTip.on{display:flex}
+#iosTip button{flex:0 0 auto;font:inherit;font-size:11px;padding:6px 10px;border-radius:6px;cursor:pointer;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+#gamecv,#bgcv{position:absolute;inset:0;width:100%;height:100%}
+#bgcv{z-index:1}
+#gamecv{z-index:1;display:none}
+body.locked #gamecv{cursor:none}
+/* v2.8 일시정지 — 화면 위 중앙 */
+#topPause{position:absolute;z-index:3;top:8px;left:50%;transform:translateX(-50%);display:none;
+  padding:7px 16px;font:inherit;font-size:12px;letter-spacing:.2em;
+  background:rgba(8,12,17,.6);color:var(--dim);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+#topPause:hover{color:var(--cyan);border-color:var(--cyan)}
+body.in-game #topPause{display:block}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;z-index:3}
+.screen.on{display:flex}
+
+/* TITLE */
+#title{align-items:center;justify-content:center;text-align:center}
+#title .wordmark{font-size:clamp(26px,6.2vw,58px);letter-spacing:.24em;font-weight:700;margin:0 0 4px}
+#title .wordmark span{color:var(--cyan)}
+#title .kr{font-size:clamp(10px,1.6vw,13px);letter-spacing:.5em;color:var(--dim);margin-bottom:30px}
+#title .menu{display:flex;flex-direction:column;gap:8px;width:min(230px,62%)}
+#title .menu button{padding:11px;font:inherit;font-size:13px;letter-spacing:.2em;
+  background:rgba(8,12,17,.5);color:var(--fg);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+#title .menu button:hover{border-color:var(--cyan);color:var(--cyan)}
+#title .menu button.primary{border-color:var(--cyan);color:var(--cyan)}
+#title .best{position:absolute;right:16px;bottom:13px;font-size:11px;color:var(--dim);letter-spacing:.1em}
+/* v2.75 타이틀 메뉴가 화면을 넘던 문제 — 시작은 한 줄 전체, 나머지는 3칸 격자 */
+#title .menu{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;width:min(430px,88%)}
+#title .menu button{padding:10px 6px;font-size:12.5px;letter-spacing:.12em;white-space:nowrap}
+#title .menu button.primary{grid-column:1/-1;padding:12px;font-size:14px;letter-spacing:.24em}
+#title .kr{margin-bottom:clamp(12px,4vh,30px)}
+@media (max-height:520px){
+  #title .wordmark{font-size:clamp(20px,8vh,40px);margin-bottom:2px}
+  #title .kr{margin-bottom:10px;font-size:10px}
+  #title .menu{gap:6px}
+  #title .menu button{padding:8px 5px;font-size:11.5px}
+  #title .menu button.primary{padding:10px}
+  #title .ver,#title .best{bottom:8px;font-size:10px}
+}
+/* 폰 · 낮은 화면에서는 키보드 안내와 바깥 설명글을 숨긴다 */
+body.touch #title .ver{display:none}
+@media (max-height:600px){ body > .note{display:none} #title .ver{display:none} }
+#title .ver{position:absolute;left:16px;bottom:13px;font-size:11px;color:var(--dim)}
+
+/* 공통 바 */
+.bar{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;
+  border-bottom:1px solid var(--line);flex:0 0 auto;background:rgba(8,12,17,.9)}
+.bar .t{font-size:11.5px;letter-spacing:.24em;color:var(--dim)}
+.cur{font-size:13px;color:var(--warn);letter-spacing:.1em}
+
+/* HUB */
+#hub{background:rgba(8,12,17,.96)}
+#hub .body{flex:1;display:flex;gap:12px;padding:14px 18px;min-height:0}
+.cards .grp{grid-column:1/-1;font-size:10px;letter-spacing:.18em;color:var(--dim);
+  padding:6px 2px 1px;border-top:1px solid var(--line)}
+.cards .grp:first-child{padding-top:0;border-top:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:7px;
+  flex:1 1 58%;align-content:start;overflow:auto;min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer}
+.card:hover{border-color:var(--cyan)}
+.card.sel{border-color:var(--cyan);background:rgba(47,227,208,.08)}
+.card .n{font-size:12.5px;letter-spacing:.1em;margin-bottom:2px}
+.card .s{font-size:9.5px;color:var(--dim);margin-bottom:7px;line-height:1.45}
+.card.skill .n{color:var(--warn)}
+.card.locked{opacity:.75}
+#skillSel .sr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
+#skillSel .sr>span{min-width:22px;flex:0 0 auto}
+#skillSel .sr button{flex:1 1 auto;min-width:0;white-space:nowrap}
+#dbgTag{color:var(--warn);margin-left:8px}
+#debugBtns{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+#debugBtns button{padding:7px 11px;font:inherit;font-size:10.5px;background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:5px;cursor:pointer}
+#skillSel{display:flex;flex-direction:column;gap:5px;font-size:10.5px;color:var(--dim);padding:0 2px}
+#skillSel button{padding:5px 8px;font:inherit;font-size:10px;background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:5px;cursor:pointer}
+#skillSel button.on{color:var(--cyan);border-color:var(--cyan)}
+#skillSel button:disabled{opacity:.45;cursor:not-allowed}
+.pips{display:flex;gap:4px}
+.pip{width:10px;height:10px;border-radius:50%;border:1px solid var(--line)}
+.pip.f{background:var(--cyan);border-color:var(--cyan)}
+.side{flex:1 1 42%;display:flex;flex-direction:column;gap:9px;min-width:0;min-height:0;overflow:auto}
+#skillSel,.recs{flex:0 0 auto}
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px;flex:0 0 auto}
+.detail h4{margin:0 0 7px;font-size:12.5px;letter-spacing:.1em}
+.detail .eff{font-size:11px;line-height:1.85;color:var(--dim)}
+.detail .eff b{color:var(--fg)}
+.detail .arrow{color:var(--cyan)}
+.buy{width:100%;margin-top:11px;padding:10px;font:inherit;font-size:11.5px;letter-spacing:.14em;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:6px;cursor:pointer}
+.buy:disabled{color:var(--dim);border-color:var(--line);cursor:not-allowed}
+.recs{font-size:10.5px;color:var(--dim);line-height:1.8;padding:0 2px}
+.recs b{color:var(--fg)}
+#hub .foot{flex:0 0 auto;display:flex;gap:9px;padding:0 18px 14px}
+.ghost{padding:12px 18px;font:inherit;font-size:11.5px;letter-spacing:.14em;background:transparent;
+  color:var(--dim);border:1px solid var(--line);border-radius:7px;cursor:pointer}
+.ghost:hover{color:var(--fg)}
+.go{flex:1;padding:12px;font:inherit;font-size:13.5px;letter-spacing:.34em;font-weight:700;
+  background:var(--cyan);color:#06211e;border:0;border-radius:7px;cursor:pointer}
+
+/* RESULT */
+#result{align-items:center;justify-content:center;text-align:center;padding:clamp(10px,2vw,20px);
+  background:rgba(8,12,17,.94);overflow:auto}
+#result .over{font-size:12px;letter-spacing:.34em;color:var(--red);margin-bottom:clamp(4px,1vw,10px)}
+#result .score{font-size:clamp(26px,5.4vw,54px);font-weight:700;color:var(--warn);line-height:1}
+#result .new{font-size:10.5px;letter-spacing:.2em;color:var(--cyan);margin-top:5px;min-height:14px}
+#result .stats{display:grid;grid-template-columns:repeat(3,auto);gap:clamp(3px,.8vw,6px) clamp(14px,3vw,28px);margin:clamp(8px,2vw,18px) 0 clamp(6px,1.6vw,14px);
+  font-size:11px;color:var(--dim)}
+#result .stats b{display:block;color:var(--fg);font-size:14px;margin-top:2px}
+#result .gain{font-size:clamp(13px,1.8vw,16px);color:var(--warn);letter-spacing:.1em;margin-bottom:clamp(8px,2vw,18px)}
+/* v2.48 온라인 랭킹 */
+#rankBox{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:7px;margin:0 0 clamp(8px,2vw,14px);max-width:360px}
+#rankBox input{flex:1 1 150px;min-width:0;padding:8px 10px;font:inherit;font-size:12px;color:var(--fg);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
+#rankBox input:focus{outline:none;border-color:var(--cyan)}
+#rankBox button{padding:8px 13px;font:inherit;font-size:11.5px;letter-spacing:.1em;cursor:pointer;
+  background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:7px}
+#rankBox button:disabled{opacity:.45;cursor:default}
+#rkMsg{flex:1 0 100%;font-size:11px;color:var(--dim);min-height:14px}
+.rkList{list-style:none;margin:0;padding:0;font-size:12px}
+.rkList li{display:flex;gap:8px;align-items:baseline;padding:7px 6px;border-bottom:1px solid var(--line)}
+.rkList li .no{width:26px;color:var(--dim);text-align:right}
+.rkList li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rkList li .sc{color:var(--warn);font-weight:700}
+.rkList li .cw{flex:0 0 auto;white-space:nowrap;text-align:right;color:var(--dim);font-size:10.5px}
+.rkList li .sc{flex:0 0 auto;white-space:nowrap}
+.rkList li.top .no{color:var(--warn)}
+.rkList li.me{background:rgba(47,227,208,.08)}
+.rkList li.me .nm{color:var(--cyan)}
+.rkNote{font-size:10.5px;color:var(--dim);margin:6px 0 10px}
+#result .btns{display:flex;gap:9px}
+/* v2.76 결과 화면이 낮은 화면에서 넘치면 위아래가 잘리고 버튼이 글을 가렸다 — 넘치면 위부터 스크롤, 낮은 화면은 촘촘하게 */
+#result{justify-content:safe center}
+#result>*{flex-shrink:0}
+@media (max-height:560px){
+  #result{padding-top:8px;padding-bottom:8px}
+  #result .over{margin-bottom:2px;font-size:11px}
+  #result .score{font-size:clamp(24px,9vh,44px)}
+  #result .new{margin-top:1px;min-height:12px}
+  #result .stats{margin:5px 0 3px;gap:1px 18px}
+  #result .stats b{font-size:12.5px;margin-top:0}
+  #result .gain{margin-bottom:3px}
+  #cloudStat,#discStat{margin:0 0 1px;min-height:0}
+  #achStat{margin:0 0 4px}
+  #rBoons{margin:0 0 3px}
+  #rankBox{margin:0 0 5px}
+  #result .btns button{padding:7px 16px}
+}
+#result .btns button{padding:clamp(8px,1.6vw,11px) clamp(16px,3vw,26px);font:inherit;font-size:11.5px;letter-spacing:.18em;
+  background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+#result .btns button.primary{border-color:var(--cyan);color:var(--cyan)}
+
+/* PAUSE / OPTIONS */
+/* v2.75 전체화면 3분할 대신, 가운데에 작은 창으로 */
+#reward{position:absolute;inset:0;background:rgba(8,12,17,.82);z-index:7;display:none;
+  align-items:center;justify-content:center;padding:20px}
+#reward.on{display:flex}
+#reward .box{position:relative;width:min(620px,100%);max-height:100%;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 18px 16px}
+#reward .hd{text-align:center;padding:0 8px 14px;font-size:11.5px;letter-spacing:.26em;color:var(--dim)}
+#reward .hd b{color:var(--cyan);font-weight:600}
+#reward .own{text-align:center;padding-top:14px;font-size:10.5px;color:var(--dim);line-height:1.7}
+#reward .own b{color:var(--fg)}
+#reward .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:560px){#reward .row{grid-template-columns:1fr}}
+#reward .bc.sp{border-color:var(--warn)!important;box-shadow:0 0 0 1px var(--warn) inset}
+.bc.sp .k{color:var(--warn)}
+.bc{position:relative;min-width:0;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:20px 14px;text-align:center;
+  border:1px solid var(--line);border-radius:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,.015),rgba(255,255,255,0));
+  transition:background .12s,border-color .12s}
+#reward .bc::before{content:'';position:absolute;left:10px;right:10px;top:0;height:2px;
+  background:var(--cyan);opacity:0;transition:opacity .12s}
+#reward .bc:hover{background:rgba(47,227,208,.10);border-color:var(--cyan)}
+#reward .bc:hover::before{opacity:1}
+#reward .bc .num{font-size:11px;letter-spacing:.3em;color:var(--dim);
+  border:1px solid var(--line);border-radius:5px;padding:4px 10px}
+#reward .bc:hover .num{color:var(--cyan);border-color:var(--cyan)}
+#reward .bc .k{font-size:10px;letter-spacing:.2em;color:var(--dim)}
+#reward .bc .n{font-size:clamp(15px,2.2vw,19px);letter-spacing:.06em;color:var(--cyan);font-weight:700}
+#reward .bc .d{font-size:clamp(10.5px,1.2vw,12px);line-height:1.6;color:var(--fg)}
+#reward .bc .st{font-size:10px;letter-spacing:.1em;color:var(--dim);margin-top:2px}
+@media (max-height:560px){#reward .box{padding:14px 14px 12px}#reward .hd{padding:0 64px 10px}.bc{padding:14px 10px}}
+#modal{position:absolute;inset:0;background:rgba(8,12,17,.93);z-index:50;   /* v2.26 일시정지 메뉴(40)보다 위 */
+  display:none;align-items:center;justify-content:center;padding:20px}
+#modal.on{display:flex}
+#pause{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+  background:rgba(8,12,17,.82);padding:16px}
+#pause.on{display:flex}
+#pause .box{width:min(300px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:16px;max-height:100%;overflow:auto;text-align:center}
+#pause h4{margin:0 0 12px;font-size:12.5px;letter-spacing:.2em;color:var(--dim)}
+#pause .pm{display:block;width:100%;margin-bottom:8px;padding:11px;font:inherit;font-size:12px;letter-spacing:.1em;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:7px;cursor:pointer}
+#pause .pm:hover{background:rgba(47,227,208,.08)}
+#pause .hint{font-size:10px;color:var(--dim);letter-spacing:.1em;margin-top:6px}
+@media (max-height:560px){ #pause .box{padding:11px} #pause .pm{padding:8px;margin-bottom:6px} }
+/* v2.39 스크롤바 — 기본 흰색 막대 대신 얇은 청록 막대 */
+*{scrollbar-width:thin;scrollbar-color:rgba(47,227,208,.45) transparent}
+*::-webkit-scrollbar{width:6px;height:6px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(47,227,208,.35);border-radius:6px}
+*::-webkit-scrollbar-thumb:hover{background:rgba(47,227,208,.6)}
+*::-webkit-scrollbar-button{display:none;width:0;height:0}
+*::-webkit-scrollbar-corner{background:transparent}
+/* v2.38 업데이트 알림 · 업데이트 내역 */
+#updBar{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:80;
+  display:none;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+  background:rgba(8,12,17,.94);border:1px solid var(--cyan);color:var(--fg);font-size:12px;max-width:94vw}
+#updBar.on{display:flex}
+#updBar button{font:inherit;font-size:11.5px;padding:6px 11px;border-radius:6px;cursor:pointer;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+#updBar #updX{border-color:var(--line);color:var(--dim);padding:6px 9px}
+#logNew{display:inline-block;margin-left:6px;font-size:9.5px;color:var(--warn);letter-spacing:.1em}
+.log{padding-right:2px}
+/* v2.40 업데이트 내역 — 오른쪽 위 ✕로 닫는다. 제목줄은 스크롤해도 위에 붙어 있다 */
+.logHd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  position:sticky;top:0;margin:0 0 10px;padding:2px 0 8px;background:var(--panel);z-index:1;
+  box-shadow:0 -16px 0 var(--panel)}   /* v2.49 창 여백이 줄어드는 작은 화면에서 제목이 잘리던 문제 */
+.logHd h4{margin:0}
+.xBtn{flex:0 0 auto;width:30px;height:30px;padding:0;font:inherit;font-size:14px;line-height:1;
+  background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:7px;cursor:pointer}
+.xBtn:hover{color:var(--cyan);border-color:var(--cyan)}
+.log .lv{margin:0 0 10px}
+.log .lv b{color:var(--cyan);font-size:12px;letter-spacing:.08em}
+.log .lv.cur b::after{content:'  현재';color:var(--warn);font-size:10px}
+.log .lv ul{margin:4px 0 0;padding-left:16px;color:var(--dim);font-size:11px;line-height:1.7}
+.opt-desc{font-size:10.5px;line-height:1.6;color:var(--dim);padding:5px 0 8px;border-bottom:1px solid var(--line)}
+.opt-desc b{color:var(--fg);font-weight:600}
+/* v2.89 캐릭터 이미지 */
+.pimgModes{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.pimgModes button{flex:1 1 auto;padding:8px 6px;font:inherit;font-size:11px;letter-spacing:.05em;cursor:pointer;
+  background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:7px}
+.pimgModes button.on{color:var(--cyan);border-color:var(--cyan)}
+.pimgUp{text-align:center;padding:8px 0}
+.pimgFileBtn{display:inline-block;cursor:pointer}
+.pimgPrev{display:block;width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);margin:10px auto}
+.pimgGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0}
+.pimgSlot{background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.pimgLab{font-size:10.5px;color:var(--dim);letter-spacing:.1em;margin-bottom:6px}
+.pimgEmpty{width:72px;height:72px;margin:0 auto;border:1px dashed var(--line);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--dim)}
+.pimgAnim{position:relative;background-repeat:no-repeat;background-position:0 0}
+.pimgAnim b{position:absolute;right:4px;bottom:3px;font-size:9px;color:#fff;background:rgba(0,0,0,.55);padding:1px 4px;border-radius:4px}   /* v3.12 */
+.pimgSlot .pimgPrev{width:72px;height:72px;margin:0 auto}
+.pimgSlot .pimgFileBtn{display:block;margin-top:6px;font-size:10.5px;padding:6px}
+.pimgSlot .ghost{display:block;width:100%;margin-top:5px;padding:5px;font-size:10px}
+/* v2.51 확인 팝업 — 설정 창(50)보다 위 */
+#confirm{position:absolute;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  background:rgba(8,12,17,.78);padding:16px}
+#confirm.on{display:flex}
+#confirm .box{width:min(290px,100%);background:var(--panel);border:1px solid var(--red);border-radius:10px;padding:16px;text-align:center}
+#confirm h4{margin:0 0 8px;font-size:13px;letter-spacing:.06em;color:var(--fg)}
+#confirm p{margin:0 0 14px;font-size:11px;line-height:1.6;color:var(--dim)}
+.cfBtns{display:flex;gap:8px}
+.cfBtns button{flex:1;padding:10px;font:inherit;font-size:12px;border-radius:7px;cursor:pointer;background:transparent}
+#cfNo{color:var(--dim);border:1px solid var(--line)}
+#cfYes{color:var(--red);border:1px solid var(--red)}
+#cfYes:hover{background:rgba(255,80,90,.08)}
+/* v2.52 */
+#respec{margin-right:10px;padding:4px 9px;font:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;
+  background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:6px}
+#respec:hover{color:var(--warn);border-color:var(--warn)}
+/* v2.82 새로고침 버튼이 오른쪽 위에 떠서 작은 화면에서 3번 카드를 가렸다 → 카드 아래 가운데로 */
+#rwReroll{position:static;display:block;margin:12px auto 0;z-index:3;padding:7px 12px;font:inherit;font-size:11px;letter-spacing:.06em;
+  cursor:pointer;background:rgba(8,12,17,.8);color:var(--cyan);border:1px solid var(--cyan);border-radius:7px}
+#rwReroll:disabled{opacity:.35;cursor:default;color:var(--dim);border-color:var(--line)}
+#rBoons{max-width:520px;font-size:10.5px;line-height:1.7;color:var(--dim);text-align:center;margin:0 0 8px;padding:0 10px}
+#rBoons b{color:var(--fg);font-weight:600}
+.bnList{list-style:none;margin:0;padding:0}
+.bnList li{padding:7px 2px;border-bottom:1px solid var(--line);font-size:11.5px}
+.bnList li b{color:var(--cyan)} .bnList li.sp b{color:var(--warn)}
+.bnList li span{display:block;color:var(--dim);font-size:10.5px;margin-top:2px}
+.cloud input{width:100%;box-sizing:border-box;margin:0 0 7px;padding:9px 10px;font:inherit;font-size:12px;color:var(--fg);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
+.cloud input:focus{outline:none;border-color:var(--cyan)}
+.cloud .row2{display:flex;gap:8px;margin-top:3px}
+.cloud .row2 button{flex:1;padding:10px;font:inherit;font-size:12px;cursor:pointer;border-radius:7px;background:transparent;
+  color:var(--cyan);border:1px solid var(--cyan)}
+.cloud .row2 button.ld{color:var(--warn);border-color:var(--warn)}
+.cloud .msg{min-height:16px;font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6}
+#errBox{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:99;
+  max-width:92vw;padding:9px 12px;border-radius:8px;background:rgba(40,8,12,.95);border:1px solid var(--red);color:#ffd6d9;
+  font-size:11.5px;line-height:1.5;cursor:pointer}
+#cloudStat{font-size:10.5px;color:var(--dim);margin:-4px 0 2px;min-height:14px}
+#discStat{font-size:10.5px;color:#9aa6ff;margin:0 0 8px;min-height:14px}
+.login .lead{font-size:11px;line-height:1.7;color:var(--dim);margin:2px 0 12px}
+.login input{width:100%;box-sizing:border-box;margin:0 0 8px;padding:10px 11px;font:inherit;font-size:13px;color:var(--fg);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:7px}
+.login input:focus{outline:none;border-color:var(--cyan)}
+.login .go{width:100%;margin-top:4px;padding:11px;font:inherit;font-size:13px;letter-spacing:.1em;cursor:pointer;border-radius:7px;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+.login .go:disabled{opacity:.45;cursor:default}
+.login .off{width:100%;margin-top:8px;padding:9px;font:inherit;font-size:11.5px;cursor:pointer;border-radius:7px;
+  background:transparent;color:var(--dim);border:1px solid var(--line);display:none}
+.login .msg{min-height:16px;font-size:11px;color:var(--dim);margin-top:9px;line-height:1.6}
+/* v2.60 체험판 튜토리얼 안내 바 */
+#tutBar{position:absolute;top:46px;left:50%;transform:translateX(-50%);z-index:6;display:none;
+  width:min(440px,calc(100% - 24px));padding:10px 14px 11px;border-radius:10px;text-align:center;
+  background:rgba(8,12,17,.86);border:1px solid var(--cyan);box-shadow:0 6px 24px rgba(0,0,0,.4)}
+#tutBar.on{display:block}
+#tutBar .tb-step{font-size:10px;letter-spacing:.2em;color:var(--dim)}
+#tutBar .tb-t{font-size:15px;font-weight:700;color:var(--cyan);margin:3px 0 4px}
+#tutBar .tb-d{font-size:11.5px;line-height:1.6;color:var(--fg)}
+#tutBar .tb-d b{color:var(--warn)}
+#tutBar .tb-p{font-size:12px;color:var(--warn);margin-top:5px;min-height:15px;font-weight:700}
+#tutBar .tb-btns{display:flex;gap:7px;justify-content:center;margin-top:7px}
+#tutBar .tb-btns button{padding:6px 12px;font:inherit;font-size:11px;cursor:pointer;border-radius:6px;background:transparent;
+  color:var(--dim);border:1px solid var(--line)}
+#tutBar .tb-btns button.go{color:var(--cyan);border-color:var(--cyan)}
+@media (max-height:420px){ #tutBar{top:40px;padding:7px 10px} #tutBar .tb-t{font-size:13px} #tutBar .tb-d{font-size:10.5px} }
+/* v2.68 */
+.optTabs{display:flex;gap:5px;margin:0 0 10px}
+.optTabs button{flex:1;padding:7px 4px;font:inherit;font-size:11px;cursor:pointer;border-radius:6px;background:transparent;color:var(--dim);border:1px solid var(--line)}
+.optTabs button.on{color:var(--cyan);border-color:var(--cyan)}
+.modeBox{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 8px}
+.modes{display:flex;gap:4px}
+.modes button{padding:6px 11px;font:inherit;font-size:11px;letter-spacing:.06em;cursor:pointer;border-radius:6px;background:transparent;color:var(--dim);border:1px solid var(--line)}
+.modes button.on{color:var(--warn);border-color:var(--warn)}
+#modeDesc{font-size:9.5px;color:var(--dim);max-width:340px;text-align:center;line-height:1.4}
+#achStat{font-size:10.5px;color:var(--warn);margin:0 0 8px;min-height:0}
+#achStat b{color:var(--fg)}
+.achList{list-style:none;margin:0;padding:0}
+.achList li{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+.achList li b{color:var(--fg)} .achList li.on b{color:var(--cyan)}
+.achList .rw{color:var(--warn);font-size:10.5px} .achList .dd{grid-column:1/3;font-size:10.5px}
+/* v2.98 HUB 위쪽 줄에 쓰는 전역 .bar(안쪽 여백 13px, flex)가 업적 게이지에도 걸려서, 게이지가 두꺼운 회색 칸이 되고 채워진 부분이 안 보였다 */
+.achList .bar{grid-column:1/2;height:6px;padding:0;display:block;border:0;flex:none;background:rgba(255,255,255,.08);border-radius:3px;align-self:center;overflow:hidden}
+.achList .bar i{display:block;height:100%;background:var(--cyan)} .achList .pc{font-size:10px}
+.achList .pips{grid-column:1/3;display:flex;gap:4px;margin:1px 0}
+.achList .pips i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.12);display:block}
+.achList .pips i.on{background:var(--cyan)}
+.statGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.statGrid div{display:flex;flex-direction:column;gap:2px;padding:8px;border:1px solid var(--line);border-radius:7px}
+.statGrid span{font-size:10px;color:var(--dim)} .statGrid b{font-size:14px;color:var(--fg)}
+#toastBox{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%) translateY(-20px);z-index:95;opacity:0;pointer-events:none;
+  padding:9px 14px;border-radius:9px;background:rgba(8,12,17,.95);border:1px solid var(--cyan);color:var(--fg);font-size:12px;transition:.25s}
+#toastBox.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#modal .box{width:min(320px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:16px;max-height:100%;overflow:auto}
+/* v2.9 낮은 화면 — 옵션 창이 위아래로 잘리지 않게 */
+@media (max-height:560px){
+  #modal{padding:10px}
+  #modal .box{padding:11px}
+  #modal h4{margin:0 0 7px}
+  .opt-row{padding:5px 0;font-size:11px}
+  #modal .buy{margin-top:7px;padding:8px}
+}
+#modal h4{margin:0 0 12px;font-size:11.5px;letter-spacing:.24em;color:var(--dim)}
+.opt-row{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:11.5px}
+.opt-row:first-of-type{border-top:0}
+.opt-tg{cursor:pointer}.opt-tg:hover i{text-decoration:underline}
+.opt-row span{color:var(--dim)} .opt-row i{font-style:normal;color:var(--cyan)}
+
+/* 모바일 조작 */
+.pads{display:flex;gap:9px;width:100%;max-width:1000px}
+.pads button{flex:1;padding:16px;font:inherit;font-size:13px;letter-spacing:.12em;
+  background:var(--panel);color:var(--cyan);border:1px solid var(--cyan);border-radius:8px;
+  cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+body:not(.in-game) .pads{display:none}
+/* v2.6 가로로 든 폰처럼 높이가 낮은 화면 — 여백과 글자를 줄이고 추천 문구는 감춘다 */
+@media (max-height:560px){
+  #hub .body{padding:10px 12px;gap:9px}
+  .card{padding:8px}
+  .card .n{font-size:11.5px}
+  .card .s{font-size:9px;line-height:1.35;margin-bottom:5px}
+  .detail{padding:10px}
+  .detail .eff{font-size:10.5px;line-height:1.7}
+  .recs{display:none}
+  #hub .foot{padding:0 12px 10px}
+  .go,.ghost{padding:10px 14px}
+  #skillSel button{padding:4px 7px;font-size:9.5px}
+}
+/* v2.4 폰 세로 모드 안내 — 가로로 돌리면 사라진다 */
+#rotate{position:fixed;inset:0;z-index:60;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;text-align:center;padding:28px;
+  background:rgba(8,12,17,.96);color:var(--fg)}
+#rotate .ic{font-size:44px;animation:rot 1.8s ease-in-out infinite}
+@keyframes rot{0%,40%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+#rotate p{font-size:13px;line-height:1.7;color:var(--dim);letter-spacing:.04em}
+#rotate button{padding:12px 20px;font:inherit;font-size:12px;letter-spacing:.14em;
+  background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:7px;cursor:pointer}
+@media (max-width:900px) and (orientation:portrait){ body.in-game #rotate{display:flex} }
+@media (max-width:759px){ #gamecv{touch-action:none} }
+/* v2.31 마우스가 있는 큰 화면에서만 숨긴다. 가로로 든 폰은 폭이 760을 넘어도 버튼이 필요하다 */
+@media (min-width:760px) and (pointer:fine){ .pads{display:none} }
+/* v2.33 터치 기기에서는 버튼을 화면 위에 띄운다.
+   전체화면에서는 프레임이 화면을 다 채워서, 프레임 아래에 있던 버튼이 화면 밖으로 밀려 안 눌렸다 */
+/* v2.79 패링 조이스틱 옆 스킬 버튼 — 켜면 아래 버튼 줄은 숨긴다 */
+.ring{display:none;position:fixed;inset:0;pointer-events:none;z-index:46}
+body.touch.in-game.ring-on .ring{display:block}
+.ring button{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;pointer-events:auto;   /* v2.89 조금 작고 반투명 — 뒤의 적·탄환이 보이게 */
+  font:inherit;font-size:13px;font-weight:700;background:rgba(8,12,17,.35);color:var(--cyan);border:1px solid rgba(47,227,208,.6);opacity:.8;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.ring button:active{background:rgba(47,227,208,.25)}
+body.touch.in-game.ring-on .pads{display:none!important}
+/* v2.80 일시정지 · 설정 · 보상 창이 떠 있으면 스킬 버튼과 아래 버튼 줄을 숨긴다 (창 위에 겹쳐 보였다) */
+body.ui-cover .ring,body.ui-cover .pads{display:none!important}
+/* v2.81 조이스틱 자리 편집 */
+#stickEdit{position:fixed;inset:0;z-index:92;display:none;background:rgba(5,8,12,.72);touch-action:none}
+#stickEdit.on{display:block}
+#stickEdit .se-note{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+  font-size:12px;color:var(--fg);text-align:center;width:92vw}
+#stickEdit .se-dot{position:absolute;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;cursor:grab;border:2px dashed currentColor;background:rgba(255,255,255,.04)}
+#stickEdit .se-dot.mv{color:var(--cyan)} #stickEdit .se-dot.am{color:var(--warn)}
+#stickEdit .se-dot.sk{width:46px;height:46px;color:var(--cyan);font-weight:700;font-size:14px}   /* v3.13 스킬 버튼 */
+#stickEdit .se-btns{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px}
+#stickEdit .se-btns button{padding:10px 16px;font:inherit;font-size:12px;border-radius:7px;cursor:pointer;background:rgba(8,12,17,.9);color:var(--dim);border:1px solid var(--line)}
+#stickEdit .se-btns button.go{color:var(--cyan);border-color:var(--cyan)}
+body.touch.in-game .pads{display:flex;position:fixed;z-index:45;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(8px + env(safe-area-inset-bottom,0px));
+  width:min(96vw,1000px);pointer-events:auto}
+body.touch.in-game .pads button{background:rgba(8,12,17,.72);backdrop-filter:blur(2px);
+  padding:13px 6px;font-size:12px}
+@media (max-height:560px){ .pads button{padding:11px;font-size:12px} }
+/* v2.76 아래 버튼 줄이 화면 전체 폭이라, 이동하려고 왼쪽 아래에 엄지를 대면 패링 버튼이 눌렸다.
+   가운데로 좁혀서 양쪽 아래 구석(이동 · 조준 자리)을 비운다 */
+body.touch.in-game .pads{width:min(48vw,470px);gap:6px}
+body.touch.in-game.pads-top .pads{width:min(48vw,470px)}
+/* v2.63 폰 버튼 위치 — 아래(기본) · 위 · 오른쪽 · 왼쪽 */
+body.touch.in-game.pads-top .pads{bottom:auto;top:calc(52px + env(safe-area-inset-top,0px))}
+body.touch.in-game.pads-right .pads,body.touch.in-game.pads-left .pads{flex-direction:column;width:auto;gap:7px;
+  top:50%;bottom:auto;transform:translateY(-50%)}
+body.touch.in-game.pads-right .pads{left:auto;right:calc(8px + env(safe-area-inset-right,0px))}
+body.touch.in-game.pads-left .pads{left:calc(8px + env(safe-area-inset-left,0px))}
+body.touch.in-game.pads-right .pads button,body.touch.in-game.pads-left .pads button{width:92px;padding:12px 6px}
+
+/* DEV */
+details.dev{display:none}
+body.debug details.dev{display:block}
+/* v2.5 몹 확인용 디버그 스폰 패널 — 캔버스 위에 겹치지 않도록 프레임 바깥, 화면 맨 아래에 둔다 */
+#debugSpawn{display:none;flex-wrap:wrap;gap:7px;width:100%;max-width:1000px;order:99}
+#debugSpawn span{font-size:9.5px;letter-spacing:.16em;color:var(--warn);align-self:center}
+#debugSpawn button{padding:7px 11px;font:inherit;font-size:10.5px;background:transparent;
+  color:var(--warn);border:1px solid var(--warn);border-radius:5px;cursor:pointer}
+#debugSpawn button:hover{background:rgba(255,204,85,.15)}
+body.debug.in-game #debugSpawn{display:flex}
+details.dev{width:100%;max-width:1000px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+details.dev summary{font-size:11px;letter-spacing:.14em;color:var(--dim);cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:9px 18px;margin-top:11px}
+.row{display:flex;flex-direction:column;gap:3px}
+.row .lab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim)}
+.row .lab b{color:var(--cyan)}
+.ctl{display:flex;align-items:center;gap:7px}
+input[type=range]{flex:1;min-width:0;accent-color:var(--cyan);height:20px;touch-action:none}
+.stp{width:27px;height:24px;flex:0 0 auto;font:inherit;font-size:13px;line-height:1;background:var(--bg);
+  color:var(--cyan);border:1px solid var(--line);border-radius:5px;cursor:pointer;touch-action:manipulation}
+.toggles{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.toggles button{padding:7px 11px;font:inherit;font-size:10.5px;background:transparent;color:var(--dim);
+  border:1px solid var(--line);border-radius:5px;cursor:pointer}
+.toggles button.on{color:var(--cyan);border-color:var(--cyan)}
+.note{max-width:1000px;width:100%;font-size:11px;line-height:1.85;color:var(--dim)}
+.note b{color:var(--fg)}
