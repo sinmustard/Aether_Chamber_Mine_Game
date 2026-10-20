@@ -102,6 +102,7 @@ body.touch #title .ver{display:none}
 .roul span.on{border-color:var(--warn);color:var(--warn);background:rgba(255,190,90,.12)}
 .roul span.hit{border-color:var(--cyan);color:#0b0f14;background:var(--cyan);font-weight:700}
 .roulR{margin-top:8px;font-size:15px}
+.roulGo{display:block;margin:10px auto 0;padding:9px 22px;font:inherit;font-size:14px;font-weight:700;color:#0b0f14;background:var(--warn);border:0;border-radius:8px;cursor:pointer}
 .card.folder{border-color:rgba(255,190,90,.35);background:rgba(255,190,90,.05)}
 .card.folder .n{color:var(--warn);display:flex;justify-content:space-between;align-items:center;font-weight:700}
 .card.folder .n i{font-style:normal;font-size:16px;line-height:1}
