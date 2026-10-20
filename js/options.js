@@ -22,7 +22,7 @@ addEventListener('storage',e=>{   // 다른 탭에서 저장하면 이 탭도 �
   syncMeta();
   if(typeof screen!=='undefined'&&screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); }
 });
-function save(){ try{ const upg={}; UPG.forEach(u=>upg[u.k]=u.lv);
+function save(){ if(window.__botTemp) return; try{ const upg={}; UPG.forEach(u=>upg[u.k]=u.lv);
   localStorage.setItem(SAVE_KEY,JSON.stringify({meta:META,upg,opt:OPT})); }catch(e){} }
 function setLv(k,v){ const u=UPG.find(x=>x.k===k); if(u)u.lv=clamp(v|0,0,u.max); }
 function load(){

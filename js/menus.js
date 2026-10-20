@@ -65,6 +65,7 @@ function applySave(data){
   save(); refreshKeyLabels();
 }
 async function cloudAutoSave(){
+  if(window.__botTemp) return null;
   const ss=getSession(); if(!ss) return null;
   try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
     const at=await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:pinOf(ss),p_data:data});

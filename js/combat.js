@@ -174,6 +174,15 @@ function update(dt){
         e.lungeT-=dt;
         if(e.lungeT<=0) e.lungePhase='chase';
       }
+    } else {
+      const hidden=run.phase==='fight'&&wallBetween(e.x,e.y,P.x,P.y);
+      e.hideT=hidden?(e.hideT||0)+dt:0; e.wanT=(e.wanT==null?1+Math.random()*3:e.wanT)-dt;
+      if(e.wp){ e.wpT=(e.wpT||0)+dt; if(e.wpT>4){ e.wp=null; e.wpLos=false; } }
+      if(e.hideT>1.2&&!e.wpLos){ const s=enemySpot(e,true); if(s){ e.wp=s; e.wpLos=true; e.wpT=0; } e.hideT=0; }
+      else if(!e.wp&&e.wanT<=0){ const s=enemySpot(e,false); if(s){ e.wp=s; e.wpLos=false; e.wpT=0; } e.wanT=3+Math.random()*4; }
+      if(e.wp){ const d=dist(e.ax,e.ay,e.wp[0],e.wp[1]), sp=(e.wpLos?95:45)*(e.grade==='boss'?0.6:1);
+        if(d<6){ e.wp=null; e.wpLos=false; e.wanT=3+Math.random()*4; }
+        else { const a=Math.atan2(e.wp[1]-e.ay,e.wp[0]-e.ax); e.ax=clamp(e.ax+Math.cos(a)*Math.min(d,sp*dt),40,WORLD.w-40); e.ay=clamp(e.ay+Math.sin(a)*Math.min(d,sp*dt),40,WORLD.h-40); } }
     }
     [e.ax,e.ay]=wallSlide(ox,oy,e.ax,e.ay,e.r+6);
     [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+40);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
@@ -468,6 +477,18 @@ function update(dt){
       sfx('heal'); burst(P.x,P.y,'cyan',40,300); shake=14; hitstop=0.12;
     } else endRun();
   }
+}
+function enemySpot(e,los){
+  let best=null, bs=-1e9;
+  for(let k=0;k<(los?40:14);k++){
+    const a=Math.random()*TAU, r=los?80+Math.random()*340:90+Math.random()*130, x=clamp(e.ax+Math.cos(a)*r,70,WORLD.w-70), y=clamp(e.ay+Math.sin(a)*r,70,WORLD.h-70);
+    if(allWalls().some(({col:o})=>rectHit(x,y,e.r+40,o))||wallBetween(e.ax,e.ay,x,y)) continue;
+    const dp=dist(x,y,P.x,P.y), see=!wallBetween(x,y,P.x,P.y);
+    if(los&&(!see||dp<160)) continue;
+    const sc=(see?200:0)-Math.abs(dp-340)*0.4-(los?dist(x,y,e.ax,e.ay)*0.5:0)+Math.random()*40;
+    if(sc>bs){ bs=sc; best=[x,y]; }
+  }
+  return best;
 }
 function inStasis(x,y){ return !!(P.stasis&&P.stasis.t>0&&dist(x,y,P.stasis.x,P.stasis.y)<P.stasis.r); }
 function aimPt(){ return (P.decoyT>0&&P.decoy)?P.decoy:P; }

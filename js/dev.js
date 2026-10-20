@@ -108,18 +108,30 @@ function syncUI(){
     ' · <b>재탈취 확률</b> 잡몹 25% / 엘리트 45% / 보스 60% (빠를수록 ↓)';
 }
 
-const BOT={on:false,left:0,speed:3,skill:1,runs:[],cur:null,readyT:0,react:0.1,rwT:0,mv:null,cfg:{n:5,speed:3,skill:1}};
+const BOT={on:false,left:0,speed:3,skill:1,runs:[],cur:null,readyT:0,react:0.1,rwT:0,mv:null,idx:0,snap:null,cfg:{n:6,speed:3,skill:1,build:'max'}};
+const BOT_PICK={multi:10,flow:9,grit:9,s_homing:9,s_revive:9,pierce:8,s_boss:8,accel:7,stable:7,overload:7,leech:7,shard:6,aftershock:6,vital:6,range:6,s_revhp:6,fov:5,calm:5,iframe:5,move:4,greed:3,reroll:2};
+const skName=k=>{ const u=UPG.find(x=>x.k===k); return u?u.n.replace(/^[FQR] · /,''):'없음'; };
+function botSnapshot(){ BOT.snap={lv:UPG.map(u=>u.lv),skill:META.skill,q:META.skillQ,r:META.skillR,cur:META.cur}; }
+function botRestore(){ if(!BOT.snap) return; UPG.forEach((u,i)=>u.lv=BOT.snap.lv[i]); META.skill=BOT.snap.skill; META.skillQ=BOT.snap.q; META.skillR=BOT.snap.r; META.cur=BOT.snap.cur; BOT.snap=null; window.__botTemp=false; save(); }
+function botPrep(){
+  if(BOT.cfg.build!=='max') return;
+  UPG.forEach(u=>u.lv=u.max);
+  const F=UPG.filter(u=>u.skill===1).map(u=>u.k), Q=UPG.filter(u=>u.skill==='q').map(u=>u.k), Rr=UPG.filter(u=>u.skill==='r').map(u=>u.k), i=BOT.idx;
+  META.skill=F[i%F.length]; META.skillQ=Q[i%Q.length]; let r=Rr[i%Rr.length]; if(META.skillQ==='frost'&&r==='blaze') r=Rr[(i+1)%Rr.length]; META.skillR=r;
+}
 function botReact(){ return BOT.skill?0.04+Math.random()*0.1:0.12+Math.random()*0.2; }
 function botNewRun(){ BOT.cur={att:0,ok:0,dmg:0,hits:0,lastHp:P.hp,enemyWall:0,bulletWall:0,pierce:0,fUse:0,qUse:0,rUse:0,stalls:[],wk:'',wt:0,hideT:0,wp:null,wpT:0,sE:new WeakSet(),sB:new WeakSet(),sP:new WeakSet(),own:new WeakMap()}; BOT.readyT=0; BOT.react=botReact(); BOT.rwT=0; BOT.mv=null; }
 function botStart(){
-  BOT.on=true; BOT.left=BOT.cfg.n; BOT.speed=BOT.cfg.speed; BOT.skill=BOT.cfg.skill; BOT.runs=[];
+  BOT.on=true; BOT.left=BOT.cfg.n; BOT.speed=BOT.cfg.speed; BOT.skill=BOT.cfg.skill; BOT.runs=[]; BOT.idx=0;
+  if(BOT.cfg.build==='max'){ if(!BOT.snap) botSnapshot(); window.__botTemp=true; }
+  botPrep();
   $('#modal').classList.remove('on'); startRun(OPT.mode||'normal'); botNewRun(); announce('테스트 봇 시작','warn');
 }
 function botTick(dt){
   if(!run||run.tut) return;
   if(!BOT.cur) botNewRun();
   const c=BOT.cur;
-  if(run.phase==='reward'){ BOT.rwT+=dt; if(BOT.rwT>0.35){ BOT.rwT=0; takeReward(Math.floor(Math.random()*Math.max(1,rwPicks.length))); } return; }
+  if(run.phase==='reward'){ BOT.rwT+=dt; if(BOT.rwT>0.35){ BOT.rwT=0; let bi=0, bs=-1; rwPicks.forEach((b,i)=>{ const s=(BOT_PICK[b.k]||4)+Math.random()*0.5; if(s>bs){ bs=s; bi=i; } }); takeReward(bi); } return; }
   if(P.hp<c.lastHp){ c.dmg+=c.lastHp-P.hp; c.hits++; } c.lastHp=P.hp;
   const Rg=range(), threats=bullets.filter(b=>b.owner==='enemy');
   let tb=null, td=1e9;
@@ -157,10 +169,11 @@ function botTick(dt){
 function botRunEnd(){
   const c=BOT.cur||{}; BOT.cur=null;
   BOT.runs.push({cycle:run.cycle,wave:run.wave,score:run.score,kills:run.kills,time:run.time,att:c.att||0,ok:c.ok||0,dmg:Math.round(c.dmg||0),hits:c.hits||0,
-    enemyWall:c.enemyWall||0,bulletWall:c.bulletWall||0,pierce:c.pierce||0,fUse:c.fUse||0,qUse:c.qUse||0,rUse:c.rUse||0,stalls:c.stalls||[],stallN:(c.stalls||[]).length});
-  BOT.left--;
-  if(BOT.on&&BOT.left>0) setTimeout(()=>{ if(!BOT.on) return; startRun(); botNewRun(); },1200);
-  else { BOT.on=false; setTimeout(botReport,700); }
+    enemyWall:c.enemyWall||0,bulletWall:c.bulletWall||0,pierce:c.pierce||0,fUse:c.fUse||0,qUse:c.qUse||0,rUse:c.rUse||0,stalls:c.stalls||[],stallN:(c.stalls||[]).length,
+    build:skName(META.skill)+' · '+skName(META.skillQ)+' · '+skName(META.skillR),boons:Object.keys(run.boons||{}).map(k=>{ const b=boonDef(k); return b?b.n+(run.boons[k]>1?'×'+run.boons[k]:''):k; }).join(', ')});
+  BOT.left--; BOT.idx++;
+  if(BOT.on&&BOT.left>0) setTimeout(()=>{ if(!BOT.on) return; botPrep(); startRun(); botNewRun(); },1200);
+  else { BOT.on=false; if(window.__botTemp) botRestore(); setTimeout(botReport,700); }
 }
 function botReport(){
   const R=BOT.runs; if(!R.length) return;
@@ -170,23 +183,26 @@ function botReport(){
     '<div class="rkNote">평균 점수 '+Math.round(avg('score')).toLocaleString()+' · 평균 처치 '+avg('kills').toFixed(1)+' · 평균 '+Math.round(avg('time'))+'초 · 패링 '+att+'번 (막힘 '+(att-ok)+') · 피격 '+sum('hits')+'회<br>'+
     '평균 받은 피해 '+Math.round(avg('dmg'))+' · 스킬 사용 F '+sum('fUse')+' · Q '+sum('qUse')+' · R '+sum('rUse')+'</div>'+
     '<div class="rkNote" style="color:'+(bad?'var(--red)':'var(--cyan)')+'">이상 현상 — 벽 속 적 '+sum('enemyWall')+' · 벽 속 탄 '+sum('bulletWall')+' · 패링 직후 나를 뚫은 탄 '+sum('pierce')+' · 웨이브 정체 '+sum('stallN')+(bad?'':' (문제 없음)')+(stalls.length?'<br>'+stalls.map(escH).join('<br>'):'')+'</div>'+
-    '<ul class="rkList">'+R.map((r,i)=>'<li><span class="no">'+(i+1)+'</span><span class="nm">사이클 '+r.cycle+' · 웨이브 '+r.wave+' · '+Math.round(r.time)+'초</span><span class="sc">'+r.score.toLocaleString()+'</span><span class="cw">패링 '+r.ok+'/'+r.att+' · 피해 '+r.dmg+'</span></li>').join('')+'</ul>'+
+    '<ul class="rkList">'+R.map((r,i)=>'<li style="flex-wrap:wrap"><span class="no">'+(i+1)+'</span><span class="nm">사이클 '+r.cycle+' · 웨이브 '+r.wave+' · '+Math.round(r.time)+'초</span><span class="sc">'+r.score.toLocaleString()+'</span><span class="cw">패링 '+r.att+' · 피해 '+r.dmg+'</span>'+
+      '<span style="flex-basis:100%;padding-left:34px;color:var(--dim);font-size:10.5px">'+escH(r.build)+(r.boons?' · 증강: '+escH(r.boons):'')+'</span></li>').join('')+'</ul>'+
     '<div class="optTabs"><button data-bot="again">같은 설정으로 다시</button><button data-bot="panel">설정 바꾸기</button></div>';
   $('#modal').classList.add('on');
 }
 function openBotPanel(){
   const cf=BOT.cfg, tab=(attr,v,label,cur)=>'<button data-'+attr+'="'+v+'" class="'+(cur===v?'on':'')+'">'+label+'</button>';
   $('#modalBox').innerHTML='<div class="logHd"><h4>테스트 봇</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
-    '<div class="rkNote">봇이 지금 HUB 강화 · 장착 스킬 · 선택한 모드 그대로 알아서 플레이하고, 끝나면 리포트를 보여줘요. 디버그 판이라 랭킹에는 안 올라가요. HUB로 나가면 멈춰요.</div>'+
-    '<div class="rkNote">판 수</div><div class="optTabs">'+tab('botn',1,'1판',cf.n)+tab('botn',5,'5판',cf.n)+tab('botn',10,'10판',cf.n)+'</div>'+
+    '<div class="rkNote">봇이 알아서 플레이하고 끝나면 리포트를 보여줘요. 디버그 판이라 랭킹에는 안 올라가요. HUB로 나가면 멈춰요.</div>'+
+    '<div class="rkNote">빌드 — 전부 최대: 모든 강화를 최대로 찍고, 판마다 F · Q · R 스킬을 바꿔 가며 전부 시험(좋은 증강 우선 선택). 끝나면 원래 강화 · 스킬로 돌아와요.</div><div class="optTabs">'+tab('botb','max','전부 최대 · 스킬 순환',cf.build)+tab('botb','cur','지금 그대로',cf.build)+'</div>'+
+    '<div class="rkNote">판 수</div><div class="optTabs">'+tab('botn',1,'1판',cf.n)+tab('botn',6,'6판',cf.n)+tab('botn',12,'12판',cf.n)+'</div>'+
     '<div class="rkNote">속도</div><div class="optTabs">'+tab('bots',1,'×1',cf.speed)+tab('bots',3,'×3',cf.speed)+tab('bots',6,'×6',cf.speed)+'</div>'+
     '<div class="rkNote">실력</div><div class="optTabs">'+tab('botk',0,'보통',cf.skill)+tab('botk',1,'잘함',cf.skill)+'</div>'+
     '<div class="optTabs"><button data-bot="start" class="on">시작</button>'+(BOT.runs.length?'<button data-bot="last">지난 리포트</button>':'')+'</div>';
   $('#modal').classList.add('on');
 }
 document.addEventListener('click',e=>{
-  const t=e.target.closest&&e.target.closest('[data-botn],[data-bots],[data-botk],[data-bot]'); if(!t) return;
-  if(t.dataset.botn) BOT.cfg.n=+t.dataset.botn;
+  const t=e.target.closest&&e.target.closest('[data-botn],[data-bots],[data-botk],[data-botb],[data-bot]'); if(!t) return;
+  if(t.dataset.botb) BOT.cfg.build=t.dataset.botb;
+  else if(t.dataset.botn) BOT.cfg.n=+t.dataset.botn;
   else if(t.dataset.bots) BOT.cfg.speed=+t.dataset.bots;
   else if(t.dataset.botk!=null) BOT.cfg.skill=+t.dataset.botk;
   else if(t.dataset.bot==='start'||t.dataset.bot==='again'){ sfx('ui'); botStart(); return; }
