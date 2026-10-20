@@ -429,7 +429,7 @@ function doWall(){
   const o=wallCandidate(), err=wallProblem(o);
   if(err){ say(err,'red'); sfx('miss'); P.wallCd=0.25; return; }
   if(run.walls.length>=CFG.wallMax) run.walls.shift();
-  run.walls.push(o); P.wallCd=P.qCdMax=(run.phase==='build'?0.2:WALL_CD);
+  run.walls.push(o); P.wallCd=P.qCdMax=(run.phase==='build'?0.2:WALL_CD*(CFG.cdrMul||1));
   say('벽 '+run.walls.length+' / '+CFG.wallMax,'cyan'); sfx('wall');
   burst(o.x+o.w/2,o.y+o.h/2,'cyan',14,160);
 }
