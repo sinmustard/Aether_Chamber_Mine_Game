@@ -176,7 +176,17 @@ const RAND_BOOSTS=[
  ['빗나감 페널티 −0.1초',()=>{CFG.whiff=Math.max(0.3,CFG.whiff-0.1);}],
  ['이동 속도 +15',()=>{CFG.moveSpd+=15;}],
  ['최대 체력 +15',()=>{CFG.hpMax+=15; P.hp+=15;}],
- ['유도 +0.6',()=>{CFG.homing+=0.6;}]
+ ['유도 +0.6',()=>{CFG.homing+=0.6;}],
+     ['재탈취 저항 −10%',()=>{CFG.seizeMul*=0.9;}],
+     ['방패 관통 +15%',()=>{CFG.shieldPierce=Math.min(0.75,(CFG.shieldPierce||0)+0.15);}],
+     ['스킬 재사용 대기 −6%',()=>{ ['healCd','guardCd','dashCd','phaseCd','hookCd','slowCd','shockCd','absorbCd','decoyCd','gravCd','frostCd','owCd','echoCd'].forEach(k=>{ if(CFG[k]) CFG[k]*=0.94; }); CFG.cdrMul=(CFG.cdrMul||1)*0.94; }],
+     ['R 필요 충전 −10%',()=>{ CFG.rNeed=Math.max(1,Math.round(CFG.rNeed*0.9)); }],
+     ['연쇄 타격 +15%',()=>{CFG.rallyDmg=(CFG.rallyDmg||0)+0.15;}],
+     ['웨이브 회복 +1%',()=>{CFG.waveHeal=(CFG.waveHeal||0)+0.01;}],
+     ['보호막 +1',()=>{CFG.barrier=(CFG.barrier||0)+1;}],
+     ['응급 처치 +10%',()=>{CFG.firstAid=(CFG.firstAid||0)+(CFG.firstAid?0.1:0.2);}],
+     ['부활 체력 +5%',()=>{CFG.reviveHp=(CFG.reviveHp||0)+0.05;}],
+     ['장갑 −5%',()=>{CFG.armor=Math.min(0.3,(CFG.armor||0)+0.05);}]
 ];
 function applyRandBoosts(){
   run.randBoosts=[]; const n=CFG.randBoosts||0; if(!n) return;
