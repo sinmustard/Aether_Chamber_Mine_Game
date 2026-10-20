@@ -281,7 +281,7 @@ function endRun(){
   if(run.mode!=='daily') META.bestCycle=Math.max(META.bestCycle,run.cycle);
   /* v2.68 누적 기록 · 업적 */
   stat('runs'); stat('playTime',Math.max(0,Math.round(run.time))); statMax('bestRet',run.bestRet); statMax('bestScore',run.score);
-  if(run.mode==='daily') stat('dailyRuns'); if(run.mode==='hard') statMax('hardBestCycle',run.cycle);
+  if(run.mode==='daily') stat('dailyRuns'); if(run.mode==='hard'||run.mode==='hotd') statMax('hardBestCycle',run.cycle);   // v3.53 핫드 포함
   const newAch=run.cheat?[]:checkAch(); const achGold=newAch.reduce((a,x)=>a+x.r,0); META.cur+=achGold;
   save();
   $('#rScore').textContent=run.score.toLocaleString();

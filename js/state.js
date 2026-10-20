@@ -216,7 +216,7 @@ function killEnemy(e){
   const idx=ens.indexOf(e); if(idx<0) return;
   const bonus=G(e).score;
   run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
-  if(!run.tut){ stat('kills'); if(e.grade==='boss'){ stat('bossKills'); if(run.mode==='hard') stat('hardBoss'); } }   // v2.68
+  if(!run.tut){ stat('kills'); if(e.grade==='boss'){ stat('bossKills'); if(run.mode==='hard'||run.mode==='hotd') stat('hardBoss'); } }   // v2.68 · v3.53 핫드(하드보다 어려움)도 하드 보스 격파로 셈
   P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
   if(boonLv('leech')&&P.hp>0) P.hp=Math.min(CFG.hpMax,P.hp+(e.grade==='boss'?12:3)*boonLv('leech'));
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
