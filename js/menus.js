@@ -2,11 +2,13 @@
 const BUILD=((document.querySelector('.caption')||{}).textContent||'').match(/v([0-9.]+)/)?.[1]||'0';
 const verNum=v=>String(v).split(/[~.]/).slice(0,2).map(Number);   // '2.31~2.33' → [2,31]
 const verGt=(a,b)=>{ const x=verNum(a), y=verNum(b); return x[0]!==y[0]? x[0]>y[0] : (x[1]||0)>(y[1]||0); };
-/* v2.48 온라인 랭킹 — Supabase 'game lanking' 프로젝트의 aether_normal 테이블 (공개용 키) */
-const RANK={url:'https://oijsrlbzxowlaxzmsxpt.supabase.co', key:'sb_publishable_m57hm2tIzHx_7GpppTBesg_BL4kNd26', table:'aether_normal'};
+/* v2.48 온라인 랭킹 — Supabase 'game lanking' 프로젝트 (공개용 키)
+   v3.21 노멀 랭킹 탭은 aether_normal(이름만으로 등록 → 서버에 직접 보내면 사칭 가능) 대신
+   로그인 계정으로만 기록되는 aether_verified를 보여 준다 */
+const RANK={url:'https://oijsrlbzxowlaxzmsxpt.supabase.co', key:'sb_publishable_m57hm2tIzHx_7GpppTBesg_BL4kNd26', table:'aether_verified'};
 const escH=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function rankFetch(limit){
-  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table+'?select=name,score,cycle,wave,created_at&order=score.desc,created_at.asc&limit='+(limit||50),
+  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table+'?select=name,score,cycle,wave,updated_at&order=score.desc,updated_at.asc&limit='+(limit||50),
     {headers:{apikey:RANK.key}});
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
@@ -167,10 +169,10 @@ async function openRankTable(tab){
 async function openRanking(tab){
   if(tab==='hard'||tab==='daily') return openRankTable(tab);
   $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs('normal')+
-    '<div class="rkNote">상위 50명 · 이름당 최고 기록 하나만 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
+    '<div class="rkNote">상위 50명 · 로그인 계정으로 한 기록 · 계정당 최고 1줄 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
   $('#modal').classList.add('on');
   try{
-    const rows=await rankFetch(50), me=myName();
+    const rows=await rankFetch(50), me=(getSession()||{}).name||myName();
     $('#rkList').innerHTML=rows.length? rows.map((r,i)=>
       '<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span>'+
       '<span class="nm">'+escH(r.name)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span>'+
@@ -178,7 +180,7 @@ async function openRanking(tab){
       : '<li>아직 등록된 기록이 없어요. 첫 번째 주인공이 되어 보세요.</li>';
     /* v2.52 50위 밖이어도 내 순위를 아래에 붙인다 */
     if(me && !rows.some(r=>r.name===me)){
-      try{ const r=await fetch(RANK.url+'/rest/v1/rpc/aether_my_rank',{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify({p_name:me})});
+      try{ const r=await fetch(RANK.url+'/rest/v1/rpc/aether_verified_rank',{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify({p_name:me})});
         const d=r.ok? await r.json():[]; const m=Array.isArray(d)?d[0]:d;
         if(m&&m.rank) $('#rkList').insertAdjacentHTML('beforeend','<li class="me"><span class="no">'+m.rank+'</span><span class="nm">'+escH(me)+'</span>'+
           '<span class="sc">'+Number(m.score).toLocaleString()+'</span><span class="cw">C'+m.cycle+' · W'+m.wave+'</span></li>');
@@ -190,22 +192,19 @@ async function openRanking(tab){
 /* v3.0 공개 랭킹(aether_normal)은 이름만으로 등록돼서 남의 닉네임을 사칭할 수 있었다(이슈 #8).
    비밀번호 없이 이름만 보내는 서버 API라 자유 입력란을 없애고, 로그인 계정 이름으로만 자동 등록한다 */
 function setupRankBox(){
-  const box=$('#rankBox');
-  if(run.score<=0||run.mode==='hard'||run.mode==='daily'){ box.style.display='none'; box.innerHTML=''; return; }   // v2.68 공개 랭킹은 노멀만
+  const box=$('#rankBox'), ss=getSession(), hide=()=>{ box.style.display='none'; box.innerHTML=''; };
+  if(run.score<=0||run.mode!=='normal'){ hide(); return; }   // v2.68 공개 랭킹은 노멀만 · v3.21 카오스도 제외(#13)
+  /* v3.21 노멀 랭킹 결과는 #discStat 한 줄(aether_verified)로 보여 준다.
+     aether_normal은 디스코드 봇(#1)이 aether_verified로 옮길 때까지만 화면 표시 없이 계속 올린다 */
+  if(ss){ hide();
+    if(!run.cheat) rankSend({name:ss.name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD})
+      .then(()=>{ run.rankSent=true; }).catch(()=>{});
+    return; }
   box.style.display='flex';
   if(run.cheat){ box.innerHTML='<div id="rkMsg">디버그 기능을 쓴 판은 랭킹에 등록할 수 없어요.</div>'; return; }
-  const ss=getSession();
-  if(!ss){
-    box.innerHTML='<div id="rkMsg">공개 랭킹은 로그인 계정 이름으로만 등록돼요(이름 사칭 방지). '+
-      '<button id="rkLogin" style="margin-left:4px;padding:3px 9px;font:inherit;font-size:10.5px;cursor:pointer;background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:6px">로그인</button>'+
-      ' — 로그인하면 다음 판부터 자동 등록돼요.</div>';
-    return;
-  }
-  box.innerHTML='<div id="rkMsg">'+escH(ss.name)+' 이름으로 등록 중…</div>';
-  rankSend({name:ss.name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD})
-    .then(res=>{ run.rankSent=true; const place=res&&res.rank?' · '+res.rank+'위':'';
-      const m=$('#rkMsg'); if(m) m.textContent=((!res||res.updated)?'랭킹 등록됨':'최고 기록 '+Number(res.best).toLocaleString()+'점 유지')+place; })
-    .catch(()=>{ const m=$('#rkMsg'); if(m) m.textContent='랭킹 등록에 실패했어요.'; });
+  box.innerHTML='<div id="rkMsg">노멀 랭킹은 로그인 계정으로만 기록돼요(이름 사칭 방지). '+
+    '<button id="rkLogin" style="margin-left:4px;padding:3px 9px;font:inherit;font-size:10.5px;cursor:pointer;background:transparent;color:var(--cyan);border:1px solid var(--cyan);border-radius:6px">로그인</button>'+
+    ' — 로그인하면 다음 판부터 자동 기록돼요.</div>';
 }
 $('#rankBox').addEventListener('click',e=>{ if(e.target&&e.target.id==='rkLogin') openLogin(); });
 /* v2.70 ⑤ 업적 — 한 번에 큰 목표 대신 단계별로 점진 증가 (10·30·50·100식) */
