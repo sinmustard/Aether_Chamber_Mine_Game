@@ -193,8 +193,9 @@ function doParry(force){
     return;
   }
   /* v1.3.2 다중 패링: 사거리·시야 안의 적 탄환을 가까운 순으로 최대 CFG.multi발 */
+  const pScore=b=>dist(b.x,b.y,P.x,P.y)+angDiff(P.face,Math.atan2(b.y-P.y,b.x-P.x))*range()*0.8;
   let ts=bullets.filter(b=>b.owner==='enemy'&&(b.ready||b.coy>0))   // v2.42 코요테
-    .sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y)).slice(0,Math.max(1,CFG.multi|0));
+    .sort((a,b)=>pScore(a)-pScore(b)).slice(0,Math.max(1,CFG.multi|0));
   /* v2.34 장갑탄 — 첫 패링은 장갑만 깎고, 두 번째 패링에서 그대로 빼앗는다 */
   ts.forEach(b=>{ if(b.armor>0){ b.armor--; b.shell=1; b.glow=1; burst(b.x,b.y,'warn',8,150); } });
   const blocked=ts.filter(b=>b.armor>0);
@@ -241,7 +242,8 @@ function doParry(force){
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
-      t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
+      t.glow=1; t.hcd=0.15; t.ready=false;
+      t.tried=ens.filter(e=>dist(e.x,e.y,t.x,t.y)<e.r+SEIZE_R+20);
       t.htg=(i===0?tgt:foes[i])||null;   // v2.86 이 탄환이 노리는 적을 기억
       if(i===0){ t.dir=mainDir;
         if(seekTgt){ const away=Math.hypot(t.x-P.x,t.y-P.y)>8?Math.atan2(t.y-P.y,t.x-P.x):P.face;   // v3.03 앞으로 → 적 찾기
