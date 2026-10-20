@@ -36,6 +36,7 @@ TITLE → HUB(강화 · 스킬 장착 · 모드 선택) → 전투(웨이브 10 
 | `index.html` | 화면 뼈대, 버전 캡션, css · js 불러오기 |
 | `css/style.css` | 스타일 |
 | `js/*.js` | 게임 코드 (구역별 18개 파일, `index.html`에 적힌 순서대로 실행) |
+| `tests/` | 푸시 전에 돌리는 자동 테스트 — `cd tests` → `npm install`(처음 한 번) → `npm test`. [사용법](tests/README.md) |
 | `assets/enemies/` | 적 이미지. 이미지가 없는 등급은 벡터 도형으로 자동 대체 |
 
 파일별 역할, 버전 올리는 방법은 [진행 요약 문서](에테르_챔버_진행_요약.md)의 2-1 · 2-2를 보세요.
