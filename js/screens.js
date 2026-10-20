@@ -75,6 +75,7 @@ function armFullscreen(){
   addEventListener('pointerdown',once); addEventListener('touchstart',once);
 }
 function go(id){
+  if(id==='hub'||id==='title') BOT.on=false;
   if(id!=='result') settleRoulette();
   if(id==='hub'&&!getSession()&&!offlineOK){ openLogin(); return; }   // v2.58 로그인 먼저
   if(id==='hub') setTimeout(syncFromCloud,0);   // v2.68 HUB에 들어갈 때마다 다른 기기 기록 확인
@@ -254,6 +255,7 @@ function spinRoulette(r,gain){
   tick();
 }
 function endRun(){
+  if(BOT.on&&BOT.endedRun!==run){ BOT.endedRun=run; setTimeout(botRunEnd,0); }
   /* v1.7 재화: 점수÷3 + 처치×5 + 도달 웨이브×6 + 보스 격파×150 (점수 비중 상향) */
   const gScore=Math.round(run.score/3), gKill=run.kills*5,
         gWave=((run.cycle-1)*(BOSS_WAVE+1)+run.wave)*6, gBoss=run.bossKills*150;

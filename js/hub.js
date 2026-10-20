@@ -150,6 +150,7 @@ $('#debugBtns').addEventListener('click',e=>{
   const b=e.target.closest('[data-dbg]'); if(!b)return;
   const k=b.dataset.dbg;
   if(k==='restore'){ dbgRestore(); return; }
+  if(k==='bot'){ openBotPanel(); return; }
   if(k==='cur') META.cur+=10000;
   if(k==='max') UPG.forEach(u=>{ u.lv=u.max; });
   if(k==='zero') UPG.forEach(u=>{ u.lv=0; });

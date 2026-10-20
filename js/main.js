@@ -18,7 +18,7 @@ function loop(ts){
   const dt=Math.min(.033,(ts-t0)/1000||0);t0=ts;
   if(screen==='game'&&run){
     if((fitTick++%20)===0) fitCanvas();   // v2.84
-    try{ update(dt); }catch(e){ reportErr('update',e); }
+    try{ for(let i=0;i<(BOT.on?BOT.speed:1);i++) update(dt); }catch(e){ reportErr('update',e); }
     try{ render(); }catch(e){ reportErr('render',e); }
     if(OPT.skillRing&&touchMode) placeRing();   // v2.79
     { const cover=paused||$('#modal').classList.contains('on')||$('#confirm').classList.contains('on')||(run&&run.phase==='reward');

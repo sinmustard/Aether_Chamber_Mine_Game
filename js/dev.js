@@ -107,3 +107,90 @@ function syncUI(){
     ' · <b>상한 도달</b> ≈ '+(ok&&isFinite(n)?n+'회 왕복':'—')+
     ' · <b>재탈취 확률</b> 잡몹 25% / 엘리트 45% / 보스 60% (빠를수록 ↓)';
 }
+
+const BOT={on:false,left:0,speed:3,skill:1,runs:[],cur:null,readyT:0,react:0.1,rwT:0,mv:null,cfg:{n:5,speed:3,skill:1}};
+function botReact(){ return BOT.skill?0.04+Math.random()*0.1:0.12+Math.random()*0.2; }
+function botNewRun(){ BOT.cur={att:0,ok:0,dmg:0,hits:0,lastHp:P.hp,enemyWall:0,bulletWall:0,pierce:0,fUse:0,qUse:0,rUse:0,stalls:[],wk:'',wt:0,hideT:0,wp:null,wpT:0,sE:new WeakSet(),sB:new WeakSet(),sP:new WeakSet(),own:new WeakMap()}; BOT.readyT=0; BOT.react=botReact(); BOT.rwT=0; BOT.mv=null; }
+function botStart(){
+  BOT.on=true; BOT.left=BOT.cfg.n; BOT.speed=BOT.cfg.speed; BOT.skill=BOT.cfg.skill; BOT.runs=[];
+  $('#modal').classList.remove('on'); startRun(OPT.mode||'normal'); botNewRun(); announce('테스트 봇 시작','warn');
+}
+function botTick(dt){
+  if(!run||run.tut) return;
+  if(!BOT.cur) botNewRun();
+  const c=BOT.cur;
+  if(run.phase==='reward'){ BOT.rwT+=dt; if(BOT.rwT>0.35){ BOT.rwT=0; takeReward(Math.floor(Math.random()*Math.max(1,rwPicks.length))); } return; }
+  if(P.hp<c.lastHp){ c.dmg+=c.lastHp-P.hp; c.hits++; } c.lastHp=P.hp;
+  const Rg=range(), threats=bullets.filter(b=>b.owner==='enemy');
+  let tb=null, td=1e9;
+  threats.forEach(b=>{ const d=dist(b.x,b.y,P.x,P.y); if(d<td&&d<Rg*2.2&&Math.cos(b.dir-Math.atan2(P.y-b.y,P.x-b.x))>0){ td=d; tb=b; } });
+  const ne=ens.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
+  if(tb) P.face=Math.atan2(tb.y-P.y,tb.x-P.x); else if(ne) P.face=Math.atan2(ne.y-P.y,ne.x-P.x);
+  if(parryReady()&&P.lock<=0){ BOT.readyT+=dt; if(BOT.readyT>=BOT.react){ c.att++; doParry(true); if(P.lockKind==='ok') c.ok++; BOT.readyT=0; BOT.react=botReact(); } } else BOT.readyT=0;
+  let mx=0, my=0;
+  threats.forEach(b=>{ const d=dist(b.x,b.y,P.x,P.y); if(d>260||(b===tb&&d<Rg)) return; const to=Math.atan2(P.y-b.y,P.x-b.x); if(Math.cos(b.dir-to)<0.3) return;
+    const side=Math.sin(b.dir-to)>0?1:-1, w=(260-d)/260; mx+=Math.cos(b.dir+side*Math.PI/2)*w*1.4; my+=Math.sin(b.dir+side*Math.PI/2)*w*1.4; });
+  if(ne){ const d=dist(ne.x,ne.y,P.x,P.y), a=Math.atan2(P.y-ne.y,P.x-ne.x), k=d<220?(220-d)/220:(d>420?-(d-420)/400:0); mx+=Math.cos(a)*k; my+=Math.sin(a)*k; }
+  mx+=(WORLD.w/2-P.x)/WORLD.w*0.8; my+=(WORLD.h/2-P.y)/WORLD.h*0.8;
+  allWalls().forEach(({col:o})=>{ const cx=clamp(P.x,o.x,o.x+o.w), cy=clamp(P.y,o.y,o.y+o.h), d=Math.hypot(P.x-cx,P.y-cy); if(d<70&&d>0){ mx+=(P.x-cx)/d*(70-d)/70*1.5; my+=(P.y-cy)/d*(70-d)/70*1.5; } });
+  const vis=ne&&!wallBetween(P.x,P.y,ne.x,ne.y);
+  if(ne&&!vis&&!ens.some(e=>!wallBetween(P.x,P.y,e.x,e.y))) c.hideT+=dt; else c.hideT=0;
+  if(c.wpT>0){ c.wpT-=dt; const a=Math.atan2(c.wp[1]-P.y,c.wp[0]-P.x); mx+=Math.cos(a)*2.5; my+=Math.sin(a)*2.5; }
+  else if(c.hideT>1.2&&ne){ c.wp=[clamp(ne.x+(Math.random()-0.5)*360,60,WORLD.w-60),clamp(ne.y+(Math.random()-0.5)*360,60,WORLD.h-60)]; c.wpT=1.8; c.hideT=0; }
+  const ml=Math.hypot(mx,my); BOT.mv=ml>0.15?[mx/ml,my/ml]:[0,0];
+  const wk=run.cycle+'-'+run.wave; if(c.wk!==wk){ c.wk=wk; c.wt=0; c.stallNoted=false; } else if(run.phase==='fight') c.wt+=dt;
+  if(c.wt>90&&!c.stallNoted){ c.stallNoted=true; c.stalls.push('사이클 '+run.cycle+' 웨이브 '+run.wave+' — 남은 적 '+(ens.map(e=>e.grade).join(', ')||'없음')); }
+  if(c.wt>180&&P.hp>0){ c.wt=0; run.revives=0; P.inv=0; P.hp=0; }
+  if(run.phase==='fight'){
+    if(CFG.skill&&P.skillCd<=0){ const near=threats.filter(b=>dist(b.x,b.y,P.x,P.y)<160).length;
+      if(CFG.skill==='heal'?P.hp<CFG.hpMax*0.55:(near>=3||P.hp<CFG.hpMax*0.4)){ doSkill(); c.fUse++; } }
+    if(CFG.qSkill&&CFG.qSkill!=='wall'&&P.wallCd<=0&&ens.length&&Math.random()<dt*0.5){ doQ(); c.qUse++; }
+    if(CFG.skillR&&P.rChg>=CFG.rNeed&&(threats.length>=3||CFG.skillR==='autoparry'||CFG.skillR==='blaze')){ doR(); c.rUse++; }
+  }
+  allWalls().forEach(({col:o})=>{
+    ens.forEach(e=>{ if(!c.sE.has(e)&&e.x>o.x+4&&e.x<o.x+o.w-4&&e.y>o.y+4&&e.y<o.y+o.h-4){ c.sE.add(e); c.enemyWall++; } });
+    bullets.forEach(b=>{ if(!c.sB.has(b)&&b.x>o.x+2&&b.x<o.x+o.w-2&&b.y>o.y+2&&b.y<o.y+o.h-2){ c.sB.add(b); c.bulletWall++; } });
+  });
+  bullets.forEach(b=>{ if(b.owner!=='player') return; const o=c.own.get(b); if(!o||o.r!==b.returns){ c.own.set(b,{r:b.returns,t:run.time}); return; }
+    const dt2=run.time-o.t; if(dt2>0.05&&dt2<0.4&&!c.sP.has(b)&&dist(b.x,b.y,P.x,P.y)<R_PLAYER*0.6){ c.sP.add(b); c.pierce++; } });
+}
+function botRunEnd(){
+  const c=BOT.cur||{}; BOT.cur=null;
+  BOT.runs.push({cycle:run.cycle,wave:run.wave,score:run.score,kills:run.kills,time:run.time,att:c.att||0,ok:c.ok||0,dmg:Math.round(c.dmg||0),hits:c.hits||0,
+    enemyWall:c.enemyWall||0,bulletWall:c.bulletWall||0,pierce:c.pierce||0,fUse:c.fUse||0,qUse:c.qUse||0,rUse:c.rUse||0,stalls:c.stalls||[],stallN:(c.stalls||[]).length});
+  BOT.left--;
+  if(BOT.on&&BOT.left>0) setTimeout(()=>{ if(!BOT.on) return; startRun(); botNewRun(); },1200);
+  else { BOT.on=false; setTimeout(botReport,700); }
+}
+function botReport(){
+  const R=BOT.runs; if(!R.length) return;
+  const sum=k=>R.reduce((a,r)=>a+r[k],0), avg=k=>sum(k)/R.length, att=sum('att'), ok=sum('ok');
+  const bad=sum('enemyWall')+sum('bulletWall')+sum('pierce')+sum('stallN'), stalls=[].concat(...R.map((r,i)=>r.stalls.map(x=>(i+1)+'판 · '+x)));
+  $('#modalBox').innerHTML='<div class="logHd"><h4>테스트 봇 리포트 · '+R.length+'판</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div class="rkNote">평균 점수 '+Math.round(avg('score')).toLocaleString()+' · 평균 처치 '+avg('kills').toFixed(1)+' · 평균 '+Math.round(avg('time'))+'초 · 패링 '+att+'번 (막힘 '+(att-ok)+') · 피격 '+sum('hits')+'회<br>'+
+    '평균 받은 피해 '+Math.round(avg('dmg'))+' · 스킬 사용 F '+sum('fUse')+' · Q '+sum('qUse')+' · R '+sum('rUse')+'</div>'+
+    '<div class="rkNote" style="color:'+(bad?'var(--red)':'var(--cyan)')+'">이상 현상 — 벽 속 적 '+sum('enemyWall')+' · 벽 속 탄 '+sum('bulletWall')+' · 패링 직후 나를 뚫은 탄 '+sum('pierce')+' · 웨이브 정체 '+sum('stallN')+(bad?'':' (문제 없음)')+(stalls.length?'<br>'+stalls.map(escH).join('<br>'):'')+'</div>'+
+    '<ul class="rkList">'+R.map((r,i)=>'<li><span class="no">'+(i+1)+'</span><span class="nm">사이클 '+r.cycle+' · 웨이브 '+r.wave+' · '+Math.round(r.time)+'초</span><span class="sc">'+r.score.toLocaleString()+'</span><span class="cw">패링 '+r.ok+'/'+r.att+' · 피해 '+r.dmg+'</span></li>').join('')+'</ul>'+
+    '<div class="optTabs"><button data-bot="again">같은 설정으로 다시</button><button data-bot="panel">설정 바꾸기</button></div>';
+  $('#modal').classList.add('on');
+}
+function openBotPanel(){
+  const cf=BOT.cfg, tab=(attr,v,label,cur)=>'<button data-'+attr+'="'+v+'" class="'+(cur===v?'on':'')+'">'+label+'</button>';
+  $('#modalBox').innerHTML='<div class="logHd"><h4>테스트 봇</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div class="rkNote">봇이 지금 HUB 강화 · 장착 스킬 · 선택한 모드 그대로 알아서 플레이하고, 끝나면 리포트를 보여줘요. 디버그 판이라 랭킹에는 안 올라가요. HUB로 나가면 멈춰요.</div>'+
+    '<div class="rkNote">판 수</div><div class="optTabs">'+tab('botn',1,'1판',cf.n)+tab('botn',5,'5판',cf.n)+tab('botn',10,'10판',cf.n)+'</div>'+
+    '<div class="rkNote">속도</div><div class="optTabs">'+tab('bots',1,'×1',cf.speed)+tab('bots',3,'×3',cf.speed)+tab('bots',6,'×6',cf.speed)+'</div>'+
+    '<div class="rkNote">실력</div><div class="optTabs">'+tab('botk',0,'보통',cf.skill)+tab('botk',1,'잘함',cf.skill)+'</div>'+
+    '<div class="optTabs"><button data-bot="start" class="on">시작</button>'+(BOT.runs.length?'<button data-bot="last">지난 리포트</button>':'')+'</div>';
+  $('#modal').classList.add('on');
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest&&e.target.closest('[data-botn],[data-bots],[data-botk],[data-bot]'); if(!t) return;
+  if(t.dataset.botn) BOT.cfg.n=+t.dataset.botn;
+  else if(t.dataset.bots) BOT.cfg.speed=+t.dataset.bots;
+  else if(t.dataset.botk!=null) BOT.cfg.skill=+t.dataset.botk;
+  else if(t.dataset.bot==='start'||t.dataset.bot==='again'){ sfx('ui'); botStart(); return; }
+  else if(t.dataset.bot==='last'){ botReport(); return; }
+  else if(t.dataset.bot==='panel'){ openBotPanel(); return; }
+  sfx('ui'); openBotPanel();
+});

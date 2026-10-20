@@ -2,6 +2,7 @@
 /* ================= 업데이트 ================= */
 function update(dt){
   if(paused)return;
+  if(BOT.on) botTick(dt);
   if(run&&run.phase==='reward') return;     // v2.0 보상 선택 중에는 전투 정지
   /* v2.61 히트스톱 중에도 패링 경직과 미리 누른 패링은 계속 흘러가게 — 멈춘 사이 입력이 씹히지 않도록 */
   if(hitstop>0){ hitstop-=dt; if(P.lock>0) P.lock-=dt; if(P.pbuf>0) P.pbuf=Math.max(P.pbuf,0.05); return; }
@@ -23,6 +24,7 @@ function update(dt){
     const ms=stick.move;                                   // v2.3 가상 조이스틱
     let spdMul=1;
     if(ms&&(ms.dx||ms.dy)){ ax=ms.dx; ay=ms.dy; spdMul=Math.min(1,ms.len/TOUCH_MAX); }
+    if(BOT.on&&BOT.mv){ ax=BOT.mv[0]; ay=BOT.mv[1]; spdMul=1; }
     P.x=clamp(P.x+ax*CFG.moveSpd*spdMul*dt,30,WORLD.w-30);
     P.y=clamp(P.y+ay*CFG.moveSpd*spdMul*dt,30,WORLD.h-30);
     P.moving=!!(ax||ay);   // v3.12 영상 캐릭터 '움직일 때만 재생'용
@@ -36,7 +38,7 @@ function update(dt){
   if(mouseS.ok){ mouse.x=clamp(mouseS.x/ZK,0,WORLD.w); mouse.y=clamp(((mouseS.y-CAMY)/ZK-OY)/SQUASH,0,WORLD.h); }
   const as=stick.aim;                                     // v2.3 오른쪽 드래그 조준
   if(as&&(as.dx||as.dy)) P.face=Math.atan2(as.dy,as.dx);
-  else if(!touchMode)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
+  else if(!touchMode&&!BOT.on)    P.face=Math.atan2(mouse.y-P.y,mouse.x-P.x);
   if(P.hurt>0)P.hurt-=dt; if(P.lock>0)P.lock-=dt; if(P.inv>0)P.inv-=dt;
   if(P.focusT>0)P.focusT-=dt;   // v2.37
   if(debug||CFG.god) run.cheat=1;   // v2.48 디버그를 쓴 판은 랭킹 등록 불가
