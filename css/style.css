@@ -207,6 +207,10 @@ body.touch #title .ver{display:none}
 #reward .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 @media (max-width:560px){#reward .row{grid-template-columns:1fr}}
 #reward .bc.sp{border-color:var(--warn)!important;box-shadow:0 0 0 1px var(--warn) inset}
+.bc .t-minus{display:none}
+.bc:hover .t-minus{display:inline;color:var(--red)}
+.bc:hover .t-plus{display:none}
+.bc.botpick{outline:2px solid var(--cyan);outline-offset:2px;transform:translateY(-4px)}
 .bc.sp .k{color:var(--warn)}
 .bc{position:relative;min-width:0;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
