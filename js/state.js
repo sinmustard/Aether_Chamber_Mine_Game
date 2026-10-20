@@ -136,7 +136,7 @@ function waveSpawn(){
 function wallSlide(x0,y0,x1,y1,r){
   for(let k=0;k<2;k++){
     let hit=null, bd=1e9;
-    for(const {col:o} of allWalls()){ const h=sweepRect(x0,y0,x1,y1,o,r); if(!h) continue; const d=Math.hypot(h.x-x0,h.y-y0); if(d<bd){ bd=d; hit=h; } }
+    for(const {col:o} of allWalls()){ if(x0>o.x-r&&x0<o.x+o.w+r&&y0>o.y-r&&y0<o.y+o.h+r) continue; const h=sweepRect(x0,y0,x1,y1,o,r); if(!h) continue; const d=Math.hypot(h.x-x0,h.y-y0); if(d<bd){ bd=d; hit=h; } }
     if(!hit) break;
     if(hit.axis==='x') x1=hit.x; else y1=hit.y;
   }

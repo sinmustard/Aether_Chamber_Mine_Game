@@ -148,7 +148,7 @@ function botTick(dt){
   if(parryReady()&&P.lock<=0){ BOT.readyT+=dt; if(BOT.readyT>=BOT.react){ c.att++; doParry(true); if(P.lockKind==='ok') c.ok++; BOT.readyT=0; BOT.react=botReact(); } } else BOT.readyT=0;
   let mx=0, my=0;
   threats.forEach(b=>{ const d=dist(b.x,b.y,P.x,P.y); if(d>260||(b===tb&&d<Rg)) return; const to=Math.atan2(P.y-b.y,P.x-b.x); if(Math.cos(b.dir-to)<0.3) return;
-    const side=Math.sin(b.dir-to)>0?1:-1, w=(260-d)/260; mx+=Math.cos(b.dir+side*Math.PI/2)*w*1.4; my+=Math.sin(b.dir+side*Math.PI/2)*w*1.4; });
+    if(!b.botSide) b.botSide=Math.sin(b.dir-to)>0?1:-1; const side=b.botSide, w=(260-d)/260; mx+=Math.cos(b.dir+side*Math.PI/2)*w*1.4; my+=Math.sin(b.dir+side*Math.PI/2)*w*1.4; });
   if(ne){ const d=dist(ne.x,ne.y,P.x,P.y), a=Math.atan2(P.y-ne.y,P.x-ne.x), k=d<220?(220-d)/220:(d>420?-(d-420)/400:0); mx+=Math.cos(a)*k; my+=Math.sin(a)*k; }
   mx+=(WORLD.w/2-P.x)/WORLD.w*0.8; my+=(WORLD.h/2-P.y)/WORLD.h*0.8;
   allWalls().forEach(({col:o})=>{ const cx=clamp(P.x,o.x,o.x+o.w), cy=clamp(P.y,o.y,o.y+o.h), d=Math.hypot(P.x-cx,P.y-cy); if(d<70&&d>0){ mx+=(P.x-cx)/d*(70-d)/70*1.5; my+=(P.y-cy)/d*(70-d)/70*1.5; } });
@@ -156,7 +156,14 @@ function botTick(dt){
   if(ne&&!vis&&!ens.some(e=>!wallBetween(P.x,P.y,e.x,e.y))) c.hideT+=dt; else c.hideT=0;
   if(c.wpT>0){ c.wpT-=dt; const a=Math.atan2(c.wp[1]-P.y,c.wp[0]-P.x); mx+=Math.cos(a)*2.5; my+=Math.sin(a)*2.5; }
   else if(c.hideT>1.2&&ne){ c.wp=[clamp(ne.x+(Math.random()-0.5)*360,60,WORLD.w-60),clamp(ne.y+(Math.random()-0.5)*360,60,WORLD.h-60)]; c.wpT=1.8; c.hideT=0; }
-  const ml=Math.hypot(mx,my); BOT.mv=ml>0.15?[mx/ml,my/ml]:[0,0];
+  if(!c.sp){ c.sp=[P.x,P.y]; c.spT=0; }
+  c.spT+=dt; if(c.spT>1.2){ if(Math.hypot(P.x-c.sp[0],P.y-c.sp[1])<25&&!(c.wpT>0)&&BOT.mv&&Math.hypot(BOT.mv[0],BOT.mv[1])>0.3){
+      for(let k=0;k<12;k++){ const x=80+Math.random()*(WORLD.w-160), y=80+Math.random()*(WORLD.h-160);
+        if(!allWalls().some(({col:o})=>rectHit(x,y,R_PLAYER+30,o))){ c.wp=[x,y]; c.wpT=1.5; break; } } }
+    c.sp=[P.x,P.y]; c.spT=0; }
+  const ml=Math.hypot(mx,my), tx=ml>0.15?mx/ml:0, ty=ml>0.15?my/ml:0, pv=BOT.mv||[0,0], kk=Math.min(1,dt*6);
+  let sx=pv[0]+(tx-pv[0])*kk, sy=pv[1]+(ty-pv[1])*kk; const sl=Math.hypot(sx,sy);
+  BOT.mv=sl>0.2?[sx/Math.max(1,sl),sy/Math.max(1,sl)]:[0,0];
   const wk=run.cycle+'-'+run.wave; if(c.wk!==wk){ c.wk=wk; c.wt=0; c.stallNoted=false; } else if(run.phase==='fight') c.wt+=dt;
   if(c.wt>90&&!c.stallNoted){ c.stallNoted=true; c.stalls.push('사이클 '+run.cycle+' 웨이브 '+run.wave+' — 남은 적 '+(ens.map(e=>e.grade).join(', ')||'없음')); }
   if(c.wt>180&&P.hp>0){ c.wt=0; run.revives=0; P.inv=0; P.hp=0; }

@@ -191,8 +191,8 @@ function update(dt){
         if(d<6){ e.wp=null; e.wpLos=false; e.wanT=3+Math.random()*4; }
         else { const a=Math.atan2(e.wp[1]-e.ay,e.wp[0]-e.ax); e.ax=clamp(e.ax+Math.cos(a)*Math.min(d,sp*dt),40,WORLD.w-40); e.ay=clamp(e.ay+Math.sin(a)*Math.min(d,sp*dt),40,WORLD.h-40); } }
     }
-    [e.ax,e.ay]=wallSlide(ox,oy,e.ax,e.ay,e.r+6);
-    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+40);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
+    [e.ax,e.ay]=wallSlide(ox,oy,e.ax,e.ay,e.r+18);
+    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+8);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
     if(e.bindT>0||e.frozenT>0){ e.x=e.ax; e.y=e.ay; }   // v3.12 구속 중엔 제자리 흔들림(drift)도 멈춰서 완전히 고정된 것처럼 보이게
     else{ e.x=e.ax+Math.cos(e.drift*0.8)*36; e.y=e.ay+Math.sin(e.drift)*54; [e.x,e.y]=wallSlide(e.ax,e.ay,e.x,e.y,e.r); }
     if(dt>0){ e.vx=(e.lx==null?0:(e.x-e.lx)/dt); e.vy=(e.ly==null?0:(e.y-e.ly)/dt); } e.lx=e.x; e.ly=e.y;   // v3.00 이동 속도 (패링 조준 예측용)
@@ -490,7 +490,7 @@ function enemySpot(e,los){
   let best=null, bs=-1e9;
   for(let k=0;k<(los?40:14);k++){
     const a=Math.random()*TAU, r=los?80+Math.random()*340:90+Math.random()*130, x=clamp(e.ax+Math.cos(a)*r,70,WORLD.w-70), y=clamp(e.ay+Math.sin(a)*r,70,WORLD.h-70);
-    if(allWalls().some(({col:o})=>rectHit(x,y,e.r+40,o))||wallBetween(e.ax,e.ay,x,y)) continue;
+    if(allWalls().some(({col:o})=>rectHit(x,y,e.r+20,o))||wallBetween(e.ax,e.ay,x,y)) continue;
     const dp=dist(x,y,P.x,P.y), see=!wallBetween(x,y,P.x,P.y);
     if(los&&(!see||dp<160)) continue;
     const sc=(see?200:0)-Math.abs(dp-340)*0.4-(los?dist(x,y,e.ax,e.ay)*0.5:0)+Math.random()*40;
