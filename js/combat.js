@@ -175,6 +175,7 @@ function update(dt){
     if(e.hurt>0)e.hurt-=dt; if(e.seizeFx>0)e.seizeFx-=dt;
     if(e.shieldFx>0)e.shieldFx-=dt; if(e.inv>0)e.inv-=dt;
     if(e.sa!=null){                                  // v1.8.1 방패 회전
+      if(e.shieldDown>0){ e.shieldDown-=dt; if(e.shieldDown<=0){ e.shieldDown=0; say('배리어 복구','red'); burst(e.x,e.y,'red',12,160); } }
       if(e.saStun>0) e.saStun-=dt;                   // v1.9.1 반동 중에는 못 돈다
       else{
         const want=Math.atan2(aimPt().y-e.y,aimPt().x-e.x);
@@ -379,6 +380,10 @@ function update(dt){
         const d=norm((e.sa!=null?e.sa:out)-out);
         e.sa=(e.sa!=null?e.sa:out)+(d>=0?1:-1)*0.42;
         e.saStun=1.1; e.shieldFx=0.3;   // v2.2 막은 뒤 방패가 다시 돌아오기까지 더 오래 걸리게 (0.55 -> 1.1)
+        if(e.variant==='warden'){
+          e.saStun=2.0; e.wardHits=(run.time-(e.wardHitT||-99)>6?0:(e.wardHits||0))+1; e.wardHitT=run.time;
+          if(e.wardHits>=3){ e.wardHits=0; e.shieldDown=5; announce('배리어 파괴','cyan'); sfx('overwrite'); shake=14; burst(e.x,e.y,'cyan',24,260); }
+        }
         say('방패에 막힘','red'); sfx('block'); shake=5; burst(b.x,b.y,'red',6,120); bMark(b.x,b.y,'방패 반사','#ff9f43');   // v3.00
         continue;
       }
@@ -387,7 +392,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68

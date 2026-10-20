@@ -85,7 +85,7 @@ const ENEMY_IFRAME=0.10; // v1.9.2 적 피격 무적. 다중 패링으로 한 �
 const HIT_UNIT=BASE_DMG*DMG_MULT;        // 1칸
 const SHARD_UNIT=0.5;                    // 파편은 중첩당 0.5칸 (최대 2중첩 → 1칸)
 function shielded(e,b){
-  const sh=G(e).shield||e.shieldArc; if(!sh) return false;   // v2.68 수호형 보스도 방패
+  const sh=G(e).shield||e.shieldArc; if(!sh||e.shieldDown>0) return false;   // v2.68 수호형 보스도 방패
   const toB=Math.atan2(b.y-e.y,b.x-e.x);          // 적에서 탄환을 향하는 방향
   return angDiff(e.sa!=null?e.sa:toB, toB)<=(sh/2)*Math.PI/180;
 }

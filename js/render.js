@@ -293,7 +293,7 @@ function drawWallPreview(){
   ctx.restore();
 }
 function drawShield(e){
-  const sh=G(e).shield||e.shieldArc; if(!sh) return;
+  const sh=G(e).shield||e.shieldArc; if(!sh||e.shieldDown>0) return;
   const q=proj(e.x,e.y), half=(sh/2)*Math.PI/180;
   const facing=e.sa!=null?e.sa:Math.atan2(P.y-e.y,P.x-e.x);
   const exposed=angDiff(facing,Math.atan2(P.y-e.y,P.x-e.x))>half;   // 플레이어가 사각에 있음
