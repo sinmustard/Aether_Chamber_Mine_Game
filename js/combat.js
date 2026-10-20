@@ -318,7 +318,7 @@ function update(dt){
           if(wallBetween(e.x,e.y,b.x,b.y)) break;
           b.tried.push(e);
           if(Math.random()<seizeChance(e,b)){
-            b.owner='enemy'; b.tried=[]; b.just=0;
+            b.owner='enemy'; b.tried=[];
             b.dir=Math.atan2(aimPt().y-b.y,aimPt().x-b.x);
             e.seizeFx=0.35; say('빼앗김','red'); sfx('seize'); burst(b.x,b.y,'red',8); bMark(b.x,b.y,'재탈취 · '+(e===b.htg?'노린 적':'옆의 적'),'#ff5d6c');   // v3.00
           }
@@ -376,7 +376,8 @@ function update(dt){
         if(d<ens[j].r+R_BULLET && d<hitD){ hitD=d; hitIdx=j; }
       }
       if(hitIdx>=0 && ens[hitIdx].inv>0) hitIdx=-1;
-      if(hitIdx>=0 && shielded(ens[hitIdx],b)){
+      if(hitIdx>=0 && shielded(ens[hitIdx],b) && CFG.shieldPierce>0 && Math.random()<CFG.shieldPierce){ say('방패 관통','cyan'); burst(b.x,b.y,'cyan',10,160); }
+      else if(hitIdx>=0 && shielded(ens[hitIdx],b)){
         /* v1.8 방패병 정면 — 피해 없이 튕겨낸다. 소유권은 그대로라 다른 적을 노릴 수 있다 */
         const e=ens[hitIdx];
         const out=Math.atan2(b.y-e.y,b.x-e.x);
@@ -400,7 +401,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(b.just?1+0.3*b.just:1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68

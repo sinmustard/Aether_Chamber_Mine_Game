@@ -21,11 +21,13 @@ const BOONS=[
   fn:()=>['healCd','guardCd','dashCd','phaseCd','hookCd','owCd','echoCd'].forEach(k=>CFG[k]*=0.9)},
  {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
  {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}},
+ {k:'leech',     n:'처치 회복',   d:'적을 처치할 때마다 체력 +3 (보스는 +12)',           max:3, tag:'생존',   fn:()=>{}},
  {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}}   // v2.52
 ];
 /* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
 const SPECIALS=[
  {k:'s_revive', n:'재기동',      d:'이번 판 부활 횟수 +1',                               max:3, tag:'특수 특전', sp:1, fn:()=>{run.revives++;}},
+ {k:'s_boss',   n:'거인 사냥꾼', d:'보스에게 주는 피해 +50%',                              max:1, tag:'특수 특전', sp:1, fn:()=>{}},
  {k:'s_revhp',  n:'강인한 재기', d:'부활할 때 체력 +15%',                                  max:1, tag:'특수 특전', sp:1, fn:()=>{run.reviveHp=(run.reviveHp||0)+0.15;}},
  {k:'s_homing', n:'추적 회로',   d:'유도 +2.0, 유도 시간 1.4초 → 3초',                       max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.homing+=2.0; CFG.homeTime+=1.6;}},
  {k:'s_focus',  n:'패링 집중',   d:'패링에 성공하면 3초 동안 빗나감 페널티가 75% 줄어든다', max:1, tag:'특수 특전', sp:1, fn:()=>{}},

@@ -50,7 +50,7 @@ function newRun(){
   Object.assign(CFG,{rangeM:st.rangeM,fov:st.fov,whiff:st.whiff,moveSpd:st.moveSpd,
     accel:st.accel,scoreMul:st.scoreMul,hpMax:st.hpMax,iframe:st.iframe,multi:st.multi,homing:st.homing,gainMul:st.gainMul,startRewards:st.startRewards,skill:st.skill,qSkill:st.qSkill,healAmt:st.healAmt,healCd:st.healCd,guardDur:st.guardDur,guardCd:st.guardCd,phaseDur:st.phaseDur,phaseCd:st.phaseCd,wallMax:st.wallMax,
     dashDist:st.dashDist,dashCd:st.dashCd,hookCd:st.hookCd,bindDur:st.bindDur,slowDur:st.slowDur,slowCd:st.slowCd,shockR:st.shockR,shockCd:st.shockCd,absorbDur:st.absorbDur,absorbCd:st.absorbCd,decoyDur:st.decoyDur,decoyCd:st.decoyCd,
-    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,autoDur:st.autoDur,revives:st.revives,reviveHp:st.reviveHp,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,randBoosts:st.randBoosts,
+    skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,autoDur:st.autoDur,revives:st.revives,reviveHp:st.reviveHp,shieldPierce:st.shieldPierce,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,randBoosts:st.randBoosts,
     spd:240,fire:1.8,seizeMul:st.seizeMul,homeTime:1.4});   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,heat:0,ovl:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
@@ -216,6 +216,7 @@ function killEnemy(e){
   run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
   if(!run.tut){ stat('kills'); if(e.grade==='boss'){ stat('bossKills'); if(run.mode==='hard') stat('hardBoss'); } }   // v2.68
   P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
+  if(boonLv('leech')&&P.hp>0) P.hp=Math.min(CFG.hpMax,P.hp+(e.grade==='boss'?12:3)*boonLv('leech'));
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
   hitstop=e.grade==='boss'?0.18:0; sfx(e.grade==='boss'?'boss':'kill');   // v2.61 일반 처치는 멈추지 않는다 (보스만 짧게)
   if(e.grade==='boss'){ run.bossKills++; announce('보스 격파  +'+bonus,'cyan'); shake=20; }
