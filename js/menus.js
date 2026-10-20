@@ -188,7 +188,27 @@ function openCloud(){
 }
 /* v2.68 랭킹 탭 */
 const rkTabs=cur=>'<div class="optTabs">'+[['normal','노멀'],['hard','하드'],['daily','오늘의 데일리'],['hotd',hiddenOn('hotd')?'핫드':'???']].map(([k,n])=>'<button data-rtab="'+k+'" class="'+(k===cur?'on':'')+'">'+n+'</button>').join('')+'</div>';
-document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rtab]'); if(b){ openRanking(b.dataset.rtab); sfx('ui'); } });
+function hidPop(title,desc,btns){
+  const no=$('#cfNo'), yes=$('#cfYes'), reset=()=>{ no.textContent='취소'; no.style.display=''; no.onclick=closeConfirm; yes.onclick=()=>{ const f=cfOk; closeConfirm(); if(f) f(); }; };
+  $('#cfT').textContent=title; $('#cfD').textContent=desc;
+  const [a,b]=btns.length>1?btns:[null,btns[0]];
+  no.style.display=a?'':'none';
+  if(a){ no.textContent=a.label; no.onclick=()=>{ closeConfirm(); reset(); if(a.fn) a.fn(); }; }
+  yes.textContent=b.label; yes.onclick=()=>{ closeConfirm(); reset(); if(b.fn) b.fn(); };
+  cfOk=null; $('#confirm').classList.add('on'); sfx('ui');
+}
+let hidRankTaps=[], hidRankStage=0;
+function hidRankTap(){
+  const now=performance.now(); hidRankTaps=hidRankTaps.filter(t=>now-t<1200); hidRankTaps.push(now);
+  if(hidRankTaps.length<3) return;
+  hidRankTaps=[]; hidRankStage=Math.min(2,hidRankStage+1);
+  if(hidRankStage===1) hidPop('???','히든 모드 랭킹이에요',[{label:'확인'}]);
+  else hidPop('???','아 히든이 궁금해요?',[
+    {label:'아니요',fn:()=>hidPop('???','아니 그럼 진짜 궁금해서 했다고요? 와 히든 정말 찾고 싶으신 것 같네요 ㅋㅋㅋ',[{label:'ㅋㅋㅋ'}])},
+    {label:'예',fn:()=>hidPop('???','진짜 그냥 찾을 생각이 없으세요?',[{label:'…',fn:()=>hidPop('???','방금 했던 행동을 다른 데에 해봐요.....',[{label:'확인'}])}])}]);
+}
+new MutationObserver(()=>{ if(!$('#modal').classList.contains('on')){ hidRankStage=0; hidRankTaps=[]; } }).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']});
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rtab]'); if(b){ openRanking(b.dataset.rtab); sfx('ui'); if(b.dataset.rtab==='hotd'&&!hiddenOn('hotd')) hidRankTap(); } });
 async function openRankTable(tab){
   const hot=tab==='hotd', hard=tab==='hard'||hot, day=todayKST();
   $('#modalBox').innerHTML='<div class="logHd"><h4>'+(hot?'핫드 랭킹':hard?'하드 랭킹':'데일리 · '+day)+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs(tab)+
