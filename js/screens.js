@@ -301,19 +301,18 @@ function endRun(){
       : ok?'☁ '+nm+' 계정에 자동 저장했어요':'☁ 자동 저장 실패 — 다음 판에 다시 시도해요'; }); }   // v2.76
   /* v2.62 디스코드 랭킹 — 로그인 계정으로만 자동 기록 (게임 안 랭킹과 별개, 이름을 바꿔 올릴 수 없음) */
   $('#discStat').textContent='';
-  if(run.mode==='hard'||run.mode==='daily'||run.mode==='hotd'){   // v2.68 하드 · 데일리는 각자 랭킹으로 (로그인 계정만)
-    const ss=getSession(), nm=({hard:'하드',daily:'데일리',hotd:'핫드'})[run.mode];
+  if(run.mode==='hard'||run.mode==='daily'||run.mode==='hotd'||run.mode==='chaosx'){   // v2.68 하드 · 데일리는 각자 랭킹으로 (로그인 계정만)
+    const ss=getSession(), nm=({hard:'하드',daily:'데일리',hotd:'핫드',chaosx:'혼돈이야~'})[run.mode];
     if(!ss) $('#discStat').textContent=nm+' 랭킹은 로그인해야 기록돼요';
     else if(run.cheat) $('#discStat').textContent='디버그를 쓴 판은 '+nm+' 랭킹에 기록되지 않아요';
     else if(run.score>0){
       const body={p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild()};
       if(run.mode==='daily') body.p_day=run.day;
-      rankCall(({hard:'aether_submit_hard',daily:'aether_submit_daily',hotd:'aether_submit_hotd'})[run.mode],body)
+      rankCall(({hard:'aether_submit_hard',daily:'aether_submit_daily',hotd:'aether_submit_hotd',chaosx:'aether_submit_chaosx'})[run.mode],body)
         .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
           $('#discStat').textContent=nm+' 랭킹 '+(r.updated?'기록 갱신 · ':'최고 '+Number(r.best).toLocaleString()+'점 유지 · ')+r.rank+'위'; })
         .catch(e=>{ $('#discStat').textContent=nm+' 랭킹 기록 실패'+(badSession(e)?' (다시 로그인 필요)':/점수/.test(String(e.message))?' (점수 확인 실패)':''); });
     }
-  } else if(run.mode==='chaosx'){ $('#discStat').textContent='혼돈이야~ 모드는 랭킹에 기록되지 않아요';
   } else
   /* v3.21 게임 안 노멀 랭킹도 이 인증 랭킹(aether_verified)을 보여 준다 — 그래서 이름도 "노멀 랭킹"
      v3.24 카오스를 켠 판도 기록하고 랭킹에 이름(카오스)로 표시 */
@@ -400,7 +399,7 @@ function syncModeUI(){ if((OPT.mode==='hotd'||OPT.mode==='chaosx')&&!hiddenOn(OP
     hard:'적 체력 ×1.5 · 탄속 · 발사 빨라짐 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 · 하드 랭킹(로그인)',
     daily:'오늘 '+todayKST()+' — 모두 같은 맵·적, 강화 없이 기본 능력치 · 재화 ×0.5 · 데일리 랭킹(로그인) · 카오스 안 됨',
     hotd:'히든 · 진짜 하드 — 하드보다 적 체력 ×1.5 · 적 피해 ×1.5 더 · 핫드 랭킹(로그인)',
-    chaosx:'히든 · 진짜 카오스 — 벽이 매 웨이브 바뀌고, 웨이브마다 모든 적이 무작위(1사이클부터 전부). 보스가 걸리면 보스만 · 랭킹 없음'})[mode]
+    chaosx:'히든 · 진짜 카오스 — 벽이 매 웨이브 바뀌고, 웨이브마다 모든 적이 무작위(1사이클부터 전부). 보스가 걸리면 보스만 · 혼돈이야~ 랭킹(로그인)'})[mode]
     +(chaos?' · 카오스: 벽 배치가 매 웨이브 바뀜, 랭킹에 (카오스) 표시':''); }
 document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mode]'); if(!b) return;
   OPT.mode=b.dataset.mode; save(); syncModeUI(); sfx('ui'); if(b.dataset.mode==='hard') hiddenTap('hard'); });

@@ -188,7 +188,7 @@ function openCloud(){
   };
 }
 /* v2.68 랭킹 탭 */
-const rkTabs=cur=>'<div class="optTabs">'+[['normal','노멀'],['hard','하드'],['daily','오늘의 데일리'],['dbest','데일리 기록'],['hotd',hiddenOn('hotd')?'핫드':'???']].map(([k,n])=>'<button data-rtab="'+k+'" class="'+(k===cur?'on':'')+'">'+n+'</button>').join('')+'</div>';
+const rkTabs=cur=>'<div class="optTabs">'+[['normal','노멀'],['hard','하드'],['daily','오늘의 데일리'],['dbest','데일리 기록'],['hotd',hiddenOn('hotd')?'핫드':'???'],['chaosx',hiddenOn('chaosx')?'혼돈이야~':'???']].map(([k,n])=>'<button data-rtab="'+k+'" class="'+(k===cur?'on':'')+'">'+n+'</button>').join('')+'</div>';
 function hidPop(title,desc,btns){
   const no=$('#cfNo'), yes=$('#cfYes'), reset=()=>{ no.textContent='취소'; no.style.display=''; no.onclick=closeConfirm; yes.onclick=()=>{ const f=cfOk; closeConfirm(); if(f) f(); }; };
   $('#cfT').textContent=title; $('#cfD').textContent=desc;
@@ -209,18 +209,18 @@ function hidRankTap(){
     {label:'예',fn:()=>hidPop('???','진짜 그냥 찾을 생각이 없으세요?',[{label:'…',fn:()=>hidPop('???','방금 했던 행동을 다른 데에 해봐요.....',[{label:'확인'}])}])}]);
 }
 new MutationObserver(()=>{ if(!$('#modal').classList.contains('on')){ hidRankStage=0; hidRankTaps=[]; } }).observe(document.getElementById('modal'),{attributes:true,attributeFilter:['class']});
-document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rtab]'); if(b){ openRanking(b.dataset.rtab); sfx('ui'); if(b.dataset.rtab==='hotd'&&!hiddenOn('hotd')) hidRankTap(); } });
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rtab]'); if(b){ openRanking(b.dataset.rtab); sfx('ui'); if((b.dataset.rtab==='hotd'||b.dataset.rtab==='chaosx')&&!hiddenOn(b.dataset.rtab)) hidRankTap(); } });
 async function openRankTable(tab){
-  const hot=tab==='hotd', hard=tab==='hard'||hot, day=todayKST();
-  $('#modalBox').innerHTML='<div class="logHd"><h4>'+(hot?'핫드 랭킹':hard?'하드 랭킹':'데일리 · '+day)+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs(tab)+
-    '<div class="rkNote">'+(hot?'로그인 계정으로 핫드(진짜 하드)를 한 기록 · 계정당 최고 1줄':hard?'로그인 계정으로 하드 모드를 한 기록 · 계정당 최고 1줄':'오늘('+day+') 모두 같은 맵·적으로 한 기록 · 강화 없이 기본 능력치')+'</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
+  const hot=tab==='hotd', cx=tab==='chaosx', hard=tab==='hard'||hot||cx, day=todayKST();
+  $('#modalBox').innerHTML='<div class="logHd"><h4>'+(cx?'혼돈이야~ 랭킹':hot?'핫드 랭킹':hard?'하드 랭킹':'데일리 · '+day)+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs(tab)+
+    '<div class="rkNote">'+(cx?'로그인 계정으로 혼돈이야~(진짜 카오스)를 한 기록 · 계정당 최고 1줄':hot?'로그인 계정으로 핫드(진짜 하드)를 한 기록 · 계정당 최고 1줄':hard?'로그인 계정으로 하드 모드를 한 기록 · 계정당 최고 1줄':'오늘('+day+') 모두 같은 맵·적으로 한 기록 · 강화 없이 기본 능력치')+'</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
   $('#modal').classList.add('on');
-  try{ const q=hard?(hot?'aether_hotd':'aether_hard')+'?select=name,score,cycle,wave,build&order=score.desc,updated_at.asc&limit=50'
+  try{ const q=hard?(cx?'aether_chaosx':hot?'aether_hotd':'aether_hard')+'?select=name,score,cycle,wave,build&order=score.desc,updated_at.asc&limit=50'
                    :'aether_daily?select=name,score,cycle,wave&day=eq.'+day+'&order=score.desc,updated_at.asc&limit=50';
     const r=await fetch(RANK.url+'/rest/v1/'+q,{headers:{apikey:RANK.key}}); if(!r.ok) throw 0; const rows=await r.json();
     const me=(getSession()||{}).name||myName();
     $('#rkList').innerHTML=rows.length? rows.map((r,i)=>'<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+rankName(r)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
-      : '<li>'+(hot?'아직 핫드 기록이 없어요.':hard?'아직 하드 기록이 없어요.':'오늘은 아직 기록이 없어요. 첫 번째로 도전해 보세요.')+'</li>';
+      : '<li>'+(cx?'아직 혼돈이야~ 기록이 없어요.':hot?'아직 핫드 기록이 없어요.':hard?'아직 하드 기록이 없어요.':'오늘은 아직 기록이 없어요. 첫 번째로 도전해 보세요.')+'</li>';
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
 async function dailyBest(y){
@@ -247,11 +247,11 @@ async function openDailyBest(year){
 document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-dbyear]'); if(b){ openDailyBest(+b.dataset.dbyear); sfx('ui'); } });
 async function openRanking(tab){
   if(tab==='dbest') return openDailyBest();
-  if(tab==='hotd'&&!hiddenOn('hotd')){
-    $('#modalBox').innerHTML='<div class="logHd"><h4>???</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs('hotd')+
+  if((tab==='hotd'||tab==='chaosx')&&!hiddenOn(tab)){
+    $('#modalBox').innerHTML='<div class="logHd"><h4>???</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs(tab)+
       '<ul class="rkList"><li>히든 모드예요. 어딘가를 여러 번 눌러 보면 열릴지도…</li></ul>';
     $('#modal').classList.add('on'); return; }
-  if(tab==='hard'||tab==='daily'||tab==='hotd') return openRankTable(tab);
+  if(tab==='hard'||tab==='daily'||tab==='hotd'||tab==='chaosx') return openRankTable(tab);
   $('#modalBox').innerHTML='<div class="logHd"><h4>에테르 챔버 · 노멀 랭킹</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs('normal')+
     '<div class="rkNote">상위 50명 · 로그인 계정으로 한 기록 · 계정당 최고 1줄 · 점수가 같으면 먼저 등록한 사람이 위</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
   $('#modal').classList.add('on');
