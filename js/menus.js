@@ -22,6 +22,9 @@ async function rankSend(row){
   const d=await r.json(); return Array.isArray(d)?d[0]:d;   // {rank, best, updated}
 }
 const myName=()=>{ try{ return localStorage.getItem('aether_rank_name')||''; }catch(e){ return ''; } };
+const BAD_NAME=/(시발|씨발|씨바|씨빨|시빨|쉬발|쓰발|ㅅㅂ|ㅆㅂ|ㅅㅍ|ㅆㅍ|병신|븅신|빙신|병싄|ㅂㅅ|좆|존나|졸라|ㅈㄴ|개새|개색|개세끼|개쉐|새끼|섀끼|쌔끼|지랄|ㅈㄹ|미친놈|미친년|미친새|또라이|닥쳐|꺼져|엠창|앰창|엄창|느금|느그엄|느그애|니애미|니애비|니엄마|니아빠|니미|니기미|애미|애비|에미|에비|패드립|씹|섹스|보지|자지|fuck|fuk|fxck|shit|bitch|sex|porn|nigg|asshole|dick|pussy)/;
+const nameNorm=n=>String(n||'').toLowerCase().replace(/[\s\d\p{P}\p{S}·ㆍ]+/gu,'');
+const nameBlocked=n=>{ const s=nameNorm(n); return BAD_NAME.test(s)||/^(test|tset|테스트|텟스트)/.test(s); };
 /* v2.52 클라우드 저장 — 이름 + 비밀번호로 서버에 저장하고, 다른 기기에서 불러온다 */
 /* v2.58 계정 — 시작할 때 닉네임 + 비밀번호로 들어가고, 판이 끝날 때·출격할 때 자동으로 서버에 저장한다 */
 const SESSION_KEY='aether_session';
@@ -67,11 +70,12 @@ function openLogin(){
     }catch(e){
       const m=String(e.message||'');
       if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
+        if(nameBlocked(name)){ msg('사용할 수 없는 닉네임이에요. 다른 닉네임을 써 주세요.'); $('#lgGo').disabled=false; return; }
         try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
           const at=await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
           META.cloudAt=String(at||''); save();   // v2.68
           setSession(name,pin); $('#modal').classList.remove('on'); go('hub'); return;
-        }catch(e2){ msg(/비밀번호/.test(String(e2.message))?'이미 있는 닉네임이에요. 비밀번호가 달라요.':'만들지 못했어요. 인터넷 연결을 확인해 주세요.'); }
+        }catch(e2){ msg(/NAME_BLOCKED/.test(String(e2.message))?'사용할 수 없는 닉네임이에요. 다른 닉네임을 써 주세요.':/비밀번호/.test(String(e2.message))?'이미 있는 닉네임이에요. 비밀번호가 달라요.':'만들지 못했어요. 인터넷 연결을 확인해 주세요.'); }
       } else if(/비밀번호/.test(m)) msg('비밀번호가 달라요.');
       else { msg('서버에 연결하지 못했어요. 인터넷을 확인하거나 오프라인으로 할 수 있어요.'); $('#lgOff').style.display='block'; }
       $('#lgGo').disabled=false;
