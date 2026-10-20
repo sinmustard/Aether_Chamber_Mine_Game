@@ -53,11 +53,17 @@ function openLogin(){
     '<div class="login"><div class="lead">닉네임과 비밀번호로 시작해요. 처음이면 새로 만들어지고, 다른 기기에서도 같은 닉네임·비밀번호로 이어서 할 수 있어요. '+
     '판이 끝나면 자동으로 저장돼요.</div>'+
     '<input id="lgName" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="username" value="'+escH(myName())+'">'+
-    '<input id="lgPin" type="password" maxlength="20" placeholder="비밀번호 (4~20자)" autocomplete="current-password">'+
+    '<input id="lgPin" type="password" maxlength="20" placeholder="비밀번호 (영어·숫자·기호 4~20자)" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" lang="en">'+
+    '<div id="lgPinWarn" style="display:none;color:var(--warn);font-size:11px;line-height:1.5;margin:-2px 0 6px"></div>'+
     '<button class="go" id="lgGo">시작하기</button><button class="off" id="lgOff">오프라인으로 하기 (저장 안 됨)</button>'+
     '<div class="msg" id="lgMsg"></div></div>';
   $('#modal').classList.add('on');
   const msg=t=>$('#lgMsg').textContent=t;
+  const HANGUL=/[ㄱ-ㅎㅏ-ㅣ가-힣]/;
+  const pinWarn=()=>{ const w=$('#lgPinWarn'), v=$('#lgPin').value; if(!w) return;
+    if(HANGUL.test(v)){ w.textContent='비밀번호에 한글이 들어가 있어요. 한/영 키를 확인해 주세요. 새 계정은 영어 · 숫자 · 기호만 쓸 수 있어요.'; w.style.display='block'; }
+    else w.style.display='none'; };
+  $('#lgPin').addEventListener('input',pinWarn);
   const submit=async()=>{
     const name=$('#lgName').value.trim(), pin=$('#lgPin').value;
     if(name.length<1||name.length>12) return msg('닉네임은 1~12자로 써 주세요.');
@@ -71,6 +77,7 @@ function openLogin(){
       const m=String(e.message||'');
       if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
         if(nameBlocked(name)){ msg('사용할 수 없는 닉네임이에요. 다른 닉네임을 써 주세요.'); $('#lgGo').disabled=false; return; }
+        if(HANGUL.test(pin)){ msg('새 계정 비밀번호에는 한글을 쓸 수 없어요. 한/영 키를 바꿔서 영어 · 숫자 · 기호로 써 주세요.'); $('#lgGo').disabled=false; return; }
         try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
           const at=await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
           META.cloudAt=String(at||''); save();   // v2.68
