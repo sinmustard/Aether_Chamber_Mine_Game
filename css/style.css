@@ -96,6 +96,12 @@ body.touch #title .ver{display:none}
 .card .s{font-size:9.5px;color:var(--dim);margin-bottom:7px;line-height:1.45}
 .card.skill .n{color:var(--warn)}
 .card.locked{opacity:.75}
+.card.folder{border-color:rgba(255,190,90,.35);background:rgba(255,190,90,.05)}
+.card.folder .n{color:var(--warn);display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.card.folder .n i{font-style:normal;font-size:16px;line-height:1}
+.card.folder .s{margin-bottom:0}
+.card.folder.back{border-style:dashed;background:transparent}
+.card.folder.back .n{color:var(--dim)}
 #skillSel .sr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
 #skillSel .sr>span{min-width:22px;flex:0 0 auto}
 #skillSel .sr button{flex:1 1 auto;min-width:0;white-space:nowrap}
