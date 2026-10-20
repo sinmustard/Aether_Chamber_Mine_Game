@@ -443,7 +443,7 @@ function update(dt){
   if(P.hp<=0){
     if(run.revives>0){
       run.revives--;
-      P.hp=Math.round(CFG.hpMax*0.3); P.inv=1.5; P.hurt=0;   // v2.65 부활 너프
+      P.hp=Math.round(CFG.hpMax*Math.min(1,0.3+(CFG.reviveHp||0)+(run.reviveHp||0))); P.inv=1.5; P.hurt=0;   // v2.65 부활 너프
       for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i];
         if(b.owner==='enemy'&&dist(b.x,b.y,P.x,P.y)<240) bullets.splice(i,1); }
       announce('부활'+(run.revives?'  ·  남은 '+run.revives+'회':''),'cyan');

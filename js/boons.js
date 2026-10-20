@@ -26,6 +26,7 @@ const BOONS=[
 /* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
 const SPECIALS=[
  {k:'s_revive', n:'재기동',      d:'이번 판 부활 횟수 +1',                               max:3, tag:'특수 특전', sp:1, fn:()=>{run.revives++;}},
+ {k:'s_revhp',  n:'강인한 재기', d:'부활할 때 체력 +15%',                                  max:1, tag:'특수 특전', sp:1, fn:()=>{run.reviveHp=(run.reviveHp||0)+0.15;}},
  {k:'s_homing', n:'추적 회로',   d:'유도 +2.0, 유도 시간 1.4초 → 3초',                       max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.homing+=2.0; CFG.homeTime+=1.6;}},
  {k:'s_focus',  n:'패링 집중',   d:'패링에 성공하면 3초 동안 빗나감 페널티가 75% 줄어든다', max:1, tag:'특수 특전', sp:1, fn:()=>{}},
  /* v2.43 점수 배율 — 한 번만 얻을 수 있다 */

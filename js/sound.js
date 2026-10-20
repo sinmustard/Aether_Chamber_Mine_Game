@@ -115,7 +115,7 @@ function statsFromUpgrades(){
     autoDur: [0,3,4,5.5][ap],   // v3.16 자동 패링 (폰은 ×2)
     rerolls: lv('reroll'),   // v2.52
     randBoosts: lv('randstat'),   // v2.63
-    revives: lv('revive'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
+    revives: lv('revive'), reviveHp: 0.05*lv('reviveHp'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
     specialBoss: [0,0.38,0.47,0.50][lv('special')],   // v2.47 보스 처치 후 확률
     rNeed: (META.skillR==='emp'||META.skillR==='autoparry') ? EMP_NEED   // v3.16 자동 패링도 100 고정
          : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
