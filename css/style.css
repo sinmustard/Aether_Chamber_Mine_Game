@@ -355,6 +355,9 @@ body.touch #title .ver{display:none}
 .modes{display:flex;gap:4px}
 .modes button{padding:6px 11px;font:inherit;font-size:11px;letter-spacing:.06em;cursor:pointer;border-radius:6px;background:transparent;color:var(--dim);border:1px solid var(--line)}
 .modes button.on{color:var(--warn);border-color:var(--warn)}
+.modes button.tg{margin-left:6px;border-style:dashed}   /* v3.24 카오스 — 모드가 아니라 켜고 끄는 옵션 */
+.modes button.tg.on{color:var(--red);border-color:var(--red);border-style:solid}
+.modes button.tg:disabled{opacity:.35;cursor:default}
 #modeDesc{font-size:9.5px;color:var(--dim);max-width:340px;text-align:center;line-height:1.4}
 #achStat{font-size:10.5px;color:var(--warn);margin:0 0 8px;min-height:0}
 #achStat b{color:var(--fg)}

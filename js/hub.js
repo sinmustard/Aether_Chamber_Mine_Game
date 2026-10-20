@@ -90,7 +90,7 @@ async function toggleDebug(){
     const ss=getSession();
     if(!ss){ flashDbg('개발자 계정으로 로그인해야 디버그를 쓸 수 있어요'); return; }
     if(devOK===null||devName!==ss.name){
-      try{ const d=await cloudCall('aether_is_dev',{p_name:ss.name,p_pin:ss.pin}); devOK=(d===true||d==='true'); devName=ss.name; }
+      try{ const d=await cloudCall('aether_is_dev',{p_name:ss.name,p_pin:pinOf(ss)}); devOK=(d===true||d==='true'); devName=ss.name; }
       catch(e){ flashDbg('개발자 확인에 실패했어요 (인터넷 연결 확인)'); return; }
     }
     if(!devOK){ flashDbg('디버그는 개발자 계정만 쓸 수 있어요'); return; }

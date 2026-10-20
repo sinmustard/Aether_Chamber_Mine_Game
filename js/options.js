@@ -1,6 +1,6 @@
 "use strict";
 /* ================= 옵션 · 저장 (v1.3) ================= */
-const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, posSkill:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1, pimgAnimMove:0};   // v2.89 커스텀 캐릭터 이미지
+const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', chaos:0, dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, posSkill:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1, pimgAnimMove:0};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
 const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
@@ -35,6 +35,7 @@ function load(){
     } else if(d.upg) Object.keys(d.upg).forEach(k=>setLv(k,d.upg[k]));
     Object.assign(OPT,d.opt||{});
     if(OPT.tutSeen===undefined) OPT.tutSeen=1;   // v3.4 이미 저장 데이터가 있던 기존 플레이어는 튜토리얼을 건너뛴다
+    if(OPT.mode==='chaos'){ OPT.mode='normal'; OPT.chaos=1; }   // v3.24 카오스는 모드가 아니라 노멀 · 하드에 켜는 옵션
     if(META.skill==='phase'){ if(!META.skillQ) META.skillQ='phase'; META.skill=''; }
   }catch(e){}
 }

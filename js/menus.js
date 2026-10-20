@@ -7,8 +7,19 @@ const verGt=(a,b)=>{ const x=verNum(a), y=verNum(b); return x[0]!==y[0]? x[0]>y[
    로그인 계정으로만 기록되는 aether_verified를 보여 준다 */
 const RANK={url:'https://oijsrlbzxowlaxzmsxpt.supabase.co', key:'sb_publishable_m57hm2tIzHx_7GpppTBesg_BL4kNd26', table:'aether_verified'};
 const escH=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* v3.24 카오스를 켠 판은 버전 칸(build)에 '-chaos'를 붙여 기록하고, 랭킹엔 이름(카오스)로 보여 준다 */
+const CHAOS_TAG='-chaos';
+const runBuild=()=>BUILD+(run&&run.chaos?CHAOS_TAG:'');
+const rankName=r=>escH(r.name)+(String(r.build||'').endsWith(CHAOS_TAG)?'(카오스)':'');
+/* 서버가 이 표시를 거절하면(로그인 오류 말고) 표시 없이 한 번 더 보낸다 — 기록이 빠지지 않게 */
+function rankCall(fn,body){
+  return cloudCall(fn,body).catch(e=>{
+    if(body.p_build===BUILD||!e.status||e.code==='28P01'||e.status===403) throw e;
+    return cloudCall(fn,Object.assign({},body,{p_build:BUILD}));
+  });
+}
 async function rankFetch(limit){
-  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table+'?select=name,score,cycle,wave,updated_at&order=score.desc,updated_at.asc&limit='+(limit||50),
+  const r=await fetch(RANK.url+'/rest/v1/'+RANK.table+'?select=name,score,cycle,wave,build,updated_at&order=score.desc,updated_at.asc&limit='+(limit||50),
     {headers:{apikey:RANK.key}});
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
@@ -29,9 +40,22 @@ const nameBlocked=n=>{ const s=nameNorm(n); return BAD_NAME.test(s)||/^(test|tse
 /* v2.58 계정 — 시작할 때 닉네임 + 비밀번호로 들어가고, 판이 끝날 때·출격할 때 자동으로 서버에 저장한다 */
 const SESSION_KEY='aether_session';
 let offlineOK=false;
-const getSession=()=>{ try{ const d=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); return d&&d.name&&d.pin?d:null; }catch(e){ return null; } };
-function setSession(name,pin){ try{ localStorage.setItem(SESSION_KEY,JSON.stringify({name,pin})); localStorage.setItem('aether_rank_name',name); }catch(e){} }
-function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+/* v3.24 비밀번호를 기기에 기억하지 않는다(#11) — 로그인하면 서버가 주는 토큰(aether_login)만 {name, tk}로 저장하고,
+   서버 함수에는 p_pin 자리에 'tk:'+토큰을 보낸다. 서버에 aether_login이 아직 없으면 예전처럼 {name, pin}을 기억하고,
+   서버가 바뀌면 다음에 HUB에 들어갈 때 토큰으로 바꾼다 */
+const getSession=()=>{ try{ const d=JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); return d&&d.name&&(d.tk||d.pin)?d:null; }catch(e){ return null; } };
+const pinOf=ss=>ss.tk?'tk:'+ss.tk:ss.pin;
+function setSession(name,pin,tk){ try{ localStorage.setItem(SESSION_KEY,JSON.stringify(tk?{name,tk}:{name,pin})); localStorage.setItem('aether_rank_name',name); }catch(e){} }
+function clearSession(){ const ss=getSession();
+  if(ss&&ss.tk) cloudCall('aether_logout',{p_name:ss.name,p_pin:pinOf(ss)}).catch(()=>{});   // 서버에서도 토큰을 지운다
+  try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+let tokenTried=false;
+async function tokenize(){
+  const ss=getSession(); if(!ss||ss.tk||tokenTried) return;
+  try{ const t=await cloudCall('aether_login',{p_name:ss.name,p_pin:pinOf(ss)}); tokenTried=true;
+    const cur=getSession(); if(typeof t==='string'&&t&&cur&&cur.name===ss.name) setSession(ss.name,null,t); }
+  catch(e){ if(e.status) tokenTried=true; badSession(e); }   // 함수가 아직 없으면(404) 비밀번호 세션 그대로 · 연결 실패면 다음에 다시
+}
 function applySave(data){
   localStorage.setItem(SAVE_KEY,JSON.stringify(data||{}));
   UPG.forEach(u=>u.lv=0);
@@ -43,7 +67,7 @@ function applySave(data){
 async function cloudAutoSave(){
   const ss=getSession(); if(!ss) return null;
   try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
-    const at=await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:ss.pin,p_data:data});
+    const at=await cloudCall('aether_cloud_save',{p_name:ss.name,p_pin:pinOf(ss),p_data:data});
     if(at){ META.cloudAt=String(at); try{ const d2=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'); d2.meta=META; localStorage.setItem(SAVE_KEY,JSON.stringify(d2)); }catch(e){} }   // v2.68
     return true; }
   catch(e){ return badSession(e)?'badpin':false; }
@@ -72,7 +96,7 @@ function openLogin(){
     try{
       const d=await cloudCall('aether_cloud_load',{p_name:name,p_pin:pin}); const row=Array.isArray(d)?d[0]:d;
       if(row&&row.data){ applySave(row.data); META.cloudAt=String(row.updated_at||''); save(); }   // v2.68
-      setSession(name,pin); $('#modal').classList.remove('on'); go('hub');
+      setSession(name,pin); tokenTried=false; $('#modal').classList.remove('on'); go('hub');
     }catch(e){
       const m=String(e.message||'');
       if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
@@ -81,7 +105,7 @@ function openLogin(){
         try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
           const at=await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
           META.cloudAt=String(at||''); save();   // v2.68
-          setSession(name,pin); $('#modal').classList.remove('on'); go('hub'); return;
+          setSession(name,pin); tokenTried=false; $('#modal').classList.remove('on'); go('hub'); return;
         }catch(e2){ msg(/NAME_BLOCKED/.test(String(e2.message))?'사용할 수 없는 닉네임이에요. 다른 닉네임을 써 주세요.':/비밀번호/.test(String(e2.message))?'이미 있는 닉네임이에요. 비밀번호가 달라요.':'만들지 못했어요. 인터넷 연결을 확인해 주세요.'); }
       } else if(/비밀번호/.test(m)) msg('비밀번호가 달라요.');
       else { msg('서버에 연결하지 못했어요. 인터넷을 확인하거나 오프라인으로 할 수 있어요.'); $('#lgOff').style.display='block'; }
@@ -100,12 +124,12 @@ function toast(msg){ let t=document.getElementById('toastBox');
   t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),3200); }
 let syncing=false;
 async function syncFromCloud(){
-  const ss=getSession(); if(!ss||syncing) return; syncing=true;
-  try{
-    const st=await cloudCall('aether_cloud_stamp',{p_name:ss.name,p_pin:ss.pin});
+  if(!getSession()||syncing) return; syncing=true;
+  try{ await tokenize(); const ss=getSession(); if(!ss) return;   // v3.24
+    const st=await cloudCall('aether_cloud_stamp',{p_name:ss.name,p_pin:pinOf(ss)});
     const remote=Date.parse(st)||0, local=Date.parse(META.cloudAt||'')||0;
     if(remote>local+1500){
-      const d=await cloudCall('aether_cloud_load',{p_name:ss.name,p_pin:ss.pin}); const row=Array.isArray(d)?d[0]:d;
+      const d=await cloudCall('aether_cloud_load',{p_name:ss.name,p_pin:pinOf(ss)}); const row=Array.isArray(d)?d[0]:d;
       if(row&&row.data){ applySave(row.data); META.cloudAt=String(row.updated_at||st); save();
         if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
         toast('다른 기기에서 진행한 최신 기록을 불러왔어요'); }
@@ -119,11 +143,12 @@ async function cloudCall(fn,body){
   if(!r.ok){ const er=new Error((d&&d.message)||('HTTP '+r.status)); er.status=r.status; er.code=d&&d.code; throw er; }
   return d;
 }
-/* v2.76 이 기기에 기억된 비밀번호가 서버와 다르면(28P01 / 403) 계속 실패만 했다 → 로그인을 풀고 다시 입력하게 */
+/* v2.76 이 기기에 기억된 비밀번호가 서버와 다르면(28P01 / 403) 계속 실패만 했다 → 로그인을 풀고 다시 입력하게
+   v3.24 토큰이 만료되거나 지워졌을 때도 서버가 같은 28P01을 돌려준다 */
 function badSession(e){
   if(!e||!(e.code==='28P01'||(e.status===403&&/비밀번호/.test(String(e.message))))) return false;
   clearSession(); offlineOK=false;
-  toast('이 기기에 기억된 비밀번호가 계정과 달라요. HUB에 들어갈 때 다시 로그인해 주세요.');
+  toast('이 기기의 로그인 정보가 만료됐거나 계정과 달라요. HUB에 들어갈 때 다시 로그인해 주세요.');
   return true;
 }
 function openCloud(){
@@ -169,11 +194,11 @@ async function openRankTable(tab){
   $('#modalBox').innerHTML='<div class="logHd"><h4>'+(hard?'하드 랭킹':'데일리 · '+day)+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs(tab)+
     '<div class="rkNote">'+(hard?'로그인 계정으로 하드 모드를 한 기록 · 계정당 최고 1줄':'오늘('+day+') 모두 같은 맵·적으로 한 기록 · 강화 없이 기본 능력치')+'</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
   $('#modal').classList.add('on');
-  try{ const q=hard?'aether_hard?select=name,score,cycle,wave&order=score.desc,updated_at.asc&limit=50'
+  try{ const q=hard?'aether_hard?select=name,score,cycle,wave,build&order=score.desc,updated_at.asc&limit=50'
                    :'aether_daily?select=name,score,cycle,wave&day=eq.'+day+'&order=score.desc,updated_at.asc&limit=50';
     const r=await fetch(RANK.url+'/rest/v1/'+q,{headers:{apikey:RANK.key}}); if(!r.ok) throw 0; const rows=await r.json();
     const me=(getSession()||{}).name||myName();
-    $('#rkList').innerHTML=rows.length? rows.map((r,i)=>'<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+escH(r.name)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
+    $('#rkList').innerHTML=rows.length? rows.map((r,i)=>'<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+rankName(r)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
       : '<li>'+(hard?'아직 하드 기록이 없어요.':'오늘은 아직 기록이 없어요. 첫 번째로 도전해 보세요.')+'</li>';
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
@@ -186,7 +211,7 @@ async function openRanking(tab){
     const rows=await rankFetch(50), me=(getSession()||{}).name||myName();
     $('#rkList').innerHTML=rows.length? rows.map((r,i)=>
       '<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span>'+
-      '<span class="nm">'+escH(r.name)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span>'+
+      '<span class="nm">'+rankName(r)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span>'+
       '<span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
       : '<li>아직 등록된 기록이 없어요. 첫 번째 주인공이 되어 보세요.</li>';
     /* v2.52 50위 밖이어도 내 순위를 아래에 붙인다 */
@@ -204,11 +229,11 @@ async function openRanking(tab){
    비밀번호 없이 이름만 보내는 서버 API라 자유 입력란을 없애고, 로그인 계정 이름으로만 자동 등록한다 */
 function setupRankBox(){
   const box=$('#rankBox'), ss=getSession(), hide=()=>{ box.style.display='none'; box.innerHTML=''; };
-  if(run.score<=0||run.mode!=='normal'){ hide(); return; }   // v2.68 공개 랭킹은 노멀만 · v3.21 카오스도 제외(#13)
+  if(run.score<=0||run.mode!=='normal'){ hide(); return; }   // v2.68 공개 랭킹은 노멀만 (카오스를 켠 노멀 판 포함)
   /* v3.21 노멀 랭킹 결과는 #discStat 한 줄(aether_verified)로 보여 준다.
      aether_normal은 디스코드 봇(#1)이 aether_verified로 옮길 때까지만 화면 표시 없이 계속 올린다 */
   if(ss){ hide();
-    if(!run.cheat) rankSend({name:ss.name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:BUILD})
+    if(!run.cheat) rankSend({name:ss.name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:runBuild()})
       .then(()=>{ run.rankSent=true; }).catch(()=>{});
     return; }
   box.style.display='flex';

@@ -99,7 +99,7 @@ function rollWave(n){
 }
 function waveSpawn(){
   run.wave++;
-  if(run.wave>1 && (run.mode==='chaos' || run.wave%5===1)){ rerollMap(); say('지형 변화','warn'); }   // v3.2 5웨이브마다 맵 교체 · v3.15 카오스 모드는 매 웨이브
+  if(run.wave>1 && (run.chaos || run.wave%5===1)){ rerollMap(); say('지형 변화','warn'); }   // v3.2 5웨이브마다 맵 교체 · v3.15 카오스 모드는 매 웨이브 · v3.24 카오스는 옵션(run.chaos)
   const boss = run.wave>BOSS_WAVE;
   if(boss){ spawnEnemy('boss');
     /* v2.68 ④ 사이클마다 다른 보스 — 1: 기본 · 2: 수호형(정면 방패 120° + 잡졸 소환) · 3: 환영형(순간이동 + 페인트·우회 위주), 이후 반복 */

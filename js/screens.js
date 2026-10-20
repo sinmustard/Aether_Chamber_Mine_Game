@@ -202,12 +202,13 @@ function startRun(mode){
   newRun();
   if(keep){ UPG.forEach((u,i)=>u.lv=keep.lv[i]); META.skill=keep.sk[0]; META.skillQ=keep.sk[1]; META.skillR=keep.sk[2]; }
   run.mode=mode; run.day=mode==='daily'?todayKST():'';
+  run.chaos=!!OPT.chaos&&mode!=='daily';   // v3.24 카오스 — 노멀 · 하드에 켜는 옵션 (데일리는 모두 같은 맵이어야 해서 제외)
   /* ③ 하드 — 적 체력 ×1.5 · 탄속 ×1.15 · 발사 간격 ×0.85 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 */
   if(mode==='hard'){ run.diff*=1.5; CFG.spd*=1.15; CFG.fire*=0.85; CFG.scoreMul*=1.3; CFG.gainMul=(CFG.gainMul||1)*1.5; }
   if(mode==='daily'){ CFG.gainMul=(CFG.gainMul||1)*0.5; run.startRewards=0; run.revives=0; run.randBoosts=[]; }
   else applyRandBoosts();
   go('game');
-  if(mode!=='normal') setTimeout(()=>{ if(run) announce(mode==='hard'?'하드 모드':mode==='chaos'?'카오스 모드':'데일리 챌린지 · '+run.day,'warn'); },300);
+  if(mode!=='normal'||run.chaos) setTimeout(()=>{ if(run) announce(mode==='hard'?'하드 모드'+(run.chaos?' · 카오스':''):mode==='daily'?'데일리 챌린지 · '+run.day:'카오스','warn'); },300);
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
 }
 function endRun(){
@@ -247,20 +248,19 @@ function endRun(){
     if(!ss) $('#discStat').textContent=nm+' 랭킹은 로그인해야 기록돼요';
     else if(run.cheat) $('#discStat').textContent='디버그를 쓴 판은 '+nm+' 랭킹에 기록되지 않아요';
     else if(run.score>0){
-      const body={p_name:ss.name,p_pin:ss.pin,p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:BUILD};
+      const body={p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild()};
       if(run.mode==='daily') body.p_day=run.day;
-      cloudCall(run.mode==='hard'?'aether_submit_hard':'aether_submit_daily',body)
+      rankCall(run.mode==='hard'?'aether_submit_hard':'aether_submit_daily',body)
         .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
           $('#discStat').textContent=nm+' 랭킹 '+(r.updated?'기록 갱신 · ':'최고 '+Number(r.best).toLocaleString()+'점 유지 · ')+r.rank+'위'; })
         .catch(e=>{ $('#discStat').textContent=nm+' 랭킹 기록 실패'+(badSession(e)?' (다시 로그인 필요)':/점수/.test(String(e.message))?' (점수 확인 실패)':''); });
     }
-  } else if(run.mode==='chaos'){   // v3.21 카오스는 벽이 매 웨이브 바뀌어 노멀과 비교가 안 되므로 랭킹에 기록하지 않는다 (#13)
-    if(run.score>0) $('#discStat').textContent='카오스 모드는 랭킹에 기록되지 않아요';
   } else
-  /* v3.21 게임 안 노멀 랭킹도 이 인증 랭킹(aether_verified)을 보여 준다 — 그래서 이름도 "노멀 랭킹" */
+  /* v3.21 게임 안 노멀 랭킹도 이 인증 랭킹(aether_verified)을 보여 준다 — 그래서 이름도 "노멀 랭킹"
+     v3.24 카오스를 켠 판도 기록하고 랭킹에 이름(카오스)로 표시 */
   if(getSession()&&!run.cheat&&!run.tut&&run.score>0){
     const ss=getSession();
-    cloudCall('aether_submit_verified',{p_name:ss.name,p_pin:ss.pin,p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:BUILD})
+    rankCall('aether_submit_verified',{p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild()})
       .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
         $('#discStat').textContent= r.updated? '노멀 랭킹 기록 갱신 · '+r.rank+'위' : '노멀 랭킹 · 최고 기록 '+Number(r.best).toLocaleString()+'점 유지 · '+r.rank+'위'; })
       .catch(e=>{ $('#discStat').textContent='노멀 랭킹 기록 실패'+(badSession(e)?' (다시 로그인 필요)':' — 다음 판에 다시 시도해요'); });
@@ -332,13 +332,16 @@ document.addEventListener('click',e=>{
 });
 $('#launch').onclick=()=>{ cloudAutoSave(); startRun(OPT.mode||'normal'); };   // v2.58 · v2.68 고른 모드로 출격
 /* v2.68 모드 고르기 */
-function syncModeUI(){ document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===(OPT.mode||'normal')));
+function syncModeUI(){ const mode=OPT.mode||'normal', tg=$('#chaosTg'), chaos=!!OPT.chaos&&mode!=='daily';
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
+  if(tg){ tg.disabled=mode==='daily'; tg.classList.toggle('on',chaos); }
   const d=$('#modeDesc'); if(d) d.textContent=({normal:'기본 모드',
     hard:'적 체력 ×1.5 · 탄속 · 발사 빨라짐 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 · 하드 랭킹(로그인)',
-    daily:'오늘 '+todayKST()+' — 모두 같은 맵·적, 강화 없이 기본 능력치 · 재화 ×0.5 · 데일리 랭킹(로그인)',
-    chaos:'그 외엔 노멀과 동일 · 벽 배치가 매 웨이브마다 무작위로 바뀜 · 랭킹 기록 없음'})[OPT.mode||'normal']; }
+    daily:'오늘 '+todayKST()+' — 모두 같은 맵·적, 강화 없이 기본 능력치 · 재화 ×0.5 · 데일리 랭킹(로그인) · 카오스 안 됨'})[mode]
+    +(chaos?' · 카오스: 벽 배치가 매 웨이브 바뀜, 랭킹에 (카오스) 표시':''); }
 document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mode]'); if(!b) return;
   OPT.mode=b.dataset.mode; save(); syncModeUI(); sfx('ui'); });
+$('#chaosTg').onclick=()=>{ OPT.chaos=OPT.chaos?0:1; save(); syncModeUI(); sfx('ui'); };   // v3.24
 $('#again').onclick=startRun;
 /* v2.52 결과 이미지 — 점수 카드를 그려서 공유(폰) 또는 내려받기(PC) */
 $('#rShare').onclick=async()=>{
