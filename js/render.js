@@ -317,11 +317,18 @@ function drawShield(e){
   ctx.beginPath(); ctx.arc(0,0,e.r+17,facing-half,facing+half); ctx.stroke();
   ctx.restore();
 }
+function hpTicks(x,y,w,h,hpMax,maxSeg){
+  const hits=hpMax/HIT_UNIT; if(!(hits>1.05)) return;
+  const step=Math.max(1,Math.ceil(hits/maxSeg)), seg=step*HIT_UNIT/hpMax*w;
+  ctx.fillStyle='rgba(8,12,17,.85)';
+  for(let k=1;k*seg<w-1;k++) ctx.fillRect(Math.round(x+k*seg),y,1,h);
+}
 function drawHpBar(e){
-  const p=proj(e.x,e.y), w=e.r*1.7, hg=4, top=p[1]-e.r*1.3-16;
+  const p=proj(e.x,e.y), w=e.r*1.7, hg=5, top=p[1]-e.r*1.3-16;
   ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(p[0]-w/2-1,top-1,w+2,hg+2);
   ctx.fillStyle='rgba(255,255,255,.14)';ctx.fillRect(p[0]-w/2,top,w,hg);
   ctx.fillStyle=C.red;ctx.fillRect(p[0]-w/2,top,w*Math.max(0,e.hp/e.hpMax),hg);
+  hpTicks(p[0]-w/2,top,w,hg,e.hpMax,10);
   /* v2.72 칸 구분선 대신 남은 타격 수를 숫자로 표시
      v2.74 처치 판정(HIT_UNIT*0.25 이하면 죽음)과 같은 기준으로 계산 — 안 그러면 "2"인데 1대에 죽는 경우가 생김 */
   if(e.hp>HIT_UNIT*0.25){
@@ -652,6 +659,7 @@ function drawHUD(){
     ctx.fillStyle=boss.p2?C.red:C.dim;ctx.fillText(boss.p2?'알레테이아  ·  과부하':'알레테이아',W/2,22);
     ctx.fillStyle='rgba(255,255,255,.1)';ctx.fillRect(W/2-180,30,360,7);
     ctx.fillStyle=C.red;ctx.fillRect(W/2-180,30,360*Math.max(0,boss.hp/boss.hpMax),7);
+    hpTicks(W/2-180,30,360,7,boss.hpMax,24);
   }
   msgs.forEach((m,i)=>{
     ctx.globalAlpha=Math.min(1,m.t*2.2);

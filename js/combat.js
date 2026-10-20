@@ -117,8 +117,14 @@ function update(dt){
     e.drift+=dt*0.7;
     /* v3.11 앵커 이동 — 구속이 최우선, 그 다음 송신기 도주 / 분열체 접근 압박.
        구속된 동안은 제자리에서 못 움직인다(공격은 평소처럼) — 그래서 e.ax/e.ay를 그대로 둔다 */
+    const hl=(e.bindT>0||G(e).heal||e.grade==='boss'||e.grade==='tracker'||e.hp>=e.hpMax*0.4)?null
+      :ens.filter(o=>o!==e&&G(o).heal).sort((a,b)=>dist(a.x,a.y,e.x,e.y)-dist(b.x,b.y,e.x,e.y))[0];
     if(e.bindT>0){
       e.bindT-=dt;
+    } else if(hl){
+      const d=dist(e.ax,e.ay,hl.x,hl.y);
+      if(d>HEAL_R*0.45){ const to=Math.atan2(hl.y-e.ay,hl.x-e.ax);
+        e.ax=clamp(e.ax+Math.cos(to)*110*dt,40,WORLD.w-40); e.ay=clamp(e.ay+Math.sin(to)*110*dt,40,WORLD.h-40); }
     } else if(G(e).relay){
       const d=dist(e.ax,e.ay,P.x,P.y), FLEE_R=300, FLEE_SPD=70;
       if(d<FLEE_R){
