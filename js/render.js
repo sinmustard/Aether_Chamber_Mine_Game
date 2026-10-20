@@ -213,7 +213,13 @@ loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방�
   .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
 /* v3.10.1 분열체는 항상 플레이어 쪽을 보고 회전한다(계속 다가붙는 적이라 방향이 보이는 게 자연스럽다) */
 function enemyFacing(e){
-  if(e.grade==='splinter') return Math.atan2(P.y-e.y,P.x-e.x);
+  const toP=Math.atan2(P.y-e.y,P.x-e.x);
+  if(e.grade==='splinter') return toP;
+  /* v3.33 저격수 · 대포병 · 추적자도 그림이 오른쪽(0rad) 정면이라 실제 방향으로 돌린다
+     추적자는 돌진 중엔 돌진 방향, 그 밖(추격 · 예비 동작 · 대기)엔 플레이어 쪽 — 예비 동작 중 lungeDir가 비어 엉뚱한 쪽을 보던 문제(v3.10.1) 해결 */
+  if(e.grade==='tracker') return e.lungePhase==='dash'&&e.lungeDir!=null?e.lungeDir:toP;
+  if(e.grade==='sniper') return e.aimOn&&e.aimAng!=null?e.aimAng:toP;
+  if(e.grade==='cannon') return toP;
   return null;
 }
 function drawEnemyBody(e){
@@ -239,6 +245,7 @@ function drawEnemyBody(e){
   if(e.hurt>0) ctx.filter='brightness('+(1+e.hurt*6)+') saturate('+Math.max(0,1-e.hurt*3)+')';
   if(face!=null){
     ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.rotate(face);
+    if(e.grade!=='splinter'&&Math.abs(face)>Math.PI/2) ctx.scale(1,-1);   // v3.33 왼쪽을 볼 땐 위아래가 뒤집히지 않게
     ctx.drawImage(img,-s/2,-s/2,s,s);
   } else {
     ctx.drawImage(img,p[0]-s/2,p[1]-s/2,s,s);
