@@ -22,7 +22,7 @@ const inCorner=()=>(P.x<EDGE||P.x>WORLD.w-EDGE)&&(P.y<EDGE||P.y>WORLD.h-EDGE);
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
 /* v2.63 후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25%, 최대 ×2.5 (체험판은 그대로) */
-const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1))*(run.mode==='hard'?1.3:1);   // v2.68 하드 ×1.3
+const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1))*(run.mode==='hard'?1.3:run.mode==='hotd'?1.95:1);   // v2.68 하드 ×1.3
 /* v2.78 적 체력의 사이클 배율 — 예전엔 사이클마다 ×1.15씩 복리로 불어나서(cycle10이면 ×3.5) 후반에 잡몹도
    총알받이가 됐다. 로그형으로 바꿔서 초반 체감(2사이클 ×1.15)은 그대로 두고 후반 증가폭만 점점 완만해지게 */
 const cycleHpMul=c=>1+0.22*Math.log(Math.max(1,c||1));
@@ -225,7 +225,7 @@ const BOSS_P2S=[
 function pickPattern(e){
   if(e.grade==='boss'){
     /* v3.02 노멀 1사이클에서는 나중에 추가한 어려운 보스 패턴(late)을 빼고, 2사이클부터 섞는다. 하드는 처음부터 전부 */
-    const early=run.mode!=='hard'&&run.cycle<2, ok=p=>!(early&&p.late);
+    const early=run.mode!=='hard'&&run.mode!=='hotd'&&run.mode!=='chaosx'&&run.cycle<2, ok=p=>!(early&&p.late);
     const pick=a=>a[Math.floor(Math.random()*a.length)];
     const p2=BOSS_P2S.filter(ok), base=BOSS_PATTERNS.filter(ok);
     if(e.p2&&p2.length&&Math.random()<0.45) return pick(p2);   // v2.62

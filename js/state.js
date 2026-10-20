@@ -101,12 +101,20 @@ function waveSpawn(){
   run.wave++;
   if(run.wave>1 && (run.chaos || run.wave%5===1)){ rerollMap(); say('지형 변화','warn'); }   // v3.2 5웨이브마다 맵 교체 · v3.15 카오스 모드는 매 웨이브 · v3.24 카오스는 옵션(run.chaos)
   const boss = run.wave>BOSS_WAVE;
-  if(boss){ spawnEnemy('boss');
-    /* v2.68 ④ 사이클마다 다른 보스 — 1: 기본 · 2: 수호형(정면 방패 120° + 잡졸 소환) · 3: 환영형(순간이동 + 페인트·우회 위주), 이후 반복 */
-    const bb=ens[ens.length-1], v=['core','warden','phantom'][(run.cycle-1)%3]; bb.variant=v;
+  const bossSpawn=v=>{ spawnEnemy('boss'); const bb=ens[ens.length-1]; bb.variant=v;
     if(v==='warden'){ bb.shieldArc=120; bb.sa=Math.atan2(P.y-bb.y,P.x-bb.x); bb.hp*=1.15; bb.hpMax=bb.hp; bb.wardT=6; }
     if(v==='phantom'){ bb.hp*=0.85; bb.hpMax=bb.hp; bb.blinkT=4.5; }
-    announce(v==='warden'?'알레테이아 · 수호형':v==='phantom'?'알레테이아 · 환영형':'알레테이아','red'); sfx('boss'); }
+    announce(v==='warden'?'알레테이아 · 수호형':v==='phantom'?'알레테이아 · 환영형':'알레테이아','red'); sfx('boss'); };
+  if(boss) bossSpawn(['core','warden','phantom'][(run.cycle-1)%3]);
+  else if(run.mode==='chaosx'){
+    const n=Math.min(6, Math.min(5,1+Math.ceil(run.wave/2))+(run.cycle>=2?1:0));
+    const pool=['mob','splitter','elite','bulwark','healer','relay','tracker','summoner','cannon','sniper'];
+    const order=[]; let bossRoll=false;
+    for(let i=0;i<n;i++){ if(Math.random()<0.025){ bossRoll=true; break; } order.push(pool[Math.floor(Math.random()*pool.length)]); }
+    if(bossRoll) bossSpawn(['core','warden','phantom'][Math.floor(Math.random()*3)]);
+    else { order.sort((a,b)=>(a==='relay'?1:0)-(b==='relay'?1:0)); order.forEach(g=>spawnEnemy(g));
+      announce('혼돈  ·  사이클 '+run.cycle+'  ·  웨이브 '+run.wave,'cyan'); sfx('wave'); }
+  }
   else{
     const base=Math.min(5,1+Math.ceil(run.wave/2));
     const n=Math.min(6, base+(run.cycle>=2?1:0));
