@@ -136,7 +136,7 @@ module.exports = {
     for (let i = 0; i < 3; i++) await click(p, '#hub [data-mode=hard]'); await wait(2000);
     for (let i = 0; i < 3; i++) await click(p, '#chaosTg'); await wait(2000);
     t.eq(JSON.stringify(await p.evaluate(() => META.hidden)), '{"hotd":1,"chaosx":1}', '하드 · 카오스 3번 누르면 해금');
-    for (const [mode, want] of [['hotd', 'aether_submit_hotd'], ['chaosx', '']]) {
+    for (const [mode, want] of [['hotd', 'aether_submit_hotd'], ['chaosx', 'aether_submit_chaosx']]) {
       g.calls.length = 0; await launchRun(p, mode, 0); t.eq(await p.evaluate(() => run.mode), mode, mode + ' 출격');
       await finishRun(p); t.eq(g.calls.filter(c => /submit/.test(c.fn)).map(c => c.fn).join(','), want, mode + ' 판 → ' + (want || '랭킹 기록 없음'));
       await p.evaluate(() => go('hub')); await wait(800);

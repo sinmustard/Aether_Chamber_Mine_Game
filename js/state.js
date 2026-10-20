@@ -52,7 +52,7 @@ function newRun(){
     dashDist:st.dashDist,dashCd:st.dashCd,hookCd:st.hookCd,bindDur:st.bindDur,slowDur:st.slowDur,slowCd:st.slowCd,shockR:st.shockR,shockCd:st.shockCd,absorbDur:st.absorbDur,absorbCd:st.absorbCd,decoyDur:st.decoyDur,decoyCd:st.decoyCd,
     skillR:st.skillR,owCd:st.owCd,echoCd:st.echoCd,rNeed:st.rNeed,empDur:st.empDur,autoDur:st.autoDur,gravDur:st.gravDur,frostDur:st.frostDur,frostCd:st.frostCd,blazeDur:st.blazeDur,gravCd:st.gravCd,novaR:st.novaR,revives:st.revives,waveHeal:st.waveHeal,armor:st.armor,barrier:st.barrier,reviveHp:st.reviveHp,shieldPierce:st.shieldPierce,rallyDmg:st.rallyDmg,firstAid:st.firstAid,specialChance:st.specialChance,specialBoss:st.specialBoss,rerolls:st.rerolls,randBoosts:st.randBoosts,
     spd:240,fire:1.8,seizeMul:st.seizeMul,homeTime:1.4});
-  { const cr=1-0.06*(st.cdr||0); CFG.cdrMul=cr; ['healCd','guardCd','dashCd','phaseCd','hookCd','slowCd','shockCd','absorbCd','decoyCd','gravCd','frostCd','owCd','echoCd'].forEach(k=>{ if(CFG[k]) CFG[k]*=cr; }); }   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
+  { const cr=1-0.06*(st.cdr||0); CFG.cdrMul=cr; SKILL_CD_KEYS.forEach(k=>{ if(CFG[k]) CFG[k]*=cr; }); }   // v3.1 안정화 보상이 CFG.seizeMul을 건드리므로 판마다 초기화해야 한다
   syncUI();
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,heat:0,ovl:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
      dashT:0,dashDir:0,rCd:0,rCdMax:1,rChg:0,echoT:0};

@@ -18,7 +18,7 @@ const BOONS=[
  {k:'multi', n:'분배',      d:'한 번에 빼앗는 탄환 +1',        max:1, tag:'패링',   fn:()=>CFG.multi+=1},
  /* v3.1 웨이브 보상 3종 추가 */
  {k:'overload', n:'회로 과부하', d:'장착한 스킬(F·Q·R)의 재사용 대기시간 −10%', max:3, tag:'스킬',
-  fn:()=>['healCd','guardCd','dashCd','phaseCd','hookCd','owCd','echoCd'].forEach(k=>CFG[k]*=0.9)},
+  fn:()=>{ SKILL_CD_KEYS.forEach(k=>{ if(CFG[k]) CFG[k]*=0.9; }); CFG.cdrMul=(CFG.cdrMul||1)*0.9; }},   // v3.55 새 스킬 · 벽 생성도 포함
  {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
  {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}},
  {k:'leech',     n:'처치 회복',   d:'적을 처치할 때마다 체력 +3 (보스는 +12), 최대 3중첩',  max:3, tag:'생존',   fn:()=>{}},

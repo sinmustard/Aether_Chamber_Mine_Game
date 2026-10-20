@@ -112,6 +112,8 @@ function seizeChance(e,b){
 
 /* v1.5 고정 장애물 제거. 벽은 Q 스킬(벽 생성)로만 생긴다.
    벽은 높이(WALL_HG)만큼 솟아 보이므로 충돌 영역(col)은 윗면까지 포함 */
+/* v3.55 재사용 대기가 있는 스킬 전부 — 냉각 회로 · 회로 과부하 · 무작위 보정이 같이 쓴다 (새 스킬을 넣으면 여기에 추가) */
+const SKILL_CD_KEYS=['healCd','guardCd','dashCd','phaseCd','hookCd','slowCd','shockCd','absorbCd','decoyCd','gravCd','frostCd','owCd','echoCd'];
 const WALL_HG=28, WALL_L=130, WALL_T=30, WALL_GAP=50, WALL_CD=1.0, BUILD_T=12;
 /* v2.1 R 슬롯 · 신규 F/Q 옵션 상수 */
 const DASH_DUR=0.16, ECHO_DUR=4;
