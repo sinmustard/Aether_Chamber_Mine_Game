@@ -226,12 +226,29 @@ function startRun(mode){
   if(mode!=='normal'||run.chaos) setTimeout(()=>{ if(run) announce(mode==='hard'?'하드 모드'+(run.chaos?' · 카오스':''):mode==='hotd'?'핫드 · 진짜 하드'+(run.chaos?' · 카오스':''):mode==='chaosx'?'혼돈이야~':mode==='daily'?'데일리 챌린지 · '+run.day:'카오스','warn'); },300);
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
 }
+const ROUL=[0.001,0.1,0.25,0.5,0.75,1,1.25,1.5,2,2.5,3,3.5];
+let roulTimer=null;
+function spinRoulette(r,gain){
+  clearTimeout(roulTimer);
+  const box=$('#rGain'), fmt=m=>'×'+m;
+  box.innerHTML='<div class="roulT">혼돈의 룰렛 — 재화 ◆ '+r.base.toLocaleString()+'</div><div class="roul">'+ROUL.map((m,i)=>'<span data-ri="'+i+'">'+fmt(m)+'</span>').join('')+'</div><div class="roulR">돌리는 중…</div>';
+  const cells=[...box.querySelectorAll('[data-ri]')], total=ROUL.length*2+r.i;
+  let k=0;
+  const tick=()=>{ cells.forEach(c=>c.classList.remove('on')); cells[k%ROUL.length].classList.add('on'); sfx('ui');
+    if(k>=total){ cells[r.i].classList.add('hit');
+      box.querySelector('.roulR').innerHTML='<b>'+fmt(r.m)+'</b> → ◆ +'+gain.toLocaleString()+(r.m>=2?'  대박!':r.m<0.5?'  …혼돈이야~':'');
+      sfx(r.m>=2?'boss':'block'); return; }
+    k++; roulTimer=setTimeout(tick,30+Math.pow(k/total,3)*260); };
+  tick();
+}
 function endRun(){
   /* v1.7 재화: 점수÷3 + 처치×5 + 도달 웨이브×6 + 보스 격파×150 (점수 비중 상향) */
   const gScore=Math.round(run.score/3), gKill=run.kills*5,
         gWave=((run.cycle-1)*(BOSS_WAVE+1)+run.wave)*6, gBoss=run.bossKills*150;
   let gain=Math.round((gScore+gKill+gWave+gBoss)*(CFG.gainMul||1));   // v2.17 재화 획득 강화
   if(!isFinite(gain)||gain<0) gain=0;                                    // v2.46 계산이 깨져도 0 이하로 안 떨어지게
+  const roul=run.mode==='chaosx'?{base:gain,i:Math.floor(Math.random()*ROUL.length)}:null;
+  if(roul){ roul.m=ROUL[roul.i]; gain=Math.max(0,Math.round(gain*roul.m)); }
   syncMeta();                                                            // v2.46 다른 탭이 저장한 최신 재화에 더한다
   META.cur+=gain;
   const isNew=run.score>META.best;
@@ -251,6 +268,7 @@ function endRun(){
   $('#rGain').innerHTML='◆ +'+gain.toLocaleString()+
     '<div style="font-size:10.5px;color:var(--dim);letter-spacing:.06em;margin-top:6px">'+
     '점수 '+gScore+' · 처치 '+gKill+' · 웨이브 '+gWave+(gBoss?' · 보스 '+gBoss:'')+'</div>';
+  if(roul) spinRoulette(roul,gain);
   $('#rBoons').innerHTML=Object.keys(run.boons).length? '받은 보상 — '+Object.keys(run.boons).map(k=>{ const b=boonDef(k);
       return b? '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'') : ''; }).join(' · ') : '';   // v2.52
   $('#cloudStat').textContent=getSession()?'☁ 자동 저장 중…':'';   // v2.58
