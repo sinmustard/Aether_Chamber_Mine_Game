@@ -19,10 +19,12 @@ const chaosStat=()=>CHAOS_STATS[Math.floor(Math.random()*CHAOS_STATS.length)];
 function chaosAmp8(){ return {k:'c_amp8',n:'랜덤 스탯 증폭 +8',d:'무작위 능력치를 8번 강화합니다',tag:'혼돈',max:1,sp:1,chaos:1,fn:()=>{
   const got={}; for(let i=0;i<8;i++){ const s=chaosStat(); s[1](1); got[s[0]]=(got[s[0]]||0)+1; }
   announce('랜덤 스탯 증폭 — '+Object.entries(got).map(([n,c])=>n+(c>1?' ×'+c:'')).join(' · '),'cyan'); }}; }
-function chaosTrap(){ return {k:'c_trap',n:'랜덤 스탯 증폭 +8',d:'무작위 능력치를 8번 강화합니다',tag:'혼돈',max:1,sp:1,chaos:1,fn:()=>{
+function chaosTrap(){ return {k:'c_trap',n:'랜덤 스탯 증폭 +8',nh:'랜덤 스탯 증폭 <span class="t-plus">+8</span><span class="t-minus">−8</span>',d:'무작위 능력치를 8번 강화합니다',tag:'혼돈',max:1,sp:1,chaos:1,fn:()=>{
   const s=chaosStat(); s[1](-1); announce('함정! '+s[0]+' '+s[2](-1),'red'); sfx('breach'); shake=10; }}; }
 function chaosPick(){ const s=chaosStat(); return {k:'c_pick',n:'지정 스탯 랜덤 증폭',d:'<b>'+s[0]+'</b>을(를) ×0.5 ~ ×4 사이 무작위로 증폭합니다',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>{
   const m=Math.round((0.5+Math.random()*3.5)*10)/10; s[1](m); announce(s[0]+' ×'+m+' 증폭  '+s[2](m),'cyan'); }}; }
+function chaosPickHidden(){ return {k:'c_pickh',n:'지정 스탯 랜덤 증폭',d:'얻는 순간 증폭할 능력치가 정해져요 · ×0.5 ~ ×4 무작위',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>{
+  const s=chaosStat(), m=Math.round((0.5+Math.random()*3.5)*10)/10; s[1](m); announce('지정 — '+s[0]+' ×'+m+' 증폭  '+s[2](m),'cyan'); }}; }
 function chaosDisguise(){
   const pool=BOONS.filter(b=>boonLv(b.k)<b.max); if(!pool.length) return chaosPick();
   const look=pool[Math.floor(Math.random()*pool.length)];
@@ -43,7 +45,7 @@ function openReward(afterBoss,fromReroll){
   /* v2.41 보스를 잡은 직후 보상은 특수 특전 확률 +30%p (최대 90%) */
   const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(run.mode==='chaosx'&&Math.random()<Math.max(spChance,0.25)){
-    const r=Math.random(), pick=r<0.35?chaosDisguise():r<0.6?chaosTrap():chaosPick();
+    const r=Math.random(), pick=r<0.3?chaosDisguise():r<0.5?chaosTrap():r<0.75?chaosPick():chaosPickHidden();
     rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=pick;
   }
   else if(CFG.specialChance>0 && Math.random()<spChance){
@@ -62,7 +64,7 @@ function openReward(afterBoss,fromReroll){
     '<div class="bc'+(b.sp?' sp':'')+'" data-i="'+i+'">'+
     '<div class="num">'+(i+1)+'</div>'+
     '<div class="k">'+b.tag+'</div>'+
-    '<div class="n">'+b.n+'</div>'+
+    '<div class="n">'+(b.nh||b.n)+'</div>'+
     '<div class="d">'+b.d+'</div>'+
     '<div class="st">'+(boonLv(b.look||b.k)?'보유 '+boonLv(b.look||b.k)+' / '+b.max:'신규')+'</div>'+
     '</div>').join('');

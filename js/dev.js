@@ -131,7 +131,14 @@ function botTick(dt){
   if(!run||run.tut) return;
   if(!BOT.cur) botNewRun();
   const c=BOT.cur;
-  if(run.phase==='reward'){ BOT.rwT+=dt; if(BOT.rwT>0.35){ BOT.rwT=0; let bi=0, bs=-1; rwPicks.forEach((b,i)=>{ const s=(BOT_PICK[b.k]||4)+Math.random()*0.5; if(s>bs){ bs=s; bi=i; } }); takeReward(bi); } return; }
+  if(run.phase==='reward'){
+    const now=performance.now();
+    if(!BOT.rwAt){ BOT.rwAt=now; BOT.rwPick=null; }
+    if(BOT.rwPick==null&&now-BOT.rwAt>700){ let bi=0, bs=-1; rwPicks.forEach((b,i)=>{ const s=(BOT_PICK[b.look||b.k]||(b.chaos?5:4))+Math.random()*0.5; if(s>bs){ bs=s; bi=i; } }); BOT.rwPick=bi;
+      const el=document.querySelector('#rwRow .bc[data-i="'+bi+'"]'); if(el) el.classList.add('botpick'); }
+    if(BOT.rwPick!=null&&now-BOT.rwAt>1500){ const b=rwPicks[BOT.rwPick]; BOT.rwAt=0; const i=BOT.rwPick; BOT.rwPick=null; takeReward(i); if(b) announce('봇 선택 — '+b.n,'warn'); }
+    return; }
+  BOT.rwAt=0;
   if(P.hp<c.lastHp){ c.dmg+=c.lastHp-P.hp; c.hits++; } c.lastHp=P.hp;
   const Rg=range(), threats=bullets.filter(b=>b.owner==='enemy');
   let tb=null, td=1e9;
