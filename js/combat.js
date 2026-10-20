@@ -80,6 +80,7 @@ function update(dt){
   }
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
+  if(CFG.firstAid>0&&!run.aidUsed&&!run.tut&&P.hp>0&&P.hp<CFG.hpMax*0.3){ run.aidUsed=true; P.hp=Math.min(CFG.hpMax,P.hp+CFG.hpMax*CFG.firstAid); announce('응급 처치  +'+Math.round(CFG.firstAid*100)+'%','cyan'); sfx('heal'); burst(P.x,P.y,'cyan',24,240); }
   if(P.grav){ P.grav.t-=dt; if(P.grav.t<=0) P.grav=null; }
   if(P.blazeT>0){ P.blazeT-=dt; if(P.blazeT<=0){ P.blazeT=0; say('오버클럭 끝','dim'); } }
   if(P.stasis){ P.stasis.t-=dt; if(P.stasis.t<=0) P.stasis=null; }
@@ -413,7 +414,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68

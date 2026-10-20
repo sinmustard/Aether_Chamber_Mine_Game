@@ -3,7 +3,7 @@
 const CFG={ homeTime:1.4, rangeM:3.2, fov:55, whiff:1.3, dwell:0.35, spd:240, seizeMul:1, fire:1.8, homing:0, gainMul:1, startRewards:0,
             skill:'', qSkill:'', healAmt:0, healCd:18, guardDur:0, guardCd:18, phaseDur:0, phaseCd:16, wallMax:0,
             dashDist:0, dashCd:8, hookCd:9, bindDur:0, slowDur:0, slowCd:20, shockR:0, shockCd:14, absorbDur:0, absorbCd:22, decoyDur:0, decoyCd:14,
-            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, autoDur:0, gravDur:0, gravCd:16, novaR:0, frostDur:0, frostCd:14, blazeDur:0, waveHeal:0.05, killHeal:0, reviveHp:0, shieldPierce:0, revives:0, specialChance:0, specialBoss:0, rerolls:0, randBoosts:0,
+            skillR:'', owCd:26, echoCd:22, rNeed:50, empDur:0, autoDur:0, gravDur:0, gravCd:16, novaR:0, frostDur:0, frostCd:14, blazeDur:0, waveHeal:0.05, killHeal:0, reviveHp:0, shieldPierce:0, rallyDmg:0, firstAid:0, revives:0, specialChance:0, specialBoss:0, rerolls:0, randBoosts:0,
             accel:1.20, maxB:8, bounce:1, god:0, fastwave:0,
             moveSpd:230, scoreMul:1, hpMax:85, iframe:0.4, multi:1 };
 const M=40, SQUASH=0.62, OY=40, W=1000, H=560;
