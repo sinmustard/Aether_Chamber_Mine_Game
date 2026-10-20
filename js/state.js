@@ -131,6 +131,15 @@ function waveSpawn(){
   run.phase='fight';
 }
 /* v2.16 벽에 걸린 자리는 다시 뽑지 않고 옆으로 밀어낸다. 겹친 벽의 가까운 면 쪽으로 빠져나간다 */
+function wallSlide(x0,y0,x1,y1,r){
+  for(let k=0;k<2;k++){
+    let hit=null, bd=1e9;
+    for(const {col:o} of allWalls()){ const h=sweepRect(x0,y0,x1,y1,o,r); if(!h) continue; const d=Math.hypot(h.x-x0,h.y-y0); if(d<bd){ bd=d; hit=h; } }
+    if(!hit) break;
+    if(hit.axis==='x') x1=hit.x; else y1=hit.y;
+  }
+  return [x1,y1];
+}
 function pushOutOfWalls(x,y,r){
   for(let k=0;k<8;k++){
     let moved=false;

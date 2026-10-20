@@ -238,7 +238,9 @@ function doParry(force){
     const foes=[tgt].concat(byAim.filter(e=>e!==tgt&&ang(e)<=70*Math.PI/180)).filter(Boolean);
     let maxRet=0;
     const echoes=[];
+    const jl=lv('just'), just=jl>0&&ts.some(b=>dist(b.x,b.y,P.x,P.y)<=R_PLAYER+R_BULLET+34);
     ts.forEach((t,i)=>{
+      t.just=just?jl:0; if(just) t.spd=Math.min(t.spd*1.1,cap());
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
@@ -271,7 +273,8 @@ function doParry(force){
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
     /* v2.35 대포병 장갑탄은 손이 더 가는 만큼 충전을 3 준다 (장갑 깎기 1 + 빼앗기 3) */
-    P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1));
+    P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1)+(just?1:0));
+    if(just){ announce('저스트!','warn'); burst(P.x,P.y,'warn',16,220); }
     if(run.tut) run.tut.parried=(run.tut.parried||0)+1;   // v2.60
     else stat('parries');   // v2.68
     say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
