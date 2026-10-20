@@ -303,6 +303,19 @@ function doSkill(){
     P.dashT=DASH_DUR; P.inv=Math.max(P.inv,DASH_DUR);
     P.skillCd=P.skillCdMax=CFG.dashCd;
     say('대시','cyan'); sfx('dash'); burst(P.x,P.y,'cyan',12,160);
+  } else if(CFG.skill==='slow'){
+    P.slowT=CFG.slowDur; P.skillCd=P.skillCdMax=CFG.slowCd;
+    say('시간 감속','cyan'); sfx('phase');
+  } else if(CFG.skill==='shock'){
+    let n=0;
+    bullets.forEach(b=>{ if(b.owner!=='enemy') return; const d=dist(b.x,b.y,P.x,P.y); if(d>CFG.shockR) return;
+      const a=Math.atan2(b.y-P.y,b.x-P.x); b.dir=a; b.ready=false; b.coy=0;
+      if(d<R_PLAYER+R_BULLET+20){ b.x=P.x+Math.cos(a)*(R_PLAYER+R_BULLET+20); b.y=P.y+Math.sin(a)*(R_PLAYER+R_BULLET+20); } n++; });
+    P.shockFx=0.35; P.skillCd=P.skillCdMax=CFG.shockCd;
+    say(n?'충격파 ×'+n:'충격파','cyan'); sfx('block'); shake=Math.max(shake,8); burst(P.x,P.y,'cyan',18,260);
+  } else if(CFG.skill==='absorb'){
+    P.absorbT=CFG.absorbDur; P.skillCd=P.skillCdMax=CFG.absorbCd;
+    say('흡수','cyan'); sfx('guard');
   }
 }
 function wallCandidate(){
@@ -332,6 +345,12 @@ function doQ(){
     ens.forEach(e=>{ e.bindT=CFG.bindDur; burst(e.x,e.y,'cyan',6,120); });   // v3.12 필드의 모든 적을 한 번에 구속
     P.wallCd=P.qCdMax=CFG.hookCd;
     say('구속','cyan'); sfx('hook');
+  } else if(CFG.qSkill==='decoy'){
+    if(paused||P.wallCd>0||P.hp<=0)return;
+    let x=clamp(P.x+Math.cos(P.face)*120,40,WORLD.w-40), y=clamp(P.y+Math.sin(P.face)*120,40,WORLD.h-40);
+    [x,y]=pushOutOfWalls(x,y,R_PLAYER+6);
+    P.decoy={x,y}; P.decoyT=P.decoyMax=CFG.decoyDur; P.wallCd=P.qCdMax=CFG.decoyCd;
+    say('미끼','cyan'); sfx('phase'); burst(x,y,'cyan',14,160);
   }
 }
 /* v2.1 R 슬롯 — 덮어쓰기 / 메아리 (웨이브 보상 '잔상'과 이름이 겹쳐서 개명) */

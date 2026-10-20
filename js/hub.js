@@ -47,8 +47,8 @@ function renderSkillSel(){
     return '<button data-slot="'+slot+'" data-skill="'+k+'"'+(cur===k?' class="on"':'')+(ok?'':' disabled')+'>'+n+(ok?'':' (잠김)')+'</button>';
   }).join('')+'</div>';
   $('#skillSel').innerHTML=
-    row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['','없음']],META.skill)+
-    row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','구속'],['','없음']],META.skillQ)+
+    row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['slow','시간 감속'],['shock','충격파'],['absorb','흡수'],['','없음']],META.skill)+
+    row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','구속'],['decoy','미끼'],['','없음']],META.skillQ)+
     row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['emp','해킹'],['autoparry','자동 패링'],['','없음']],META.skillR);   // v3.16
 }
 $('#skillSel').addEventListener('click',e=>{

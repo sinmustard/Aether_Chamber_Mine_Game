@@ -352,6 +352,24 @@ function drawHpBarPlayer(){
 }
 function drawSkill(){
   const p=proj(P.x,P.y), now=performance.now();
+  if(P.decoyT>0&&P.decoy){
+    const q=proj(P.decoy.x,P.decoy.y), k=P.decoyT/(P.decoyMax||1);
+    ctx.save(); ctx.globalAlpha=.35+.15*Math.sin(now/120); ctx.fillStyle=C.cyan; ctx.beginPath(); ctx.ellipse(q[0],q[1],R_PLAYER,R_PLAYER*SQUASH*1.6,0,0,TAU); ctx.fill();
+    ctx.globalAlpha=.9; ctx.strokeStyle=C.cyan; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(q[0],q[1]-R_PLAYER-14,8,-Math.PI/2,-Math.PI/2+TAU*k); ctx.stroke();
+    ctx.font='700 10px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle=C.fg; ctx.fillText('미끼',q[0],q[1]+4); ctx.restore();
+  }
+  if(P.absorbT>0){
+    ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.globalAlpha=.14; ctx.fillStyle='#b48cff'; ctx.beginPath(); ctx.arc(0,0,R_PLAYER+28,0,TAU); ctx.fill();
+    ctx.globalAlpha=Math.min(1,P.absorbT*2)*(.6+.3*Math.sin(now/70)); ctx.strokeStyle='#b48cff'; ctx.lineWidth=3; ctx.setLineDash([6,5]); ctx.lineDashOffset=-now/40; ctx.stroke(); ctx.restore();
+  }
+  if(P.slowT>0){
+    ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.globalAlpha=Math.min(.5,P.slowT); ctx.strokeStyle=C.warn; ctx.lineWidth=2; ctx.setLineDash([2,8]);
+    ctx.beginPath(); ctx.arc(0,0,R_PLAYER+44+6*Math.sin(now/300),0,TAU); ctx.stroke(); ctx.restore();
+  }
+  if(P.shockFx>0){
+    const t=1-P.shockFx/0.35; ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.globalAlpha=1-t; ctx.strokeStyle=C.cyan; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.arc(0,0,R_PLAYER+t*(CFG.shockR-R_PLAYER),0,TAU); ctx.stroke(); ctx.restore();
+  }
   if(P.guard>0){
     ctx.save();ctx.translate(p[0],p[1]);ctx.scale(1,SQUASH);
     const R=R_PLAYER+30; ctx.beginPath();

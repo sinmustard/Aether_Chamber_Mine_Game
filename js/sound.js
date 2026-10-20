@@ -86,7 +86,7 @@ const reqLabel=u=>(u.req||[]).filter(r=>lv(r.k)<r.lv)
   .map(r=>UPG.find(x=>x.k===r.k).n+' Lv.'+r.lv).join(' · ');
 function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
-        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp'), ap=lv('autoparry');
+        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp'), ap=lv('autoparry'), as=lv('antiseize'), sl=lv('slow'), sh=lv('shock'), ab=lv('absorb'), dc=lv('decoy');
   return {
     rangeM: 3.2+0.3*r, fov: 55+5*f, whiff: 1.30-0.10*pe,   /* v2.61 기본 스탯 너프 (사거리 3.5→3.2m, 시야 60→55°, 빗나감 1.2→1.3s) */
     moveSpd: 230+15*m,
@@ -104,6 +104,11 @@ function statsFromUpgrades(){
     wallMax:(META.skillQ==='wall'&&wl>0)?wl:0,
     dashDist:[0,140,155,170,185,200][da], dashCd:[0,8.0,7.4,6.8,6.2,5.5][da],
     hookCd:[0,9.0,8.0,7.0,6.0,5.0][hk], bindDur:[0,.8,1.0,1.2,1.4,1.6][hk],
+    seizeMul:[1,.9,.8,.7,.6,.5][as],
+    slowDur:[0,2,2.5,3,3.5,4][sl], slowCd:[0,20,18,16,14,12][sl],
+    shockR:[0,150,170,190,210,230][sh], shockCd:[0,14,13,12,11,10][sh],
+    absorbDur:[0,1.2,1.5,1.8,2.1,2.5][ab], absorbCd:[0,22,20,18,16,14][ab],
+    decoyDur:[0,2.5,3,3.5,4,4.5][dc], decoyCd:[0,14,13,12,11,10][dc],
     owCd:[0,26,23,20,17,14][ow], echoCd:[0,22,19,16,13,10][ec],
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.5,0.8,1.5][em],

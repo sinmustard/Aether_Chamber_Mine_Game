@@ -80,6 +80,8 @@ function update(dt){
   }
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
+  if(P.slowT>0)P.slowT-=dt; if(P.absorbT>0)P.absorbT-=dt; if(P.shockFx>0)P.shockFx-=dt;
+  if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; } }
   if(P.autoT>0){ P.autoT-=dt; if(P.autoT<=0){ P.autoT=0; say(touchMode?'과부하 억제 끝':'자동 패링 끝','dim'); } }   // v3.16
 
   if(run.tut) tutTick(dt);   // v2.60 체험판
@@ -175,7 +177,7 @@ function update(dt){
     if(e.sa!=null){                                  // v1.8.1 방패 회전
       if(e.saStun>0) e.saStun-=dt;                   // v1.9.1 반동 중에는 못 돈다
       else{
-        const want=Math.atan2(P.y-e.y,P.x-e.x);
+        const want=Math.atan2(aimPt().y-e.y,aimPt().x-e.x);
         e.sa+=clamp(norm(want-e.sa),-SHIELD_TURN*dt,SHIELD_TURN*dt);
       }
     }
@@ -219,7 +221,7 @@ function update(dt){
       if(run.phase!=='fight') { e.snipeT=2.2; e.aimOn=0; return; }
       if(e.hackT>0) return;
       e.snipeT=(e.snipeT===undefined?2.2:e.snipeT-dt);
-      if(e.snipeT<=1.0){ e.aimOn=1; if(e.snipeT>0.3) e.aimAng=Math.atan2(P.y-e.y,P.x-e.x); }
+      if(e.snipeT<=1.0){ e.aimOn=1; if(e.snipeT>0.3) e.aimAng=Math.atan2(aimPt().y-e.y,aimPt().x-e.x); }
       if(e.snipeT<=0){
         e.aimOn=0; e.snipeT=3.0+Math.random()*1.2;
         if(bullets.filter(b=>b.owner==='enemy').length<CFG.maxB){
@@ -266,7 +268,7 @@ function update(dt){
     if(b.owner==='enemy'){
       if(b.feint) b.spd = b.age<0.55 ? b.base*0.35 : Math.min(b.base*1.35,cap());
       if(b.orbitAmt>0) b.orbitAmt=Math.max(0,b.orbitAmt-dt*1.05);
-      const want=Math.atan2(P.y-b.y,P.x-b.x)+b.orbitDir*b.orbitAmt;
+      const want=Math.atan2(aimPt().y-b.y,aimPt().x-b.x)+b.orbitDir*b.orbitAmt;
       if(P.phase<=0 && !b.armor && !b.straight) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
     } else {
       /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
@@ -308,7 +310,7 @@ function update(dt){
           b.tried.push(e);
           if(Math.random()<seizeChance(e,b)){
             b.owner='enemy'; b.tried=[];
-            b.dir=Math.atan2(P.y-b.y,P.x-b.x);
+            b.dir=Math.atan2(aimPt().y-b.y,aimPt().x-b.x);
             e.seizeFx=0.35; say('빼앗김','red'); sfx('seize'); burst(b.x,b.y,'red',8); bMark(b.x,b.y,'재탈취 · '+(e===b.htg?'노린 적':'옆의 적'),'#ff5d6c');   // v3.00
           }
           break;
@@ -316,7 +318,8 @@ function update(dt){
       }
     }
     const prevX=b.x, prevY=b.y;
-    b.x+=Math.cos(b.dir)*b.spd*dt; b.y+=Math.sin(b.dir)*b.spd*dt;
+    const sf=(b.owner==='enemy'&&P.slowT>0)?0.5:1;
+    b.x+=Math.cos(b.dir)*b.spd*sf*dt; b.y+=Math.sin(b.dir)*b.spd*sf*dt;
 
     // 장애물
     const obstacles=allWalls();
@@ -410,8 +413,11 @@ function update(dt){
         if(b.pierceLeft>0 && ens.length){ b.pierceLeft--; continue; }
         bullets.splice(i,1); continue;
       }
-    } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+(P.guard>0?14:0)){
+    } else if(P.decoyT>0&&P.decoy&&dist(b.x,b.y,P.decoy.x,P.decoy.y)<R_PLAYER+R_BULLET){
+      burst(b.x,b.y,'cyan',8); bullets.splice(i,1); continue;
+    } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+((P.guard>0||P.absorbT>0)?14:0)){
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
+      else if(P.absorbT>0){ if(CFG.skillR) P.rChg=Math.min(CFG.rNeed,P.rChg+2); say('흡수','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round(PLAYER_DMG*(b.boss===2?1.75:b.boss?1.5:1)*dmgScale()); P.hurt=.3;   /* v2.62 보스 탄환은 ×1.5, 2페이즈 ×1.75 */ P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
       bullets.splice(i,1); continue;
     }
@@ -434,6 +440,7 @@ function update(dt){
     } else endRun();
   }
 }
+function aimPt(){ return (P.decoyT>0&&P.decoy)?P.decoy:P; }
 function spawnBullet(q){
   const s0=q.spec.fast?Math.max(CFG.spd,cap()*q.spec.fast):CFG.spd*(q.boss?1.15:1);
   if(q.hack){
@@ -447,7 +454,7 @@ function spawnBullet(q){
       feint:0, orbitDir:0, orbitAmt:0});
     return;
   }
-  const a=Math.atan2(P.y-q.ey,P.x-q.ex)+(q.spec.ang||0);
+  const a=Math.atan2(aimPt().y-q.ey,aimPt().x-q.ex)+(q.spec.ang||0);
   if(q.spec.heavy){
     /* v2.34 장갑탄 — 유도 없이 직선. armor가 남아 있으면 패링해도 소유권이 넘어오지 않는다 */
     const hs=CFG.spd*0.85;
