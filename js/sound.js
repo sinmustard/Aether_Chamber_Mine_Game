@@ -86,7 +86,7 @@ const reqLabel=u=>(u.req||[]).filter(r=>lv(r.k)<r.lv)
   .map(r=>UPG.find(x=>x.k===r.k).n+' Lv.'+r.lv).join(' · ');
 function statsFromUpgrades(){
   const r=lv('range'), f=lv('fov'), pe=lv('penalty'), m=lv('move'), b=lv('bullet'), v=lv('vital'), mu=lv('multi'), hm=lv('homing'), gr=lv('greed'), sp=lv('supply'),
-        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp'), ap=lv('autoparry'), as=lv('antiseize'), sl=lv('slow'), sh=lv('shock'), ab=lv('absorb'), dc=lv('decoy'), gv=lv('gravity'), nv=lv('nova');
+        h=lv('heal'), g=lv('guard'), ph=lv('phase'), wl=lv('wall'), da=lv('dash'), hk=lv('hook'), ow=lv('overwrite'), ec=lv('echo'), em=lv('emp'), ap=lv('autoparry'), as=lv('antiseize'), sl=lv('slow'), sh=lv('shock'), ab=lv('absorb'), dc=lv('decoy'), gv=lv('gravity'), nv=lv('nova'), fr=lv('frost'), bz=lv('blaze');
   return {
     rangeM: 3.2+0.3*r, fov: 55+5*f, whiff: 1.30-0.10*pe,   /* v2.61 기본 스탯 너프 (사거리 3.5→3.2m, 시야 60→55°, 빗나감 1.2→1.3s) */
     moveSpd: 230+15*m,
@@ -113,12 +113,13 @@ function statsFromUpgrades(){
     /* v2.18 R 슬롯은 충전식 — 장착한 R 스킬의 단계가 오를수록 필요 충전량이 준다 */
     empDur: [0,0.5,0.8,1.5][em],
     autoDur: [0,3,4,5.5][ap],
-    gravDur: [0,2.5,3,3.5,4,4.5][gv], gravCd: [0,16,15,14,13,12][gv], novaR: [0,200,240,280][nv],   // v3.16 자동 패링 (폰은 ×2)
+    gravDur: [0,2.5,3,3.5,4,4.5][gv], gravCd: [0,16,15,14,13,12][gv], novaR: [0,200,240,280][nv],
+    frostDur: [0,2,2.5,3,3.5,4][fr], frostCd: [0,14,13,12,11,10][fr], blazeDur: [0,4,5,6.5][bz],   // v3.16 자동 패링 (폰은 ×2)
     rerolls: lv('reroll'),   // v2.52
     randBoosts: lv('randstat'),   // v2.63
     revives: lv('revive'), waveHeal: 0.05+0.01*lv('waveHeal'), killHeal: lv('killHeal'), shieldPierce: [0,0.2,0.35,0.5][lv('shieldPierce')], reviveHp: 0.05*lv('reviveHp'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
     specialBoss: [0,0.38,0.47,0.50][lv('special')],   // v2.47 보스 처치 후 확률
-    rNeed: META.skillR==='nova' ? 70 : (META.skillR==='emp'||META.skillR==='autoparry') ? EMP_NEED   // v3.16 자동 패링도 100 고정
+    rNeed: META.skillR==='nova' ? 70 : META.skillR==='blaze' ? 60 : (META.skillR==='emp'||META.skillR==='autoparry') ? EMP_NEED   // v3.16 자동 패링도 100 고정
          : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ]
   };
 }

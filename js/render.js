@@ -230,6 +230,15 @@ function drawEnemyBody(e){
     ctx.lineWidth=2; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+10,(e.r+10)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
   }
+  if(e.frozenT>0){
+    const q=proj(e.x,e.y);
+    ctx.save(); ctx.fillStyle='#8fd8ff'; ctx.globalAlpha=.22; ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+6,(e.r+6)*SQUASH*1.6,0,0,TAU); ctx.fill();
+    ctx.strokeStyle='#bfeaff'; ctx.globalAlpha=.85; ctx.lineWidth=2.5; ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+9,(e.r+9)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
+  }
+  if(e.burnT>0){
+    const q=proj(e.x,e.y), fl=.5+.4*Math.sin(performance.now()/60);
+    ctx.save(); ctx.strokeStyle='#ff9f43'; ctx.globalAlpha=fl; ctx.lineWidth=3; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+7,(e.r+7)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
+  }
   if(e.bindT>0){   // v3.11 구속 표시 — 해킹 표시와 구분되게 실선
     const q=proj(e.x,e.y);
     ctx.save(); ctx.strokeStyle=C.cyan; ctx.globalAlpha=.65; ctx.lineWidth=2.5;
@@ -366,6 +375,14 @@ function drawHpBarPlayer(){
 }
 function drawSkill(){
   const p=proj(P.x,P.y), now=performance.now();
+  if(P.blazeT>0){
+    ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.globalAlpha=Math.min(.7,P.blazeT)*(.5+.3*Math.sin(now/80)); ctx.strokeStyle='#ff9f43'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,R_PLAYER+16,0,TAU); ctx.stroke(); ctx.restore();
+  }
+  if(P.frostFx>0){
+    const t=1-P.frostFx/0.35; ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.globalAlpha=1-t; ctx.fillStyle='#8fd8ff';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,40+t*260,P.face-Math.PI*0.4,P.face+Math.PI*0.4); ctx.closePath(); ctx.globalAlpha=(1-t)*0.3; ctx.fill(); ctx.restore();
+  }
   if(P.grav&&P.grav.t>0){
     const g=P.grav, q=proj(g.x,g.y), k=g.t/(g.max||1);
     ctx.save(); ctx.translate(q[0],q[1]); ctx.scale(1,SQUASH);
@@ -548,7 +565,7 @@ function drawZone(){
   ctx.restore();
 }
 function drawBullet(b){
-  const col=b.owner==='player'?C.cyan:C.red;
+  const col=b.owner==='player'?(b.fire?'#ff9f43':C.cyan):C.red;
   b.trail.forEach((q,i)=>{
     const p=proj(q[0],q[1]);
     ctx.globalAlpha=(i/b.trail.length)*.3;ctx.fillStyle=col;

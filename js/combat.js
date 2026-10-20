@@ -81,6 +81,8 @@ function update(dt){
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
   if(P.grav){ P.grav.t-=dt; if(P.grav.t<=0) P.grav=null; }
+  if(P.blazeT>0){ P.blazeT-=dt; if(P.blazeT<=0){ P.blazeT=0; say('열폭주 끝','dim'); } }
+  if(P.frostFx>0) P.frostFx-=dt;
   if(P.slowT>0)P.slowT-=dt; if(P.absorbT>0)P.absorbT-=dt; if(P.shockFx>0)P.shockFx-=dt;
   if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; } }
   if(P.autoT>0){ P.autoT-=dt; if(P.autoT<=0){ P.autoT=0; say(touchMode?'과부하 억제 끝':'자동 패링 끝','dim'); } }   // v3.16
@@ -114,16 +116,19 @@ function update(dt){
   }
 
   // 적
+  ens.filter(e=>e.burnKill).forEach(killEnemy);
   ens.forEach(e=>{
-    if(e.hackT>0) e.hackT-=dt;   // v2.29 해킹 지속 시간
+    if(e.hackT>0) e.hackT-=dt;
+    if(e.frozenT>0) e.frozenT-=dt;
+    if(e.burnT>0){ e.burnT-=dt; e.hp-=HIT_UNIT*0.35*dt; e.hurt=Math.max(e.hurt||0,.06); if(e.hp<=HIT_UNIT*0.25) e.burnKill=true; }   // v2.29 해킹 지속 시간
     e.drift+=dt*0.7;
     /* v3.11 앵커 이동 — 구속이 최우선, 그 다음 송신기 도주 / 분열체 접근 압박.
        구속된 동안은 제자리에서 못 움직인다(공격은 평소처럼) — 그래서 e.ax/e.ay를 그대로 둔다 */
     const ox=e.ax, oy=e.ay;
-    const hl=(e.bindT>0||G(e).heal||e.grade==='boss'||e.grade==='tracker'||e.hp>=e.hpMax*0.4)?null
+    const hl=(e.bindT>0||e.frozenT>0||G(e).heal||e.grade==='boss'||e.grade==='tracker'||e.hp>=e.hpMax*0.4)?null
       :ens.filter(o=>o!==e&&G(o).heal).sort((a,b)=>dist(a.x,a.y,e.x,e.y)-dist(b.x,b.y,e.x,e.y))[0];
-    if(e.bindT>0){
-      e.bindT-=dt;
+    if(e.bindT>0||e.frozenT>0){
+      if(e.bindT>0) e.bindT-=dt;
     } else if(hl){
       const d=dist(e.ax,e.ay,hl.x,hl.y);
       if(d>HEAL_R*0.45){ const to=Math.atan2(hl.y-e.ay,hl.x-e.ax);
@@ -171,7 +176,7 @@ function update(dt){
     }
     [e.ax,e.ay]=wallSlide(ox,oy,e.ax,e.ay,e.r+6);
     [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+40);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
-    if(e.bindT>0){ e.x=e.ax; e.y=e.ay; }   // v3.12 구속 중엔 제자리 흔들림(drift)도 멈춰서 완전히 고정된 것처럼 보이게
+    if(e.bindT>0||e.frozenT>0){ e.x=e.ax; e.y=e.ay; }   // v3.12 구속 중엔 제자리 흔들림(drift)도 멈춰서 완전히 고정된 것처럼 보이게
     else{ e.x=e.ax+Math.cos(e.drift*0.8)*36; e.y=e.ay+Math.sin(e.drift)*54; [e.x,e.y]=wallSlide(e.ax,e.ay,e.x,e.y,e.r); }
     if(dt>0){ e.vx=(e.lx==null?0:(e.x-e.lx)/dt); e.vy=(e.ly==null?0:(e.y-e.ly)/dt); } e.lx=e.x; e.ly=e.y;   // v3.00 이동 속도 (패링 조준 예측용)
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
@@ -249,7 +254,7 @@ function update(dt){
        없어 못 잡게 되므로(예: 송신기 2기만 남는 경우) 그럴 땐 다른 적처럼 쏘게 한다.
        "혼자 남았는지"가 아니라 "나 말고 쏠 수 있는 적이 남아있는지"로 판정해야 안전하다 */
     if((G(e).relay||G(e).noFire) && ens.some(o=>o!==e && !(G(o).relay||G(o).noFire)))return;
-    e.fireT-=dt;
+    e.fireT-=dt*(e.frozenT>0?0.5:1);
     if(e.fireT<=0){
       const room=CFG.maxB-(bullets.length+queue.length);
       if(room<=0){ e.fireT=0.25; return; }               // v1.7 A-3: 자리가 없으면 잠깐 뒤 재시도
@@ -320,7 +325,7 @@ function update(dt){
           if(wallBetween(e.x,e.y,b.x,b.y)) break;
           b.tried.push(e);
           if(Math.random()<seizeChance(e,b)){
-            b.owner='enemy'; b.tried=[];
+            b.owner='enemy'; b.tried=[]; b.fire=0;
             b.dir=Math.atan2(aimPt().y-b.y,aimPt().x-b.x);
             e.seizeFx=0.35; say('빼앗김','red'); sfx('seize'); burst(b.x,b.y,'red',8); bMark(b.x,b.y,'재탈취 · '+(e===b.htg?'노린 적':'옆의 적'),'#ff5d6c');   // v3.00
           }
@@ -407,7 +412,8 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.fire&&e.frozenT>0?2.5:1);
+        if(b.fire){ if(e.frozenT>0){ e.frozenT=0; announce('쇄빙!','cyan'); burst(e.x,e.y,'#8fd8ff',22,240); sfx('block'); } else e.burnT=2.5; }
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68

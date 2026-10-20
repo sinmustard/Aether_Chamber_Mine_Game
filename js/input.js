@@ -242,7 +242,7 @@ function doParry(force){
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
-      t.glow=1; t.hcd=0.15; t.ready=false;
+      t.glow=1; t.hcd=0.15; t.ready=false; t.fire=P.blazeT>0?1:0;
       t.tried=ens.filter(e=>dist(e.x,e.y,t.x,t.y)<e.r+SEIZE_R+20);
       t.htg=(i===0?tgt:foes[i])||null;   // v2.86 이 탄환이 노리는 적을 기억
       if(i===0){ t.dir=mainDir;
@@ -361,6 +361,13 @@ function doQ(){
     [x,y]=pushOutOfWalls(x,y,20);
     P.grav={x,y,t:CFG.gravDur,max:CFG.gravDur,r:170}; P.wallCd=P.qCdMax=CFG.gravCd;
     say('중력장','cyan'); sfx('phase'); burst(x,y,'#b48cff',18,200);
+  } else if(CFG.qSkill==='frost'){
+    if(paused||P.wallCd>0||P.hp<=0)return;
+    let n=0;
+    ens.forEach(e=>{ if(dist(e.x,e.y,P.x,P.y)>300+e.r) return; if(angDiff(P.face,Math.atan2(e.y-P.y,e.x-P.x))>Math.PI*0.4) return; if(wallBetween(P.x,P.y,e.x,e.y)) return;
+      e.frozenT=CFG.frostDur*(e.grade==='boss'?0.5:1); e.burnT=0; n++; });
+    P.frostFx=0.35; P.wallCd=P.qCdMax=CFG.frostCd;
+    say(n?'빙결  ×'+n:'빙결','cyan'); sfx('phase'); burst(P.x+Math.cos(P.face)*90,P.y+Math.sin(P.face)*90,'#8fd8ff',20,240);
   }
 }
 /* v2.1 R 슬롯 — 덮어쓰기 / 메아리 (웨이브 보상 '잔상'과 이름이 겹쳐서 개명) */
@@ -415,6 +422,9 @@ function doR(){
     P.rChg=0; if(g) P.grav=null;
     if(g){ announce('연계 · 반전 폭발  ×'+ts.length,'cyan'); shake=16; } else { say('반전 폭발  ×'+ts.length,'cyan'); shake=10; }
     sfx('overwrite'); burst(cx,cy,'cyan',30,rad);
+  } else if(CFG.skillR==='blaze'){
+    P.blazeT=P.blazeMax=CFG.blazeDur; P.rChg=0;
+    say('열폭주  '+CFG.blazeDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=10; burst(P.x,P.y,'#ff9f43',26,280);
   }
 }
 function doWall(){
