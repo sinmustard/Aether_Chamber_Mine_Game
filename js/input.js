@@ -257,6 +257,8 @@ function doParry(force){
         if(Math.abs(dd)>LIM){ t.dir=out+(dd>0?LIM:-LIM);
           if(t.htg&&!(t.seekLeft>0)){ t.seekT=0.1; t.seekLeft=1.4; } }
       }
+      { const rx=t.x-P.x, ry=t.y-P.y, cx=Math.cos(t.dir), cy=Math.sin(t.dir), along=rx*cx+ry*cy, side=Math.abs(rx*cy-ry*cx), r0=R_PLAYER+R_BULLET+6;
+        if(Math.hypot(rx,ry)<r0||(along<0&&side<r0)){ t.x=P.x+cx*r0; t.y=P.y+cy*r0; t.trail.length=0; } }
       maxRet=Math.max(maxRet,t.returns);
       burst(t.x,t.y,'cyan',10,180);
       /* v2.1 메아리 — 지속 시간 동안 패링마다 탄환을 하나 더 복제한다 */
