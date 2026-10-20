@@ -21,7 +21,7 @@ const BOONS=[
   fn:()=>{ SKILL_CD_KEYS.forEach(k=>{ if(CFG[k]) CFG[k]*=0.9; }); CFG.cdrMul=(CFG.cdrMul||1)*0.9; }},   // v3.55 새 스킬 · 벽 생성도 포함
  {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
  {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}},
- {k:'leech',     n:'처치 회복',   d:'적을 처치할 때마다 체력 +3 (보스는 +12), 최대 3중첩',  max:3, tag:'생존',   fn:()=>{}},
+ {k:'leech',     n:'처치 회복',   d:'적을 처치할 때마다 체력 +2 (보스는 +10), 최대 3중첩',  max:3, tag:'생존',   fn:()=>{}},
  {k:'counter',   n:'역습',        d:'맞으면 2초 동안 이동 속도 +40 · 패링 사거리 +0.4m (레벨당)',  max:2, tag:'생존',   fn:()=>{}},   // v3.50
  {k:'fury',      n:'분노',        d:'맞을 때마다 R 충전 +5 (레벨당)',                          max:2, tag:'스킬',   fn:()=>{}},   // v3.50
  {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}}   // v2.52
