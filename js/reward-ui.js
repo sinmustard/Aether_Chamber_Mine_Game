@@ -21,8 +21,7 @@ function chaosAmp8(){ return {k:'c_amp8',n:'랜덤 스탯 증폭 +8',d:'무작�
   announce('랜덤 스탯 증폭 — '+Object.entries(got).map(([n,c])=>n+(c>1?' ×'+c:'')).join(' · '),'cyan'); }}; }
 function chaosTrap(){ return {k:'c_trap',n:'랜덤 스탯 증폭 +8',nh:'랜덤 스탯 증폭 <span class="t-plus">+8</span><span class="t-minus">−8</span>',d:'무작위 능력치를 8번 강화합니다',tag:'혼돈',max:1,sp:1,chaos:1,fn:()=>{
   const s=chaosStat(); s[1](-1); announce('함정! '+s[0]+' '+s[2](-1),'red'); sfx('breach'); shake=10; }}; }
-function chaosPick(){ const s=chaosStat(); return {k:'c_pick',n:'지정 스탯 랜덤 증폭',d:'<b>'+s[0]+'</b>을(를) ×0.5 ~ ×4 사이 무작위로 증폭합니다',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>{
-  const m=Math.round((0.5+Math.random()*3.5)*10)/10; s[1](m); announce(s[0]+' ×'+m+' 증폭  '+s[2](m),'cyan'); }}; }
+function chaosPick(){ const s=chaosStat(); return {k:'c_pick',n:'지정 스탯 랜덤 증폭',d:'<b>'+s[0]+'</b>을(를) ×0.5 ~ ×4 사이 무작위로 증폭합니다',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>chaosPickHidden().fn()}; }
 function chaosPickHidden(){ return {k:'c_pickh',n:'지정 스탯 랜덤 증폭',d:'얻는 순간 증폭할 능력치가 정해져요 · ×0.5 ~ ×4 무작위',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>{
   const s=chaosStat(), m=Math.round((0.5+Math.random()*3.5)*10)/10; s[1](m); announce('지정 — '+s[0]+' ×'+m+' 증폭  '+s[2](m),'cyan'); }}; }
 function chaosDisguise(){
