@@ -187,7 +187,7 @@ function openCloud(){
   };
 }
 /* v2.68 랭킹 탭 */
-const rkTabs=cur=>'<div class="optTabs">'+[['normal','노멀'],['hard','하드'],['daily','오늘의 데일리'],['hotd',hiddenOn('hotd')?'핫드':'???']].map(([k,n])=>'<button data-rtab="'+k+'" class="'+(k===cur?'on':'')+'">'+n+'</button>').join('')+'</div>';
+const rkTabs=cur=>'<div class="optTabs">'+[['normal','노멀'],['hard','하드'],['daily','오늘의 데일리'],['dbest','데일리 기록'],['hotd',hiddenOn('hotd')?'핫드':'???']].map(([k,n])=>'<button data-rtab="'+k+'" class="'+(k===cur?'on':'')+'">'+n+'</button>').join('')+'</div>';
 function hidPop(title,desc,btns){
   const no=$('#cfNo'), yes=$('#cfYes'), reset=()=>{ no.textContent='취소'; no.style.display=''; no.onclick=closeConfirm; yes.onclick=()=>{ const f=cfOk; closeConfirm(); if(f) f(); }; };
   $('#cfT').textContent=title; $('#cfD').textContent=desc;
@@ -222,7 +222,30 @@ async function openRankTable(tab){
       : '<li>'+(hot?'아직 핫드 기록이 없어요.':hard?'아직 하드 기록이 없어요.':'오늘은 아직 기록이 없어요. 첫 번째로 도전해 보세요.')+'</li>';
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
+async function dailyBest(y){
+  const r=await fetch(RANK.url+'/rest/v1/rpc/aether_daily_best',{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify({p_year:y})});
+  if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
+}
+async function openDailyBest(year){
+  const now=+todayKST().slice(0,4), y=year||now;
+  $('#modalBox').innerHTML='<div class="logHd"><h4>데일리 기록 · '+(y===now?y+'년':'작년 ('+y+'년)')+'</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs('dbest')+
+    '<div class="optTabs" id="dbYears"><button data-dbyear="'+now+'" class="'+(y===now?'on':'')+'">'+now+'년</button></div>'+
+    '<div class="rkNote">날짜별 데일리 1위 · 날짜 - 이름 - 점수 - 사이클 - 웨이브</div><ul class="rkList" id="rkList"><li>불러오는 중…</li></ul>';
+  $('#modal').classList.add('on');
+  try{
+    const [rows,last]=await Promise.all([dailyBest(y), y===now?dailyBest(now-1).catch(()=>[]):Promise.resolve([1])]);
+    if(y===now&&last.length) $('#dbYears').insertAdjacentHTML('beforeend','<button data-dbyear="'+(now-1)+'">작년</button>');
+    if(y!==now) $('#dbYears').insertAdjacentHTML('beforeend','<button data-dbyear="'+y+'" class="on">작년</button>');
+    const me=(getSession()||{}).name||myName();
+    $('#rkList').innerHTML=rows.length? rows.map(r=>{ const [,m,d]=String(r.day).split('-').map(Number);
+      return '<li class="'+(me&&r.name===me?'me':'')+'"><span class="no" style="width:64px;text-align:left">'+m+'월 '+d+'일</span><span class="nm">'+escH(r.name)+'</span>'+
+        '<span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">'+r.cycle+' 사이클 · '+r.wave+' 웨이브</span></li>'; }).join('')
+      : '<li>'+(y===now?'올해':'작년')+' 데일리 기록이 아직 없어요.</li>';
+  }catch(e){ $('#rkList').innerHTML='<li>기록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
+}
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-dbyear]'); if(b){ openDailyBest(+b.dataset.dbyear); sfx('ui'); } });
 async function openRanking(tab){
+  if(tab==='dbest') return openDailyBest();
   if(tab==='hotd'&&!hiddenOn('hotd')){
     $('#modalBox').innerHTML='<div class="logHd"><h4>???</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+rkTabs('hotd')+
       '<ul class="rkList"><li>히든 모드예요. 어딘가를 여러 번 눌러 보면 열릴지도…</li></ul>';
