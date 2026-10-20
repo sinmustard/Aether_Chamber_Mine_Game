@@ -355,6 +355,12 @@ function doQ(){
     [x,y]=pushOutOfWalls(x,y,R_PLAYER+6);
     P.decoy={x,y}; P.decoyT=P.decoyMax=CFG.decoyDur; P.wallCd=P.qCdMax=CFG.decoyCd;
     say('미끼','cyan'); sfx('phase'); burst(x,y,'cyan',14,160);
+  } else if(CFG.qSkill==='gravity'){
+    if(paused||P.wallCd>0||P.hp<=0)return;
+    let x=clamp(P.x+Math.cos(P.face)*170,60,WORLD.w-60), y=clamp(P.y+Math.sin(P.face)*170,60,WORLD.h-60);
+    [x,y]=pushOutOfWalls(x,y,20);
+    P.grav={x,y,t:CFG.gravDur,max:CFG.gravDur,r:170}; P.wallCd=P.qCdMax=CFG.gravCd;
+    say('중력장','cyan'); sfx('phase'); burst(x,y,'#b48cff',18,200);
   }
 }
 /* v2.1 R 슬롯 — 덮어쓰기 / 메아리 (웨이브 보상 '잔상'과 이름이 겹쳐서 개명) */
@@ -394,6 +400,21 @@ function doR(){
     P.autoT=dur; P.autoMax=dur; P.rChg=0;
     say((touchMode?'과부하 억제  ':'자동 패링  ')+dur.toFixed(1)+'s','cyan'); sfx('echo'); shake=8;
     burst(P.x,P.y,'cyan',22,280);
+  } else if(CFG.skillR==='nova'){
+    const g=(P.grav&&P.grav.t>0)?P.grav:null, cx=g?g.x:P.x, cy=g?g.y:P.y, rad=CFG.novaR*(g?1.5:1);
+    const ts=bullets.filter(b=>b.owner==='enemy'&&dist(b.x,b.y,cx,cy)<=rad);
+    if(!ts.length){ say('탄환 없음','dim'); return; }
+    ts.forEach((t,i)=>{
+      const seen=ens.filter(e=>!G(e).shield&&!wallBetween(t.x,t.y,e.x,e.y)).sort((a,b)=>dist(a.x,a.y,t.x,t.y)-dist(b.x,b.y,t.x,t.y));
+      const pool=seen.length?seen:ens, tg=pool.length?pool[i%Math.min(pool.length,3)]:null;
+      t.owner='player'; t.returns+=g?2:1; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime; t.armor=0;
+      t.spd=Math.min(t.spd*CFG.accel*(g?1.3:1),cap()); t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.ready=false;
+      t.tried=ens.filter(e=>dist(e.x,e.y,t.x,t.y)<e.r+SEIZE_R+20); t.htg=tg;
+      t.dir=tg?Math.atan2(tg.y-t.y,tg.x-t.x):Math.atan2(t.y-cy,t.x-cx);
+    });
+    P.rChg=0; if(g) P.grav=null;
+    if(g){ announce('연계 · 반전 폭발  ×'+ts.length,'cyan'); shake=16; } else { say('반전 폭발  ×'+ts.length,'cyan'); shake=10; }
+    sfx('overwrite'); burst(cx,cy,'cyan',30,rad);
   }
 }
 function doWall(){

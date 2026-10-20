@@ -366,6 +366,15 @@ function drawHpBarPlayer(){
 }
 function drawSkill(){
   const p=proj(P.x,P.y), now=performance.now();
+  if(P.grav&&P.grav.t>0){
+    const g=P.grav, q=proj(g.x,g.y), k=g.t/(g.max||1);
+    ctx.save(); ctx.translate(q[0],q[1]); ctx.scale(1,SQUASH);
+    ctx.globalAlpha=.10; ctx.fillStyle='#b48cff'; ctx.beginPath(); ctx.arc(0,0,g.r,0,TAU); ctx.fill();
+    ctx.globalAlpha=.7; ctx.strokeStyle='#b48cff'; ctx.lineWidth=2; ctx.setLineDash([8,7]); ctx.lineDashOffset=now/30; ctx.beginPath(); ctx.arc(0,0,g.r,0,TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth=3; ctx.beginPath(); ctx.arc(0,0,22,-Math.PI/2,-Math.PI/2+TAU*k); ctx.stroke();
+    for(let i=0;i<3;i++){ const a=now/300+i*TAU/3; ctx.globalAlpha=.5; ctx.beginPath(); ctx.arc(Math.cos(a)*g.r*0.55,Math.sin(a)*g.r*0.55,3,0,TAU); ctx.fillStyle='#b48cff'; ctx.fill(); }
+    ctx.restore();
+  }
   if(P.decoyT>0&&P.decoy){
     const q=proj(P.decoy.x,P.decoy.y), k=P.decoyT/(P.decoyMax||1);
     ctx.save(); ctx.globalAlpha=.35+.15*Math.sin(now/120); ctx.fillStyle=C.cyan; ctx.beginPath(); ctx.ellipse(q[0],q[1],R_PLAYER,R_PLAYER*SQUASH*1.6,0,0,TAU); ctx.fill();

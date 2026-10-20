@@ -80,6 +80,7 @@ function update(dt){
   }
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
+  if(P.grav){ P.grav.t-=dt; if(P.grav.t<=0) P.grav=null; }
   if(P.slowT>0)P.slowT-=dt; if(P.absorbT>0)P.absorbT-=dt; if(P.shockFx>0)P.shockFx-=dt;
   if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; } }
   if(P.autoT>0){ P.autoT-=dt; if(P.autoT<=0){ P.autoT=0; say(touchMode?'과부하 억제 끝':'자동 패링 끝','dim'); } }   // v3.16
@@ -328,7 +329,11 @@ function update(dt){
       }
     }
     const prevX=b.x, prevY=b.y;
-    const sf=(b.owner==='enemy'&&P.slowT>0)?0.5:1;
+    let sf=(b.owner==='enemy'&&P.slowT>0)?0.5:1;
+    if(b.owner==='enemy'&&P.grav&&P.grav.t>0&&dist(b.x,b.y,P.grav.x,P.grav.y)<P.grav.r){
+      const gd=dist(b.x,b.y,P.grav.x,P.grav.y), want=Math.atan2(P.grav.y-b.y,P.grav.x-b.x)+(gd<36?Math.PI/2:0);
+      b.dir+=clamp(norm(want-b.dir),-dt*7,dt*7); b.ready=false; b.coy=0; sf=Math.min(sf,gd<36?0.15:0.4);
+    }
     b.x+=Math.cos(b.dir)*b.spd*sf*dt; b.y+=Math.sin(b.dir)*b.spd*sf*dt;
 
     // 장애물
