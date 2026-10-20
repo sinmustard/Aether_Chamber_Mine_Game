@@ -21,6 +21,7 @@ const inEdge=()=>P.x<EDGE||P.x>WORLD.w-EDGE||P.y<EDGE||P.y>WORLD.h-EDGE;
 const inCorner=()=>(P.x<EDGE||P.x>WORLD.w-EDGE)&&(P.y<EDGE||P.y>WORLD.h-EDGE);
 const R_ENEMY=30, R_ELITE=38, R_BOSS=52, R_PLAYER=26, R_BULLET=7;
 const BASE_DMG=10, DMG_MULT=2.0, AIM_ASSIST=20, PLAYER_DMG=12;
+const EARLY_DMG=8;   // v3.48 1사이클 1~4웨이브의 적 탄 피해 (강화 없이 시작하는 판이 3웨이브에서 끝나던 문제)
 /* v2.63 후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25%, 최대 ×2.5 (체험판은 그대로) */
 const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1))*(run.mode==='hard'?1.3:run.mode==='hotd'?1.95:1);   // v2.68 하드 ×1.3
 /* v2.78 적 체력의 사이클 배율 — 예전엔 사이클마다 ×1.15씩 복리로 불어나서(cycle10이면 ×3.5) 후반에 잡몹도

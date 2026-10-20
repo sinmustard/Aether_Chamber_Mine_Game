@@ -73,7 +73,7 @@ function enemyPool(){
   return [
     {g:'mob',      from:1, w:5, cap:6},
     {g:'splitter', from:2, w:2, cap:run.cycle>=2?2:1},
-    {g:'elite',    from:3, w:2, cap:2},
+    {g:'elite',    from:run.cycle===1?4:3, w:2, cap:2},   // v3.48 1사이클은 4웨이브부터 — 3웨이브엔 분열형만 새로 나온다
     {g:'bulwark',  from:5, w:2, cap:run.cycle>=2?2:1},
     {g:'healer',   from:3, w:1, cap:()=>2, ok:()=>run.cycle>=2},   // v2.27 2사이클 3웨이브부터
     {g:'relay',    from:7, w:1, cap:run.cycle>=3?2:1},
@@ -118,7 +118,7 @@ function waveSpawn(){
       announce('혼돈  ·  사이클 '+run.cycle+'  ·  웨이브 '+run.wave,'cyan'); sfx('wave'); }
   }
   else{
-    const base=Math.min(5,1+Math.ceil(run.wave/2));
+    const base=(run.cycle===1&&run.wave===3)?2:Math.min(5,1+Math.ceil(run.wave/2));   // v3.48 1사이클 3웨이브는 2마리 — 새 적(분열형 · 엘리트)이 처음 나오는 웨이브라 수까지 늘면 너무 가파르다
     const n=Math.min(6, base+(run.cycle>=2?1:0));
     let order = run.wave<=2 ? Array(n).fill('mob') : rollWave(n);
     /* v2.34 대포병이 나오는 웨이브는 구성이 달라진다 — 힐러만 2마리까지, 나머지는 종류당 1마리 */

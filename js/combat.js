@@ -457,7 +457,7 @@ function update(dt){
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.absorbT>0){ if(CFG.skillR) P.rChg=Math.min(CFG.rNeed,P.rChg+2); say('흡수','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.barrier>0&&P.inv<=0&&!CFG.god){ P.barrier--; P.inv=0.4; say(P.barrier?'보호막 · 남은 '+P.barrier:'보호막 깨짐','cyan'); sfx('block'); burst(b.x,b.y,'cyan',14,180); }
-      else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round(PLAYER_DMG*(b.boss===2?1.75:b.boss?1.5:1)*dmgScale()); P.hurt=.3;   /* v2.62 보스 탄환은 ×1.5, 2페이즈 ×1.75 */ P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
+      else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round((run.cycle===1&&run.wave<=4?EARLY_DMG:PLAYER_DMG)*(b.boss===2?1.75:b.boss?1.5:1)*dmgScale()); P.hurt=.3;   /* v2.62 보스 탄환은 ×1.5, 2페이즈 ×1.75 */ P.inv=CFG.iframe; shake=13; say('피격','red'); sfx('breach'); burst(P.x,P.y,'red',12); }
       bullets.splice(i,1); continue;
     }
     if(b.x<-120||b.x>WORLD.w+120||b.y<-120||b.y>WORLD.h+120){ bullets.splice(i,1); continue; }
