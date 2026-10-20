@@ -75,6 +75,7 @@ function armFullscreen(){
   addEventListener('pointerdown',once); addEventListener('touchstart',once);
 }
 function go(id){
+  if(id!=='result') settleRoulette();
   if(id==='hub'&&!getSession()&&!offlineOK){ openLogin(); return; }   // v2.58 로그인 먼저
   if(id==='hub') setTimeout(syncFromCloud,0);   // v2.68 HUB에 들어갈 때마다 다른 기기 기록 확인
   if(id!=='game') unseedRandom();   // v2.68 데일리 시드 해제
@@ -227,15 +228,26 @@ function startRun(mode){
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 출격하자마자 보상 선택
 }
 const ROUL=[0.001,0.1,0.25,0.5,0.75,1,1.25,1.5,2,2.5,3,3.5];
-let roulTimer=null;
+let roulTimer=null, pendingRoul=null;
+function settleRoulette(){
+  const r=pendingRoul; if(!r) return; pendingRoul=null; clearTimeout(roulTimer);
+  syncMeta(); META.cur+=r.gain; save(); if(getSession()) cloudAutoSave();
+}
+function showRoulette(){
+  const r=pendingRoul; if(!r) return;
+  const box=$('#rGain');
+  box.innerHTML='<div class="roulT">혼돈의 룰렛 — 재화 ◆ '+r.base.toLocaleString()+'</div><div class="roul">'+ROUL.map((m,i)=>'<span data-ri="'+i+'">×'+m+'</span>').join('')+'</div>'+
+    '<button class="roulGo" id="roulGo">룰렛 돌리기</button><div class="roulR">돌리지 않고 나가면 자동으로 돌아가요</div>';
+  $('#roulGo').onclick=()=>{ $('#roulGo').disabled=true; $('#roulGo').style.display='none'; spinRoulette(r,r.gain); };
+}
 function spinRoulette(r,gain){
   clearTimeout(roulTimer);
   const box=$('#rGain'), fmt=m=>'×'+m;
-  box.innerHTML='<div class="roulT">혼돈의 룰렛 — 재화 ◆ '+r.base.toLocaleString()+'</div><div class="roul">'+ROUL.map((m,i)=>'<span data-ri="'+i+'">'+fmt(m)+'</span>').join('')+'</div><div class="roulR">돌리는 중…</div>';
+  box.querySelector('.roulR').textContent='돌리는 중…';
   const cells=[...box.querySelectorAll('[data-ri]')], total=ROUL.length*2+r.i;
   let k=0;
   const tick=()=>{ cells.forEach(c=>c.classList.remove('on')); cells[k%ROUL.length].classList.add('on'); sfx('ui');
-    if(k>=total){ cells[r.i].classList.add('hit');
+    if(k>=total){ cells[r.i].classList.add('hit'); settleRoulette();
       box.querySelector('.roulR').innerHTML='<b>'+fmt(r.m)+'</b> → ◆ +'+gain.toLocaleString()+(r.m>=2?'  대박!':r.m<0.5?'  …혼돈이야~':'');
       sfx(r.m>=2?'boss':'block'); return; }
     k++; roulTimer=setTimeout(tick,30+Math.pow(k/total,3)*260); };
@@ -250,7 +262,8 @@ function endRun(){
   const roul=run.mode==='chaosx'?{base:gain,i:Math.floor(Math.random()*ROUL.length)}:null;
   if(roul){ roul.m=ROUL[roul.i]; gain=Math.max(0,Math.round(gain*roul.m)); }
   syncMeta();                                                            // v2.46 다른 탭이 저장한 최신 재화에 더한다
-  META.cur+=gain;
+  META.cur+=roul?0:gain;
+  pendingRoul=roul?Object.assign({},roul,{gain}):null;
   const isNew=run.score>META.best;
   if(isNew)META.best=run.score;
   if(run.mode!=='daily') META.bestCycle=Math.max(META.bestCycle,run.cycle);
@@ -268,7 +281,7 @@ function endRun(){
   $('#rGain').innerHTML='◆ +'+gain.toLocaleString()+
     '<div style="font-size:10.5px;color:var(--dim);letter-spacing:.06em;margin-top:6px">'+
     '점수 '+gScore+' · 처치 '+gKill+' · 웨이브 '+gWave+(gBoss?' · 보스 '+gBoss:'')+'</div>';
-  if(roul) spinRoulette(roul,gain);
+  if(roul) showRoulette();
   $('#rBoons').innerHTML=Object.keys(run.boons).length? '받은 보상 — '+Object.keys(run.boons).map(k=>{ const b=boonDef(k);
       return b? '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'') : ''; }).join(' · ') : '';   // v2.52
   $('#cloudStat').textContent=getSession()?'☁ 자동 저장 중…':'';   // v2.58
