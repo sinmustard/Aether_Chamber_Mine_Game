@@ -10,14 +10,29 @@ function cardHTML(u,i){
     '</div></div>';
 }
 /* v2.14 강화와 능력을 나눠서 보여준다 */
+let skFolder=null;
+const SK_SLOTS=[['f','F 스킬','skill'],['q','Q 스킬','skillQ'],['r','R 스킬','skillR']];
+const skSlot=u=>u.skill===1?'f':u.skill;
 function renderCards(){
   const idx=UPG.map((u,i)=>[u,i]);
   const groups=[['강화', idx.filter(([u])=>!u.skill&&!u.grp)],
-                ['생존 / 보급', idx.filter(([u])=>u.grp==='life')],
-                ['능력 해방 / 강화', idx.filter(([u])=>u.skill)]];
-  $('#cards').innerHTML=groups.map(([title,list])=>
+                ['생존 / 보급', idx.filter(([u])=>u.grp==='life')]];
+  let html=groups.map(([title,list])=>
     list.length? '<div class="grp">'+title+'</div>'+list.map(([u,i])=>cardHTML(u,i)).join('') : ''
   ).join('');
+  if(!skFolder){
+    html+='<div class="grp">능력 해방 / 강화</div>'+SK_SLOTS.map(([k,t,mk])=>{
+      const list=UPG.filter(u=>u.skill&&skSlot(u)===k), got=list.filter(u=>u.lv>0).length;
+      const eq=UPG.find(u=>u.k===META[mk]&&u.lv>0);
+      return '<div class="card folder" data-skf="'+k+'"><div class="n">'+t+'<i>›</i></div>'+
+        '<div class="s">해금 '+got+' / '+list.length+(eq?'<br>장착 · '+eq.n.replace(/^[FQR] · /,''):'<br>장착 없음')+'</div></div>';
+    }).join('');
+  } else {
+    const t=SK_SLOTS.find(s=>s[0]===skFolder)[1];
+    html+='<div class="grp">능력 해방 › '+t+'</div><div class="card folder back" data-skf="">'+'<div class="n">‹ 뒤로</div><div class="s">F · Q · R 고르기</div></div>'+
+      idx.filter(([u])=>u.skill&&skSlot(u)===skFolder).map(([u,i])=>cardHTML(u,i)).join('');
+  }
+  $('#cards').innerHTML=html;
 }
 function renderDetail(){
   const u=UPG[sel],maxed=u.lv>=u.max,cost=maxed?0:u.cost[u.lv],rMet=reqMet(u);
@@ -147,6 +162,10 @@ function renderRecs(){
     '</b> · 도달 사이클 <b>'+META.bestCycle+'</b>';
 }
 $('#cards').addEventListener('click',e=>{
+  const f=e.target.closest('[data-skf]');
+  if(f){ skFolder=f.dataset.skf||null;
+    if(skFolder){ const i=UPG.findIndex(u=>u.skill&&skSlot(u)===skFolder); if(i>=0&&!(UPG[sel].skill&&skSlot(UPG[sel])===skFolder)) sel=i; }
+    renderCards(); renderDetail(); sfx('ui'); return; }
   const c=e.target.closest('.card'); if(!c)return;
   sel=+c.dataset.i; renderCards(); renderDetail();
 });
