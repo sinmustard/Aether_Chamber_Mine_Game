@@ -120,6 +120,6 @@ function statsFromUpgrades(){
     revives: lv('revive'), waveHeal: 0.05+0.01*lv('waveHeal'), barrier: lv('barrier'), armor: 0.05*lv('armor'), shieldPierce: [0,0.2,0.35,0.5][lv('shieldPierce')], cdr: lv('cdr'), rallyDmg: 0.15*lv('rallyDmg'), firstAid: [0,0.2,0.3,0.4][lv('firstAid')], reviveHp: 0.05*lv('reviveHp'), specialChance: [0,0.25,0.30,0.35][lv('special')]   /* v2.44 일반 확률 낮춤 */,
     specialBoss: [0,0.38,0.47,0.50][lv('special')],   // v2.47 보스 처치 후 확률
     rNeed: Math.round((META.skillR==='nova' ? 70 : META.skillR==='blaze' ? 60 : (META.skillR==='emp'||META.skillR==='autoparry') ? EMP_NEED   // v3.16 자동 패링도 100 고정
-         : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ])*Math.max(0.6,(1-0.1*lv('rGain'))*(1-0.06*lv('cdr'))))
+         : [50,50,46,42,38,34][ (META.skillR==='overwrite'?ow : META.skillR==='echo'?ec : 0) ])*Math.max(0.6,(1-0.05*lv('rGain'))*(1-0.06*lv('cdr'))))
   };
 }
