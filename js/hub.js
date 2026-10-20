@@ -104,10 +104,17 @@ const DBG_BAK='aether_dbg_backup';
 function dbgBackupGet(){ try{ return JSON.parse(localStorage.getItem(DBG_BAK)||'null'); }catch(e){ return null; } }
 function dbgBackupMake(){
   const ss=getSession(), cur=dbgBackupGet();
-  if(cur&&(!ss||cur.name===ss.name)) return;
+  if(cur&&cur.dirty&&(!ss||cur.name===ss.name)) return;
   save();
   const cfg={}; SPECS.concat(TOGS).forEach(sp=>cfg[sp.k]=CFG[sp.k]);
   try{ localStorage.setItem(DBG_BAK,JSON.stringify({at:Date.now(),name:ss?ss.name:'',data:JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'),cfg})); }catch(e){}
+}
+function dbgMarkDirty(){ const b=dbgBackupGet(); if(b&&!b.dirty){ b.dirty=1; try{ localStorage.setItem(DBG_BAK,JSON.stringify(b)); }catch(e){} } }
+function dbgDiff(b){
+  const d=b.data||{}, m=d.meta||{}, up=d.upg||{}, out=[];
+  if((m.cur||0)!==META.cur) out.push('재화 '+META.cur.toLocaleString()+' → '+(m.cur||0).toLocaleString());
+  UPG.forEach(u=>{ const was=up[u.k]||0; if(was!==u.lv) out.push(u.n+' '+u.lv+' → '+was); });
+  return out;
 }
 function dbgBackupLabel(){
   const b=dbgBackupGet(), el=$('#dbgRestore'); if(!el) return;
@@ -118,7 +125,9 @@ async function dbgRestore(){
   const b=dbgBackupGet(); if(!b) return;
   const ss=getSession();
   if(b.name&&ss&&b.name!==ss.name){ flashDbg('다른 계정('+b.name+')의 복구 지점이라 되돌릴 수 없어요'); return; }
-  if(!confirm('디버그를 켜기 전 상태로 되돌릴까요?\n재화 · 강화 · 스킬 · 기록 · 업적이 그때로 돌아가요.\n설정(조작 · 소리 · 캐릭터 이미지 등)은 지금 그대로예요.')) return;
+  const diff=dbgDiff(b), when=new Date(b.at).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(!diff.length){ try{ localStorage.removeItem(DBG_BAK); }catch(e){} dbgBackupLabel(); flashDbg('되돌릴 변화가 없어요'); return; }
+  if(!confirm('디버그를 켠 시점('+when+')으로 되돌릴까요?\n바뀌는 것 '+diff.length+'개:\n· '+diff.slice(0,8).join('\n· ')+(diff.length>8?'\n· …':'')+'\n\n그 뒤에 직접 찍은 강화도 같이 되돌아가요. 설정(조작 · 소리 · 캐릭터 이미지 등)은 그대로예요.')) return;
   const d=JSON.parse(JSON.stringify(b.data||{})), at=META.cloudAt;
   d.opt=OPT; applySave(d); META.cloudAt=at; save();
   Object.assign(CFG,b.cfg||{}); syncUI();
@@ -131,6 +140,7 @@ async function dbgRestore(){
 }
 function setDebug(on){
   if(on) dbgBackupMake();
+  else { const b=dbgBackupGet(); if(b&&!b.dirty){ try{ localStorage.removeItem(DBG_BAK); }catch(e){} } }
   debug=on;
   document.body.classList.toggle('debug',debug);
   const d=$('details.dev'); if(d) d.open=debug;
@@ -151,6 +161,7 @@ $('#debugBtns').addEventListener('click',e=>{
   const k=b.dataset.dbg;
   if(k==='restore'){ dbgRestore(); return; }
   if(k==='bot'){ openBotPanel(); return; }
+  if(k==='cur'||k==='max'||k==='zero') dbgMarkDirty();
   if(k==='cur') META.cur+=10000;
   if(k==='max') UPG.forEach(u=>{ u.lv=u.max; });
   if(k==='zero') UPG.forEach(u=>{ u.lv=0; });
