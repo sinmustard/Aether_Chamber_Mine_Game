@@ -81,8 +81,8 @@ function update(dt){
   if(P.skillCd>0)P.skillCd-=dt; if(P.guard>0)P.guard-=dt; if(P.phase>0)P.phase-=dt; if(P.wallCd>0)P.wallCd-=dt;
   if(P.echoT>0)P.echoT-=dt;   // v2.1 R 슬롯
   if(P.grav){ P.grav.t-=dt; if(P.grav.t<=0) P.grav=null; }
-  if(P.blazeT>0){ P.blazeT-=dt; if(P.blazeT<=0){ P.blazeT=0; say('열폭주 끝','dim'); } }
-  if(P.frostFx>0) P.frostFx-=dt;
+  if(P.blazeT>0){ P.blazeT-=dt; if(P.blazeT<=0){ P.blazeT=0; say('오버클럭 끝','dim'); } }
+  if(P.stasis){ P.stasis.t-=dt; if(P.stasis.t<=0) P.stasis=null; }
   if(P.slowT>0)P.slowT-=dt; if(P.absorbT>0)P.absorbT-=dt; if(P.shockFx>0)P.shockFx-=dt;
   if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; } }
   if(P.autoT>0){ P.autoT-=dt; if(P.autoT<=0){ P.autoT=0; say(touchMode?'과부하 억제 끝':'자동 패링 끝','dim'); } }   // v3.16
@@ -116,11 +116,9 @@ function update(dt){
   }
 
   // 적
-  ens.filter(e=>e.burnKill).forEach(killEnemy);
   ens.forEach(e=>{
     if(e.hackT>0) e.hackT-=dt;
-    if(e.frozenT>0) e.frozenT-=dt;
-    if(e.burnT>0){ e.burnT-=dt; e.hp-=HIT_UNIT*0.35*dt; e.hurt=Math.max(e.hurt||0,.06); if(e.hp<=HIT_UNIT*0.25) e.burnKill=true; }   // v2.29 해킹 지속 시간
+    e.frozenT=inStasis(e.x,e.y)?1:0;   // v2.29 해킹 지속 시간
     e.drift+=dt*0.7;
     /* v3.11 앵커 이동 — 구속이 최우선, 그 다음 송신기 도주 / 분열체 접근 압박.
        구속된 동안은 제자리에서 못 움직인다(공격은 평소처럼) — 그래서 e.ax/e.ay를 그대로 둔다 */
@@ -254,7 +252,8 @@ function update(dt){
        없어 못 잡게 되므로(예: 송신기 2기만 남는 경우) 그럴 땐 다른 적처럼 쏘게 한다.
        "혼자 남았는지"가 아니라 "나 말고 쏠 수 있는 적이 남아있는지"로 판정해야 안전하다 */
     if((G(e).relay||G(e).noFire) && ens.some(o=>o!==e && !(G(o).relay||G(o).noFire)))return;
-    e.fireT-=dt*(e.frozenT>0?0.5:1);
+    if(inStasis(e.x,e.y)) return;
+    e.fireT-=dt;
     if(e.fireT<=0){
       const room=CFG.maxB-(bullets.length+queue.length);
       if(room<=0){ e.fireT=0.25; return; }               // v1.7 A-3: 자리가 없으면 잠깐 뒤 재시도
@@ -325,7 +324,7 @@ function update(dt){
           if(wallBetween(e.x,e.y,b.x,b.y)) break;
           b.tried.push(e);
           if(Math.random()<seizeChance(e,b)){
-            b.owner='enemy'; b.tried=[]; b.fire=0;
+            b.owner='enemy'; b.tried=[];
             b.dir=Math.atan2(aimPt().y-b.y,aimPt().x-b.x);
             e.seizeFx=0.35; say('빼앗김','red'); sfx('seize'); burst(b.x,b.y,'red',8); bMark(b.x,b.y,'재탈취 · '+(e===b.htg?'노린 적':'옆의 적'),'#ff5d6c');   // v3.00
           }
@@ -335,6 +334,8 @@ function update(dt){
     }
     const prevX=b.x, prevY=b.y;
     let sf=(b.owner==='enemy'&&P.slowT>0)?0.5:1;
+    if(P.blazeT>0) sf*=b.owner==='player'?1.6:1.2;
+    if(b.owner==='enemy'&&inStasis(b.x,b.y)){ sf=0; b.ready=false; b.coy=0; }
     if(b.owner==='enemy'&&P.grav&&P.grav.t>0&&dist(b.x,b.y,P.grav.x,P.grav.y)<P.grav.r){
       const gd=dist(b.x,b.y,P.grav.x,P.grav.y), want=Math.atan2(P.grav.y-b.y,P.grav.x-b.x)+(gd<36?Math.PI/2:0);
       b.dir+=clamp(norm(want-b.dir),-dt*7,dt*7); b.ready=false; b.coy=0; sf=Math.min(sf,gd<36?0.15:0.4);
@@ -412,8 +413,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.fire&&e.frozenT>0?2.5:1);
-        if(b.fire){ if(e.frozenT>0){ e.frozenT=0; announce('쇄빙!','cyan'); burst(e.x,e.y,'#8fd8ff',22,240); sfx('block'); } else e.burnT=2.5; }
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68
@@ -466,6 +466,7 @@ function update(dt){
     } else endRun();
   }
 }
+function inStasis(x,y){ return !!(P.stasis&&P.stasis.t>0&&dist(x,y,P.stasis.x,P.stasis.y)<P.stasis.r); }
 function aimPt(){ return (P.decoyT>0&&P.decoy)?P.decoy:P; }
 function spawnBullet(q){
   const s0=q.spec.fast?Math.max(CFG.spd,cap()*q.spec.fast):CFG.spd*(q.boss?1.15:1);

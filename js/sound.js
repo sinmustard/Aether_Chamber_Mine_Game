@@ -97,7 +97,7 @@ function statsFromUpgrades(){
     gainMul: 1+0.06*gr, startRewards: sp,   /* v2.65 재화 획득 너프 8%→6% */
     skill: (META.skill&&META.skill!=='phase'&&lv(META.skill)>0)?META.skill:'',
     qSkill: (META.skillQ&&lv(META.skillQ)>0)?META.skillQ:'',
-    skillR: (META.skillR&&lv(META.skillR)>0)?META.skillR:'',
+    skillR: (META.skillR&&lv(META.skillR)>0&&!(META.skillR==='blaze'&&META.skillQ==='frost'))?META.skillR:'',
     healAmt:[0,18,22,26,30,36][h], healCd:[0,32,30,28,26,24][h],   /* v2.61 회복 너프 */
     guardDur:[0,1.5,1.8,2.1,2.5,3.0][g], guardCd:[0,18,16,14,12,10][g],
     phaseDur:[0,2,2.5,3,3.5,4][ph], phaseCd:[0,16,15,13,12,10][ph],

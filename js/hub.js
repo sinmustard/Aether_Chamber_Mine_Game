@@ -63,14 +63,15 @@ function renderSkillSel(){
   }).join('')+'</div>';
   $('#skillSel').innerHTML=
     row('f','F',[['heal','회복'],['guard','방어'],['dash','대시'],['slow','시간 감속'],['shock','충격파'],['absorb','흡수'],['','없음']],META.skill)+
-    row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','구속'],['decoy','미끼'],['gravity','중력장'],['frost','빙결'],['','없음']],META.skillQ)+
-    row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['emp','해킹'],['autoparry','자동 패링'],['nova','반전 폭발'],['blaze','열폭주'],['','없음']],META.skillR);   // v3.16
+    row('q','Q',[['wall','벽 생성'],['phase','위상 이동'],['hook','구속'],['decoy','미끼'],['gravity','중력장'],['frost','정지장'],['','없음']],META.skillQ)+
+    row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['emp','해킹'],['autoparry','자동 패링'],['nova','반전 폭발'],['blaze','오버클럭'],['','없음']],META.skillR);   // v3.16
 }
 $('#skillSel').addEventListener('click',e=>{
   const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
   const slot=b.dataset.slot;
   if(slot==='q') META.skillQ=b.dataset.skill;
   else if(slot==='r') META.skillR=b.dataset.skill;
+  if(META.skillQ==='frost'&&META.skillR==='blaze'){ if(slot==='q') META.skillR=''; else META.skillQ=''; toast('상성 충돌 — 정지장과 오버클럭은 같이 쓸 수 없어요 ('+(slot==='q'?'R':'Q')+' 해제)'); }
   else META.skill=b.dataset.skill;
   save(); sfx('ui'); renderSkillSel();
 });

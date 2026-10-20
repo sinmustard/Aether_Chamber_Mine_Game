@@ -242,7 +242,7 @@ function doParry(force){
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
-      t.glow=1; t.hcd=0.15; t.ready=false; t.fire=P.blazeT>0?1:0;
+      t.glow=1; t.hcd=0.15; t.ready=false;
       t.tried=ens.filter(e=>dist(e.x,e.y,t.x,t.y)<e.r+SEIZE_R+20);
       t.htg=(i===0?tgt:foes[i])||null;   // v2.86 이 탄환이 노리는 적을 기억
       if(i===0){ t.dir=mainDir;
@@ -279,7 +279,7 @@ function doParry(force){
     /* v2.61 패링 히트스톱 제거 — 멈춘 동안 경직 시간이 안 줄어 다음 패링이 씹혔다 */
     /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
     if(boonLv('s_focus')) P.focusT=3;   // v2.37 패링 집중
-    P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1));
+    P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1))*(P.blazeT>0?0.5:1);
     P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
   } else { P.lock=CFG.whiff*((boonLv('s_focus')&&P.focusT>0)?0.25:1); P.lockMax=Math.max(0.01,P.lock); P.lockKind='miss';
            if(CFG.whiff>0){ say('빗나감','red'); shake=4; sfx('miss'); } }
@@ -363,11 +363,8 @@ function doQ(){
     say('중력장','cyan'); sfx('phase'); burst(x,y,'#b48cff',18,200);
   } else if(CFG.qSkill==='frost'){
     if(paused||P.wallCd>0||P.hp<=0)return;
-    let n=0;
-    ens.forEach(e=>{ if(dist(e.x,e.y,P.x,P.y)>300+e.r) return; if(angDiff(P.face,Math.atan2(e.y-P.y,e.x-P.x))>Math.PI*0.4) return; if(wallBetween(P.x,P.y,e.x,e.y)) return;
-      e.frozenT=CFG.frostDur*(e.grade==='boss'?0.5:1); e.burnT=0; n++; });
-    P.frostFx=0.35; P.wallCd=P.qCdMax=CFG.frostCd;
-    say(n?'빙결  ×'+n:'빙결','cyan'); sfx('phase'); burst(P.x+Math.cos(P.face)*90,P.y+Math.sin(P.face)*90,'#8fd8ff',20,240);
+    P.stasis={x:P.x,y:P.y,t:CFG.frostDur,max:CFG.frostDur,r:190}; P.wallCd=P.qCdMax=CFG.frostCd;
+    say('정지장','cyan'); sfx('phase'); burst(P.x,P.y,'#8fd8ff',20,200);
   }
 }
 /* v2.1 R 슬롯 — 덮어쓰기 / 메아리 (웨이브 보상 '잔상'과 이름이 겹쳐서 개명) */
@@ -424,7 +421,7 @@ function doR(){
     sfx('overwrite'); burst(cx,cy,'cyan',30,rad);
   } else if(CFG.skillR==='blaze'){
     P.blazeT=P.blazeMax=CFG.blazeDur; P.rChg=0;
-    say('열폭주  '+CFG.blazeDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=10; burst(P.x,P.y,'#ff9f43',26,280);
+    say('오버클럭  '+CFG.blazeDur.toFixed(1)+'s','warn'); sfx('overwrite'); shake=8; burst(P.x,P.y,'#ffd34d',24,260);
   }
 }
 function doWall(){
