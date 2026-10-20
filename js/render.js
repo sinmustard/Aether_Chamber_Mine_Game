@@ -370,6 +370,10 @@ function drawHpBarPlayer(){
 }
 function drawSkill(){
   const p=proj(P.x,P.y), now=performance.now();
+  if(P.barrier>0){
+    ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.strokeStyle=C.cyan; ctx.lineWidth=2; ctx.globalAlpha=.45+.15*Math.sin(now/200);
+    for(let k=0;k<P.barrier;k++){ ctx.beginPath(); ctx.arc(0,0,R_PLAYER+8+k*5,0,TAU); ctx.stroke(); } ctx.restore();
+  }
   if(P.blazeT>0){
     ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.globalAlpha=Math.min(.7,P.blazeT)*(.5+.3*Math.sin(now/50)); ctx.strokeStyle='#ffd34d'; ctx.lineWidth=2.5; ctx.setLineDash([10,6]); ctx.lineDashOffset=-now/10;
     ctx.beginPath(); ctx.arc(0,0,R_PLAYER+16,0,TAU); ctx.stroke(); ctx.restore();
