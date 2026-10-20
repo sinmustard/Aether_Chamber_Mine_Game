@@ -108,6 +108,7 @@ function update(dt){
     }
   } else if(run.phase!=='tut' && !ens.length && !queue.length){   // v2.60 체험판은 웨이브 진행 안 함
     run.phase='clear'; run.phaseT=3; say('웨이브 클리어','cyan');
+    if(P.hp>0&&P.hp<CFG.hpMax){ const h=Math.min(CFG.hpMax-P.hp,Math.round(CFG.hpMax*CFG.waveHeal)); P.hp+=h; say('회복 +'+h,'cyan'); }   // v3.38 웨이브 회복
     if(!run.waveHurt) stat('noHit'); run.waveHurt=0;   // v2.68 피격 없이 넘긴 웨이브
   }
 
