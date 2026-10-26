@@ -120,7 +120,7 @@ function botPrep(){
   META.skill=F[i%F.length]; META.skillQ=Q[i%Q.length]; let r=Rr[i%Rr.length]; if(META.skillQ==='frost'&&r==='blaze') r=Rr[(i+1)%Rr.length]; META.skillR=r;
 }
 function botReact(){ return BOT.skill?0.04+Math.random()*0.1:0.12+Math.random()*0.2; }
-function botNewRun(){ BOT.cur={att:0,ok:0,dmg:0,hits:0,lastHp:P.hp,enemyWall:0,bulletWall:0,pierce:0,fUse:0,qUse:0,rUse:0,stalls:[],wk:'',wt:0,hideT:0,wp:null,wpT:0,sE:new WeakSet(),sB:new WeakSet(),sP:new WeakSet(),own:new WeakMap()}; BOT.readyT=0; BOT.react=botReact(); BOT.rwT=0; BOT.mv=null; }
+function botNewRun(){ BOT.cur={att:0,ok:0,dmg:0,hits:0,lastHp:P.hp,enemyWall:0,bulletWall:0,pierce:0,fUse:0,qUse:0,rUse:0,stalls:[],wk:'',wt:0,hideT:0,wp:null,wpT:0,sE:new WeakSet(),sB:new WeakSet(),sP:new WeakSet(),own:new WeakMap()}; BOT.readyT=0; BOT.react=botReact(); BOT.rwT=0; BOT.mv=null; BOT.mvS=null; }
 function botStart(){
   BOT.on=true; BOT.left=BOT.cfg.n; BOT.speed=BOT.cfg.speed; BOT.skill=BOT.cfg.skill; BOT.runs=[]; BOT.idx=0;
   if(BOT.cfg.build==='max'){ if(!BOT.snap) botSnapshot(); window.__botTemp=true; }
@@ -161,9 +161,10 @@ function botTick(dt){
       for(let k=0;k<12;k++){ const x=80+Math.random()*(WORLD.w-160), y=80+Math.random()*(WORLD.h-160);
         if(!allWalls().some(({col:o})=>rectHit(x,y,R_PLAYER+30,o))){ c.wp=[x,y]; c.wpT=1.5; break; } } }
     c.sp=[P.x,P.y]; c.spT=0; }
-  const ml=Math.hypot(mx,my), tx=ml>0.15?mx/ml:0, ty=ml>0.15?my/ml:0, pv=BOT.mv||[0,0], kk=Math.min(1,dt*6);
-  let sx=pv[0]+(tx-pv[0])*kk, sy=pv[1]+(ty-pv[1])*kk; const sl=Math.hypot(sx,sy);
-  BOT.mv=sl>0.2?[sx/Math.max(1,sl),sy/Math.max(1,sl)]:[0,0];
+  const ml=Math.hypot(mx,my), tx=ml>0.15?mx/ml:0, ty=ml>0.15?my/ml:0, pv=BOT.mvS||[0,0], kk=Math.min(1,dt*8);
+  const sx=pv[0]+(tx-pv[0])*kk, sy=pv[1]+(ty-pv[1])*kk, sl=Math.hypot(sx,sy);
+  BOT.mvS=[sx,sy];
+  BOT.mv=sl>0.2?[sx/sl,sy/sl]:[0,0];
   const wk=run.cycle+'-'+run.wave; if(c.wk!==wk){ c.wk=wk; c.wt=0; c.stallNoted=false; } else if(run.phase==='fight') c.wt+=dt;
   if(c.wt>90&&!c.stallNoted){ c.stallNoted=true; c.stalls.push('사이클 '+run.cycle+' 웨이브 '+run.wave+' — 남은 적 '+(ens.map(e=>e.grade).join(', ')||'없음')); }
   if(c.wt>180&&P.hp>0){ c.wt=0; run.revives=0; P.inv=0; P.hp=0; }
