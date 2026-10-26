@@ -13,7 +13,8 @@ function syncMeta(){
   try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
     if(d&&d.meta&&isFinite(d.meta.cur)) META.cur=d.meta.cur;
     if(d&&d.meta&&isFinite(d.meta.best)) META.best=Math.max(META.best,d.meta.best);
-    if(d&&d.upg) Object.keys(d.upg).forEach(k=>{ const u=UPG.find(x=>x.k===k); if(u&&d.upg[k]>u.lv) u.lv=clamp(d.upg[k]|0,0,u.max); });
+    /* v3.62 강화 단계도 재화와 한 쌍으로 그대로 받는다. 예전엔 단계를 올리기만 해서, 다른 탭에서 되돌리기로 환급받은 재화 + 이 탭의 높은 단계가 같이 저장됐다 (재화 복사) */
+    if(d&&d.upg&&!Array.isArray(d.upg)&&!window.__botTemp) UPG.forEach(u=>{ if(u.k in d.upg) u.lv=clamp(d.upg[u.k]|0,0,u.max); });
   }catch(e){}
   if(!isFinite(META.cur)) META.cur=0;
 }
@@ -40,23 +41,24 @@ function load(){
   }catch(e){}
 }
 /* v2.51 확인 팝업 */
-let cfOk=null;
+let cfOk=null, cfCancel=null;
 let optTab='game';   // v2.68 설정 탭
 queueMicrotask(()=>{ const rb=$('#respec'); if(!rb) return;
-  rb.onclick=()=>{ const back=respecRefund();
+  rb.onclick=()=>{ if(hubBusy()) return; const back=respecRefund();
     if(back<=0){ askConfirm('되돌릴 강화가 없어요','아직 찍은 강화가 없어요.','확인',()=>{}); return; }
     askConfirm('강화를 되돌릴까요?','찍은 강화가 모두 0단계로 돌아가고, 쓴 재화의 40%인 ◆ '+back.toLocaleString()+'을 돌려받아요. 장착한 스킬도 해제돼요.','되돌리기',doRespec); };
 });
 queueMicrotask(()=>{
-  $('#cfNo').onclick=closeConfirm;
+  $('#cfNo').onclick=()=>{ const f=cfCancel; closeConfirm(); if(f) f(); };
   $('#cfYes').onclick=()=>{ const f=cfOk; closeConfirm(); if(f) f(); };
   $('#confirm').addEventListener('click',e=>{ if(e.target.id==='confirm') closeConfirm(); });
 });
-function askConfirm(title,desc,okLabel,onOk){
-  $('#cfT').textContent=title; $('#cfD').textContent=desc; $('#cfYes').textContent=okLabel||'확인';
-  cfOk=onOk; $('#confirm').classList.add('on'); sfx('ui');
+/* v3.62 noLabel · onNo를 주면 취소 버튼이 두 번째 선택지가 된다 (바깥 클릭 · ESC는 그냥 닫기) */
+function askConfirm(title,desc,okLabel,onOk,noLabel,onNo){
+  $('#cfT').textContent=title; $('#cfD').textContent=desc; $('#cfYes').textContent=okLabel||'확인'; $('#cfNo').textContent=noLabel||'취소';
+  cfOk=onOk; cfCancel=onNo||null; $('#confirm').classList.add('on'); sfx('ui');
 }
-function closeConfirm(){ $('#confirm').classList.remove('on'); cfOk=null; }
+function closeConfirm(){ $('#confirm').classList.remove('on'); cfOk=null; cfCancel=null; }
 /* v2.52 강화 되돌리기 — 쓴 재화의 40%를 돌려받고 강화를 0으로. 폰 전용 홀드 패링은 유지 */
 function respecRefund(){ let t=0; UPG.forEach(u=>{ if(u.phoneOnly) return; for(let i=0;i<u.lv;i++) t+=u.cost[i]||0; }); return Math.floor(t*0.4); }
 function doRespec(){

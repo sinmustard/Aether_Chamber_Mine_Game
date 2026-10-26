@@ -199,6 +199,9 @@ const REAL_RANDOM=Math.random;
 function seedRandom(seed){ let a=seed>>>0;
   Math.random=function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 function unseedRandom(){ Math.random=REAL_RANDOM; }
+/* v3.62 데일리 — 웨이브 · 보상을 만들 때마다 (날짜, 사이클, 웨이브)로 난수를 다시 맞춘다.
+   전투 중에는 효과음 · 화면 흔들림 · 적 움직임이 같은 난수를 쓰고 그 양이 사람마다(설정 · 플레이) 달라서, 2웨이브부터 구성이 갈라졌다 */
+function reseedDaily(tag){ if(run&&run.mode==='daily'&&run.day) seedRandom(+run.day.replace(/-/g,'')*7919+run.cycle*10007+tag); }
 const todayKST=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
 let lastMode='normal';
 const MODE_NAME={normal:'노멀',hard:'하드',daily:'데일리',hotd:'핫드',chaosx:'혼돈이야~'};
@@ -388,7 +391,7 @@ document.addEventListener('click',e=>{
   const g=e.target.closest('[data-go]'); if(g){go(g.dataset.go);return;}
   const m=e.target.closest('[data-modal]'); if(m){openModal(m.dataset.modal);}
 });
-$('#launch').onclick=()=>{ cloudAutoSave(); startRun(OPT.mode||'normal'); };   // v2.58 · v2.68 고른 모드로 출격
+$('#launch').onclick=()=>{ if(hubBusy()) return; cloudAutoSave(); startRun(OPT.mode||'normal'); };   // v2.58 · v2.68 고른 모드로 출격
 /* v2.68 모드 고르기 */
 function syncModeUI(){ if((OPT.mode==='hotd'||OPT.mode==='chaosx')&&!hiddenOn(OPT.mode)) OPT.mode='normal';
   const mode=OPT.mode||'normal', tg=$('#chaosTg'), chaos=!!OPT.chaos&&mode!=='daily'&&mode!=='chaosx';

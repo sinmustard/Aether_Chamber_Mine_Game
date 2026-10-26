@@ -11,10 +11,11 @@ const escH=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 const CHAOS_TAG='-chaos';
 const runBuild=()=>BUILD+(run&&run.chaos?CHAOS_TAG:'');
 const rankName=r=>escH(r.name)+(String(r.build||'').endsWith(CHAOS_TAG)?'(카오스)':'');
-/* 서버가 이 표시를 거절하면(로그인 오류 말고) 표시 없이 한 번 더 보낸다 — 기록이 빠지지 않게 */
+/* 서버가 이 표시를 거절하면(로그인 오류 말고) 표시 없이 한 번 더 보낸다 — 기록이 빠지지 않게
+   v3.62 거절(4xx)일 때만. 서버 오류 · 일시 장애(5xx)에도 다시 보내서 카오스 판이 표시 없이 일반 기록으로 남았다 */
 function rankCall(fn,body){
   return cloudCall(fn,body).catch(e=>{
-    if(body.p_build===BUILD||!e.status||e.code==='28P01'||e.status===403) throw e;
+    if(body.p_build===BUILD||!e.status||e.status>=500||e.code==='28P01'||e.status===403) throw e;
     return cloudCall(fn,Object.assign({},body,{p_build:BUILD}));
   });
 }
@@ -59,7 +60,7 @@ async function tokenize(){
 function applySave(data){
   localStorage.setItem(SAVE_KEY,JSON.stringify(data||{}));
   UPG.forEach(u=>u.lv=0);
-  Object.assign(META,{cur:0,best:0,bestCycle:1,skill:'',skillQ:'',skillR:'',stats:{},ach:{},cloudAt:''});
+  Object.assign(META,{cur:0,best:0,bestCycle:1,skill:'',skillQ:'',skillR:'',stats:{},ach:{},cloudAt:'',hidden:{}});   // v3.62 hidden — 히든 모드 해금이 다른 계정으로 따라가던 문제
   load();
   if(isTouchDev()){ const u=UPG.find(x=>x.k==='mparry'); if(u&&u.lv<1) u.lv=1; }
   save(); refreshKeyLabels();
@@ -96,8 +97,19 @@ function openLogin(){
     $('#lgGo').disabled=true; msg('확인 중…');
     try{
       const d=await cloudCall('aether_cloud_load',{p_name:name,p_pin:pin}); const row=Array.isArray(d)?d[0]:d;
-      if(row&&row.data){ applySave(row.data); META.cloudAt=String(row.updated_at||''); save(); }   // v2.68
-      setSession(name,pin); tokenTried=false; $('#modal').classList.remove('on'); go('hub');
+      const enter=()=>{ setSession(name,pin); tokenTried=false; $('#modal').classList.remove('on'); go('hub'); };
+      const useServer=()=>{ if(row&&row.data){ applySave(row.data); META.cloudAt=String(row.updated_at||''); save(); } enter(); };   // v2.68
+      /* v3.62 오프라인으로 쌓은 진행이 로그인하는 순간 서버 기록으로 말없이 덮이던 문제 —
+         이 기기 기록이 이 계정 것(또는 아직 주인 없음)이고 서버와 다르면 어느 쪽을 쓸지 고르게 한다 */
+      if(row&&row.data&&(!myName()||myName()===name)&&localDiffers(row.data)){
+        askConfirm('어느 기록으로 할까요?','이 기기 — '+saveSummary(localSave())+'\n서버 — '+saveSummary(row.data)+'\n고르지 않은 쪽 기록은 사라져요.',
+          '서버 기록 불러오기',useServer,'이 기기 기록 쓰기',async()=>{
+            try{ const at=await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:localSave()}); META.cloudAt=String(at||''); save(); enter(); }
+            catch(e2){ msg('서버에 저장하지 못했어요. 인터넷 연결을 확인해 주세요.'); }
+          });
+        msg(''); $('#lgGo').disabled=false; return;
+      }
+      useServer();
     }catch(e){
       const m=String(e.message||'');
       if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
@@ -123,9 +135,25 @@ function openLogin(){
 function toast(msg){ let t=document.getElementById('toastBox');
   if(!t){ t=document.createElement('div'); t.id='toastBox'; document.body.appendChild(t); }
   t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),3200); }
-let syncing=false;
+/* v3.62 로그인할 때 고르기 — 이 기기 기록과 서버 기록 비교 */
+const localSave=()=>{ save(); try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'{}'); }catch(e){ return {}; } };
+const saveLvs=d=>{ const o={}; UPG.forEach(u=>{ if(!u.phoneOnly) o[u.k]=(d&&d.upg&&!Array.isArray(d.upg)&&d.upg[u.k])|0; }); return o; };
+const saveSummary=d=>{ const m=(d&&d.meta)||{}, lv=Object.values(saveLvs(d)).reduce((a,b)=>a+b,0);
+  return '◆ '+((m.cur|0).toLocaleString())+' · 강화 '+lv+'단계 · 최고 '+((m.best|0).toLocaleString())+'점'; };
+function localDiffers(remote){
+  const l=localSave(), lm=l.meta||{}, rm=(remote&&remote.meta)||{}, ll=saveLvs(l), rl=saveLvs(remote);
+  const has=(lm.cur|0)>0||(lm.best|0)>0||Object.values(ll).some(v=>v>0);
+  return has&&((lm.cur|0)!==(rm.cur|0)||(lm.best|0)!==(rm.best|0)||Object.keys(ll).some(k=>ll[k]!==rl[k]));
+}
+let syncing=false, syncAt=0;
+/* v3.62 HUB에 들어가자마자 받아오는 중에 강화 · 출격하면, 출격 때 자동 저장이 다른 기기의 최신 기록을 옛 기록으로 덮거나
+   받아온 기록이 방금 찍은 강화를 되돌렸다 — 받아오는 동안(최대 6초)은 기다리게 한다 */
+function hubBusy(){
+  if(!syncing||performance.now()-syncAt>6000) return false;
+  toast('다른 기기 기록을 확인하는 중이에요. 잠시 후 다시 눌러 주세요.'); return true;
+}
 async function syncFromCloud(){
-  if(!getSession()||syncing) return; syncing=true;
+  if(!getSession()||syncing) return; syncing=true; syncAt=performance.now();
   try{ await tokenize(); const ss=getSession(); if(!ss) return;   // v3.24
     const st=await cloudCall('aether_cloud_stamp',{p_name:ss.name,p_pin:pinOf(ss)});
     const remote=Date.parse(st)||0, local=Date.parse(META.cloudAt||'')||0;

@@ -103,6 +103,7 @@ function rollWave(n){
 }
 function waveSpawn(){
   run.wave++;
+  reseedDaily(run.wave);   // v3.62
   P.barrier=CFG.barrier||0;
   if(run.wave>1 && (run.chaos || run.wave%5===1)){ rerollMap(); say('지형 변화','warn'); }   // v3.2 5웨이브마다 맵 교체 · v3.15 카오스 모드는 매 웨이브 · v3.24 카오스는 옵션(run.chaos)
   const boss = run.wave>BOSS_WAVE;

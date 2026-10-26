@@ -45,6 +45,7 @@ function renderDetail(){
     (maxed?'MAX':(u.phoneOnly&&!isTouchDev())?'폰 전용':!rMet?'선행 조건 필요':((u.skill&&u.lv===0)?'해금':'강화')+'  ◆ '+cost.toLocaleString())+'</button>';
   const b=$('#buy');
   if(b)b.onclick=()=>{
+    if(hubBusy()) return;   // v3.62
     syncMeta();   // v2.46
     if(u.lv>=u.max||!reqMet(u)||u.cost[u.lv]>META.cur||(u.phoneOnly&&!isTouchDev()))return;
     META.cur-=u.cost[u.lv];u.lv++;
@@ -67,12 +68,12 @@ function renderSkillSel(){
     row('r','R',[['overwrite','덮어쓰기'],['echo','복제'],['emp','해킹'],['autoparry','자동 패링'],['nova','반전 폭발'],['blaze','오버클럭'],['','없음']],META.skillR);   // v3.16
 }
 $('#skillSel').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-skill]'); if(!b||b.disabled)return;
+  const b=e.target.closest('button[data-skill]'); if(!b||b.disabled||hubBusy())return;
   const slot=b.dataset.slot;
   if(slot==='q') META.skillQ=b.dataset.skill;
   else if(slot==='r') META.skillR=b.dataset.skill;
+  else META.skill=b.dataset.skill;   // v3.62 예전엔 이 줄이 아래 상성 if의 else라서 Q · R을 고를 때마다 F 칸이 덮어써졌다
   if(META.skillQ==='frost'&&META.skillR==='blaze'){ if(slot==='q') META.skillR=''; else META.skillQ=''; toast('상성 충돌 — 정지장과 오버클럭은 같이 쓸 수 없어요 ('+(slot==='q'?'R':'Q')+' 해제)'); }
-  else META.skill=b.dataset.skill;
   save(); sfx('ui'); renderSkillSel();
 });
 let debug=false;

@@ -34,8 +34,11 @@ function chaosDisguise(){
   }};
 }
 function openReward(afterBoss,fromReroll){
+  if(run.phase!=='reward') run.rwPrev=run.phase;   // v3.62 보상을 고른 뒤 돌아갈 단계 (출격 직후 보상은 벽 설치 단계)
+  run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+run.wave*50+run.rwRoll);   // v3.62
   const pool=BOONS.filter(b=>boonLv(b.k)<b.max);
-  if(!pool.length){ run.phase='break'; return; }
+  if(!pool.length){ endReward(); return; }
+  unlockMouse();   // v3.62 마우스가 잠긴 채면 커서가 안 보이고 클릭이 카드 대신 캔버스(패링)로 갔다
   rwPicks=[];
   const bag=pool.slice();
   while(rwPicks.length<3 && bag.length)
@@ -86,9 +89,15 @@ function takeReward(i){
   if(b.sp) stat('specials');   // v2.68
   b.fn();
   $('#reward').classList.remove('on');
-  run.phase='break'; run.phaseT=Math.max(run.phaseT,0.9);   // v2.2 보스 직후 CYCLE 연출 시간 유지
+  endReward();
   say(b.n,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',14,150);
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 선행 보급 2단계
+  else lockMouse();
+}
+/* v3.62 출격 직후 보상(선행 보급)을 고르면 벽 설치 단계가 'break'로 덮여 사라지던 문제 — 원래 단계로 돌아간다 */
+function endReward(){
+  if(run.rwPrev==='build') run.phase='build';
+  else { run.phase='break'; run.phaseT=Math.max(run.phaseT,0.9); }   // v2.2 보스 직후 CYCLE 연출 시간 유지
 }
 $('#rwRow').addEventListener('click',e=>{
   const c=e.target.closest('.bc'); if(!c) return;

@@ -27,6 +27,7 @@ addEventListener('keydown',e=>{
   if(k==='escape'){ e.preventDefault(); handleEsc(); return; }
   if(paused) return;                               // 멈춘 동안에는 보상 선택·스킬 입력을 받지 않는다
   if(run&&run.phase==='reward'){                 // v2.0 보상 선택
+    if(e.repeat) return;                         // v3.62 꾹 누른 키의 반복 입력으로 새로고침이 다 쓰이거나 다음 보상이 저절로 골라지던 문제
     if('123'.includes(k)){ e.preventDefault(); takeReward(+k-1); }
     else if(k==='r'||k===OPT.keyR){ e.preventDefault(); rerollReward(); }   // v2.52
     return;
@@ -38,6 +39,10 @@ addEventListener('keydown',e=>{
   else if(k===OPT.keyR){e.preventDefault();doR();}
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+/* v3.62 창이 포커스를 잃으면 keyup이 안 와서 키가 눌린 채로 남았다 (W 누른 채 알트탭 → 돌아오면 계속 걸어감) */
+const clearKeys=()=>{ for(const k in keys) keys[k]=false; };
+addEventListener('blur',clearKeys);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) clearKeys(); });
 const gcv=$('#gamecv');
 /* v2.12 마우스 가두기 — 전투 중에는 포인터를 화면 안에 잠근다.
    잠긴 동안에는 움직인 거리(movementX/Y)로 조준점을 옮기고, 조준점은 맵 밖으로 못 나간다.
@@ -158,7 +163,7 @@ function parryReady(){
   return bullets.some(b=>b.owner==='enemy'&&(b.ready||b.coy>0));
 }
 function doParry(force){
-  if(paused||P.lock>0)return;
+  if(paused||P.lock>0||(run&&run.phase==='reward'))return;   // v3.62 보상 고르는 중의 클릭 · 터치는 패링이 아님
   if(!force){
     if(P.pbuf>0) return;                                   // 이미 기다리는 중
     if(OPT.inputBuf>0 && !parryReady()){ P.pbuf=OPT.inputBuf; return; }
