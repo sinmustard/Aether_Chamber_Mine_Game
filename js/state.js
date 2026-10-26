@@ -83,7 +83,10 @@ function enemyPool(){
     {g:'summoner', from:1, w:1, cap:1, ok:()=>run.cycle>=3},
     /* v2.34 대포병 — 3사이클 3웨이브부터 */
     {g:'cannon',   from:3, w:1, cap:1, ok:()=>run.cycle>=3},
-    {g:'sniper',   from:5, w:1, cap:2, ok:()=>run.cycle>=2}   // v2.65 2사이클 5웨이브부터
+    {g:'sniper',   from:5, w:1, cap:2, ok:()=>run.cycle>=2},
+    {g:'gunner',   from:4, w:2, cap:2},
+    {g:'weaver',   from:3, w:1, cap:1, ok:()=>run.cycle>=2},
+    {g:'mortar',   from:4, w:1, cap:1, ok:()=>run.cycle>=2}   // v2.65 2사이클 5웨이브부터
   ];
 }
 function rollWave(n){
@@ -106,14 +109,16 @@ function waveSpawn(){
   const bossSpawn=v=>{ spawnEnemy('boss'); const bb=ens[ens.length-1]; bb.variant=v;
     if(v==='warden'){ bb.shieldArc=120; bb.sa=Math.atan2(P.y-bb.y,P.x-bb.x); bb.hp*=1.15; bb.hpMax=bb.hp; bb.wardT=6; }
     if(v==='phantom'){ bb.hp*=0.85; bb.hpMax=bb.hp; bb.blinkT=4.5; }
-    announce(v==='warden'?'알레테이아 · 수호형':v==='phantom'?'알레테이아 · 환영형':'알레테이아','red'); sfx('boss'); };
-  if(boss) bossSpawn(['core','warden','phantom'][(run.cycle-1)%3]);
+    if(v==='collapse'){ bb.hp*=1.35; bb.hpMax=bb.hp; }
+    announce(v==='warden'?'알레테이아 · 수호형':v==='phantom'?'알레테이아 · 환영형':v==='collapse'?'알레테이아 · 붕괴형':'알레테이아','red'); sfx('boss'); };
+  run.mortars=[];
+  if(boss) bossSpawn(['core','warden','phantom','collapse'][(run.cycle-1)%4]);
   else if(run.mode==='chaosx'){
     const n=Math.min(6, Math.min(5,1+Math.ceil(run.wave/2))+(run.cycle>=2?1:0));
-    const pool=['mob','splitter','elite','bulwark','healer','relay','tracker','summoner','cannon','sniper'];
+    const pool=['mob','splitter','elite','bulwark','healer','relay','tracker','summoner','cannon','sniper','gunner','weaver','mortar'];
     const order=[]; let bossRoll=false;
     for(let i=0;i<n;i++){ if(Math.random()<0.025){ bossRoll=true; break; } order.push(pool[Math.floor(Math.random()*pool.length)]); }
-    if(bossRoll) bossSpawn(['core','warden','phantom'][Math.floor(Math.random()*3)]);
+    if(bossRoll) bossSpawn(['core','warden','phantom','collapse'][Math.floor(Math.random()*4)]);
     else { order.sort((a,b)=>(a==='relay'?1:0)-(b==='relay'?1:0)); order.forEach(g=>spawnEnemy(g));
       announce('혼돈  ·  사이클 '+run.cycle+'  ·  웨이브 '+run.wave,'cyan'); sfx('wave'); }
   }
@@ -133,6 +138,14 @@ function waveSpawn(){
   run.phase='fight';
 }
 /* v2.16 벽에 걸린 자리는 다시 뽑지 않고 옆으로 밀어낸다. 겹친 벽의 가까운 면 쪽으로 빠져나간다 */
+function escapeWall(x,y,r){
+  const bad=(a,b)=>a<40||a>WORLD.w-40||b<40||b>WORLD.h-40||allWalls().some(({col:c})=>rectHit(a,b,r,c));
+  if(!allWalls().some(({col:c})=>rectHit(x,y,r,c))) return [x,y];
+  let best=null, bd=1e9;
+  for(let k=0;k<16;k++){ const a=k*TAU/16, ca=Math.cos(a), sa=Math.sin(a);
+    for(let d=20;d<=420;d+=12){ const nx=x+ca*d, ny=y+sa*d; if(!bad(nx,ny)){ if(d<bd){ bd=d; best=[nx,ny]; } break; } } }
+  return best||[x,y];
+}
 function wallSlide(x0,y0,x1,y1,r){
   for(let k=0;k<2;k++){
     let hit=null, bd=1e9;
@@ -162,6 +175,7 @@ function spawnEnemyAt(grade,px,py){
   const g=GRADES[grade]||GRADES.mob;
   let x=clamp(px,40,WORLD.w-40), y=clamp(py,50,WORLD.h-50);
   [x,y]=pushOutOfWalls(x,y,g.r);
+  x=clamp(x,40,WORLD.w-40); y=clamp(y,40,WORLD.h-40); [x,y]=escapeWall(x,y,g.r);
   const hp=BASE_DMG*DMG_MULT*g.hits*run.diff*cycleHpMul(run.cycle)*(1+0.06*Math.max(0,run.wave-1));
   const en={x,y,r:g.r,grade,hp,hpMax:hp,hurt:0,inv:ENEMY_IFRAME,
     fireT:0.5+Math.random()*1.0, drift:Math.random()*TAU, ax:x, ay:y};
@@ -204,7 +218,9 @@ function spawnSplinters(e){
   const g=GRADES.splinter;
   for(let i=0;i<2;i++){
     const a=Math.random()*TAU, d=18;
-    const x=clamp(e.x+Math.cos(a)*d,40,WORLD.w-40), y=clamp(e.y+Math.sin(a)*d,40,WORLD.h-40);
+    let x=clamp(e.x+Math.cos(a)*d,40,WORLD.w-40), y=clamp(e.y+Math.sin(a)*d,40,WORLD.h-40);
+    if(wallBetween(e.x,e.y,x,y)){ x=e.x; y=e.y; }
+    [x,y]=pushOutOfWalls(x,y,g.r);
     const hp=BASE_DMG*DMG_MULT*g.hits*run.diff*cycleHpMul(run.cycle)*(1+0.06*Math.max(0,run.wave-1));
     ens.push({x,y,r:g.r,grade:'splinter',hp,hpMax:hp,hurt:0,
       fireT:0.3+Math.random()*0.5, drift:Math.random()*TAU, ax:x, ay:y, inv:ENEMY_IFRAME});

@@ -33,7 +33,7 @@ function update(dt){
     if(BOT.on&&BOT.mv){ ax=BOT.mv[0]; ay=BOT.mv[1]; spdMul=1; }
     P.x=clamp(P.x+ax*CFG.moveSpd*spdMul*dt,30,WORLD.w-30);
     P.y=clamp(P.y+ay*CFG.moveSpd*spdMul*dt,30,WORLD.h-30);
-    P.moving=!!(ax||ay);   // v3.12 영상 캐릭터 '움직일 때만 재생'용
+    P.moving=!!(ax||ay); P.vx=ax*CFG.moveSpd*spdMul; P.vy=ay*CFG.moveSpd*spdMul;   // v3.12 영상 캐릭터 '움직일 때만 재생'용
   }
   if(P.phase<=0) allWalls().forEach(({col:o})=>{
     const h=rectHit(P.x,P.y,R_PLAYER,o); if(!h)return;
@@ -126,6 +126,13 @@ function update(dt){
   }
 
   // 적
+  for(let i=ens.length-1;i>=0;i--) if(ens[i].ttl!=null&&ens[i].ttl<=0){ burst(ens[i].x,ens[i].y,'red',10,160); ens.splice(i,1); }
+  if(run.mortars&&run.mortars.length){ for(let i=run.mortars.length-1;i>=0;i--){ const z=run.mortars[i]; z.t-=dt;
+    if(z.t<=0){ run.mortars.splice(i,1); burst(z.x,z.y,'warn',20,z.r*2.4); shake=Math.max(shake,8); sfx('breach');
+      if(dist(z.x,z.y,P.x,P.y)<z.r&&P.hp>0&&P.phase<=0){
+        if(P.guard>0){ say('막음','cyan'); sfx('block'); }
+        else if(P.barrier>0&&P.inv<=0&&!CFG.god){ P.barrier--; P.inv=0.4; say(P.barrier?'보호막 · 남은 '+P.barrier:'보호막 깨짐','cyan'); }
+        else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round(PLAYER_DMG*dmgScale()*(1-(CFG.armor||0))); P.hurt=.3; onHurt(); } } } } }
   ens.forEach(e=>{
     if(e.hackT>0) e.hackT-=dt;
     e.frozenT=inStasis(e.x,e.y)?1:0;   // v2.29 해킹 지속 시간
@@ -192,8 +199,11 @@ function update(dt){
         else { const a=Math.atan2(e.wp[1]-e.ay,e.wp[0]-e.ax); e.ax=clamp(e.ax+Math.cos(a)*Math.min(d,sp*dt),40,WORLD.w-40); e.ay=clamp(e.ay+Math.sin(a)*Math.min(d,sp*dt),40,WORLD.h-40); } }
     }
     [e.ax,e.ay]=wallSlide(ox,oy,e.ax,e.ay,e.r+18);
-    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+8);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
+    [e.ax,e.ay]=pushOutOfWalls(e.ax,e.ay,e.r+8);
+    e.ax=clamp(e.ax,40,WORLD.w-40); e.ay=clamp(e.ay,40,WORLD.h-40);
+    [e.ax,e.ay]=escapeWall(e.ax,e.ay,e.r);   // v2.18 적이 벽을 뚫던 문제 · v2.92 흔들림(±36/54)까지 감안해 벽에 바짝 붙어 숨지 못하게
     if(e.bindT>0||e.frozenT>0){ e.x=e.ax; e.y=e.ay; }   // v3.12 구속 중엔 제자리 흔들림(drift)도 멈춰서 완전히 고정된 것처럼 보이게
+    else if(allWalls().some(({col:o})=>rectHit(e.ax,e.ay,e.r,o))){ e.x=e.ax; e.y=e.ay; }
     else{ e.x=e.ax+Math.cos(e.drift*0.8)*36; e.y=e.ay+Math.sin(e.drift)*54; [e.x,e.y]=wallSlide(e.ax,e.ay,e.x,e.y,e.r); }
     if(dt>0){ e.vx=(e.lx==null?0:(e.x-e.lx)/dt); e.vy=(e.ly==null?0:(e.y-e.ly)/dt); } e.lx=e.x; e.ly=e.y;   // v3.00 이동 속도 (패링 조준 예측용)
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
@@ -218,11 +228,27 @@ function update(dt){
     if(e.variant==='warden'&&run.phase==='fight'){ e.wardT-=dt;
       if(e.wardT<=0){ e.wardT=9; for(let i=0;i<2;i++){ const a=Math.random()*TAU; spawnEnemyAt('minion',e.x+Math.cos(a)*95,e.y+Math.sin(a)*95); }
         say('수호형 — 잡졸 소환','red'); sfx('boss'); } }
+    if(e.variant==='core'&&run.phase==='fight'){ e.ringT=(e.ringT==null?7:e.ringT-dt);
+      if(e.ringT<=0){ e.ringT=e.p2?6:9; const n=e.p2?12:10; bossVolley(e,Array.from({length:n},(_,k)=>({t:0,ang:k*TAU/n,straight:1})));
+        if(e.p2) bossVolley(e,Array.from({length:n},(_,k)=>({t:0.45,ang:(k+0.5)*TAU/n,straight:1})));
+        say('알레테이아 — 링 탄막','red'); sfx('boss'); burst(e.x,e.y,'red',16,220); } }
+    if(e.variant==='collapse'&&run.phase==='fight'){
+      e.spiralT=(e.spiralT==null?5:e.spiralT-dt); e.mortT=(e.mortT==null?8:e.mortT-dt); e.gunT=(e.gunT==null?10:e.gunT-dt);
+      if(e.spiralT<=0){ e.spiralT=e.p2?5:7; const base=Math.random()*TAU; bossVolley(e,Array.from({length:12},(_,k)=>({t:k*0.11,ang:base+k*0.52,straight:1})));
+        say('붕괴형 — 나선 탄막','red'); sfx('boss'); }
+      if(e.mortT<=0){ e.mortT=e.p2?7:10; dropMortar(P.x,P.y,true); for(let k=0;k<2;k++){ const a=Math.random()*TAU; dropMortar(P.x+Math.cos(a)*130,P.y+Math.sin(a)*130); }
+        say('붕괴형 — 포격','red'); sfx('fire'); }
+      if(e.p2&&e.gunT<=0){ e.gunT=14; if(ens.length<12){ spawnNear('gunner',e,110,180); spawnNear('gunner',e,110,180); } say('붕괴형 — 연사병 호출','red'); sfx('boss'); } }
     if(e.variant==='phantom'&&run.phase==='fight'){ e.blinkT-=dt;
-      if(e.blinkT<=0){ e.blinkT=5+Math.random()*1.5; burst(e.x,e.y,'red',14,200);
+      if(e.blinkT<=0){ e.blinkT=e.p2?3.2+Math.random():5+Math.random()*1.5; burst(e.x,e.y,'red',14,200);
+        if(ens.filter(o=>o.grade==='illusion').length<4){ for(let k=0;k<2;k++){ const il=spawnNear('illusion',e,60,120); il.ttl=7; il.fireT=0.8+k*0.4; } }
         for(let k=0;k<24;k++){ const nx=130+Math.random()*(WORLD.w-260), ny=130+Math.random()*(WORLD.h-260);
           if(dist(nx,ny,P.x,P.y)>300){ e.x=e.ax=nx; e.y=e.ay=ny; break; } }
-        burst(e.x,e.y,'red',14,200); sfx('phase'); say('환영형 — 순간이동','red'); } }
+        burst(e.x,e.y,'red',14,200); sfx('phase'); say('환영형 — 순간이동 · 분신','red');
+        bossVolley(e,[{t:0.25,ang:-0.5,feint:1},{t:0.25},{t:0.25,ang:0.5,feint:1}]); } }
+    if(e.ttl!=null) e.ttl-=dt;
+    if(G(e).mortar&&run.phase==='fight'&&!(e.hackT>0)&&!inStasis(e.x,e.y)){ e.mortarT=(e.mortarT==null?2.5:e.mortarT-dt);
+      if(e.mortarT<=0){ e.mortarT=4.2+Math.random()*1.2; dropMortar(P.x+(P.vx||0)*0.6,P.y+(P.vy||0)*0.6); sfx('fire'); burst(e.x,e.y,'warn',8,140); } }
     /* v2.19 소환사 */
     if(G(e).summon){
       if(e.summonFx>0) e.summonFx-=dt;
@@ -236,7 +262,7 @@ function update(dt){
         const cnt=1+Math.floor(Math.random()*2);
         for(let k=0;k<cnt;k++){
           const a=Math.random()*TAU, d=120+Math.random()*80;
-          spawnEnemyAt('tracker', e.x+Math.cos(a)*d, e.y+Math.sin(a)*d);
+          spawnNear('tracker',e,120,200);
         }
         e.callT=11+Math.random()*4; announce('추적자 소환','red'); sfx('boss'); shake=10;
       }
@@ -302,7 +328,7 @@ function update(dt){
     if(b.owner==='enemy'){
       if(b.feint) b.spd = b.age<0.55 ? b.base*0.35 : Math.min(b.base*1.35,cap());
       if(b.orbitAmt>0) b.orbitAmt=Math.max(0,b.orbitAmt-dt*1.05);
-      const want=Math.atan2(aimPt().y-b.y,aimPt().x-b.x)+b.orbitDir*b.orbitAmt;
+      const want=Math.atan2(aimPt().y-b.y,aimPt().x-b.x)+b.orbitDir*b.orbitAmt+(b.zig?Math.sin(b.age*8)*0.9:0);
       if(P.phase<=0 && !b.armor && !b.straight) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
     } else {
       /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
@@ -513,7 +539,9 @@ function spawnBullet(q){
       feint:0, orbitDir:0, orbitAmt:0});
     return;
   }
-  const a=Math.atan2(aimPt().y-q.ey,aimPt().x-q.ex)+(q.spec.ang||0);
+  let tx=aimPt().x, ty=aimPt().y;
+  if(q.spec.lead){ const tt=dist(q.ex,q.ey,tx,ty)/Math.max(1,s0); tx+=(P.vx||0)*tt*0.9; ty+=(P.vy||0)*tt*0.9; }
+  const a=Math.atan2(ty-q.ey,tx-q.ex)+(q.spec.ang||0);
   if(q.spec.heavy){
     /* v2.34 장갑탄 — 유도 없이 직선. armor가 남아 있으면 패링해도 소유권이 넘어오지 않는다 */
     const hs=CFG.spd*0.85;
@@ -525,5 +553,10 @@ function spawnBullet(q){
   bullets.push({x:q.ex,y:q.ey,dir:a,spd:s0,base:s0,owner:'enemy',returns:0,boss:q.boss?(q.src&&q.src.p2?2:1):0,   // v2.62
     age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
     feint:q.spec.feint||0, orbitDir:q.spec.orbit?(q.spec.odir||(Math.random()<.5?1:-1)):0,
-    orbitAmt:q.spec.orbit?1.5:0});
+    orbitAmt:q.spec.orbit?1.5:0, straight:q.spec.straight?1:0, zig:q.spec.zig?1:0});
 }
+function bossVolley(e,specs){
+  const room=CFG.maxB+8-(bullets.length+queue.length); if(room<=0) return;
+  specs.slice(0,room).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:true,hack:(e.hackT>0),src:e}));
+}
+function dropMortar(x,y,big){ (run.mortars||(run.mortars=[])).push({x:clamp(x,40,WORLD.w-40),y:clamp(y,40,WORLD.h-40),t:1.3,max:1.3,r:big?90:70}); }

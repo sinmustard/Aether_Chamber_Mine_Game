@@ -59,8 +59,21 @@ const GRADES={
   /* v2.19 소환사 — 쏘지 않고 주변에 잡졸(1칸)과 분열형을 불러낸다. 2사이클을 다 돌면 등장 */
   summoner:{hits:3,  r:34,      pool:'mob',     score:180,  seize:0.46, noFire:true, summon:true},
   /* 소환사가 부르는 1칸짜리 잡졸 — 일반 적보다 한 칸 낮다 */
-  minion:  {hits:1,  r:24,      pool:'mob',     score:20,   seize:0.40}
+  minion:  {hits:1,  r:24,      pool:'mob',     score:20,   seize:0.40},
+  gunner:  {hits:2,  r:R_ENEMY, pool:'gunner',  score:90,   seize:0.44},
+  weaver:  {hits:2,  r:R_ENEMY, pool:'weaver',  score:110,  seize:0.44},
+  mortar:  {hits:3,  r:38,      pool:'mortar',  score:150,  seize:0.46, mortar:true},
+  illusion:{hits:1,  r:40,      pool:'illusion',score:30,   seize:0.30}
 };
+const ENEMY_COL={gunner:'#c77dff', weaver:'#57e389', mortar:'#ffb84d', illusion:'#ff6b81'};
+function spawnNear(g,e,d0,d1){
+  const r=(GRADES[g]||GRADES.mob).r;
+  for(let k=0;k<14;k++){
+    const a=Math.random()*TAU, d=d0+Math.random()*(d1-d0), x=clamp(e.x+Math.cos(a)*d,50,WORLD.w-50), y=clamp(e.y+Math.sin(a)*d,60,WORLD.h-60);
+    if(!wallBetween(e.x,e.y,x,y)&&!allWalls().some(({col:o})=>rectHit(x,y,r+12,o))) return spawnEnemyAt(g,x,y);
+  }
+  return spawnEnemyAt(g,e.x,e.y);
+}
 const G=e=>GRADES[e.grade]||GRADES.mob;
 const RELAY_R=240;   // 송신기 지원 반경
 const HEAL_R=260;    // v2.27 힐러 회복 반경
@@ -70,8 +83,7 @@ function doSummon(e){
   const n=1+Math.floor(Math.random()*3);           // 잡졸 1~3
   const list=Array(n).fill('minion').concat(['splitter']);
   list.forEach(g=>{
-    const a=Math.random()*TAU, d=SUMMON_R[0]+Math.random()*(SUMMON_R[1]-SUMMON_R[0]);
-    spawnEnemyAt(g, e.x+Math.cos(a)*d, e.y+Math.sin(a)*d);
+    spawnNear(g,e,SUMMON_R[0],SUMMON_R[1]);
   });
   e.summonT=SUMMON_CD[0]+Math.random()*(SUMMON_CD[1]-SUMMON_CD[0]);
   e.summonFx=0.45;
@@ -185,17 +197,28 @@ const PATTERNS=[
  {n:'VOLLEY',  d:'좌우로 갈라지는 2발 (방패병 전용)',      specs:[{t:0,ang:-0.25},{t:0.25,ang:0.25}]},
  {n:'CLEAVE',  d:'분열 예고 동시 2발 (분열형 전용)',       specs:[{t:0,ang:-0.3},{t:0,ang:0.3}]},
  {n:'JAB',     d:'예비 동작 없는 근접 고속탄 (분열체 전용)', specs:[{t:0,fast:0.95}]},
- {n:'SHELL',   d:'직선 장갑탄 — 패링 2회 필요 (대포병 전용)', specs:[{t:0,heavy:1}]}
+ {n:'SHELL',   d:'직선 장갑탄 — 패링 2회 필요 (대포병 전용)', specs:[{t:0,heavy:1}]},
+ {n:'BURST',   d:'3연사', specs:[{t:0},{t:0.16},{t:0.32}]},
+ {n:'SPREAD',  d:'좁은 V자 2발', specs:[{t:0,ang:-0.2},{t:0,ang:0.2}]},
+ {n:'LEAD',    d:'움직임을 내다보고 쏘는 직선탄', specs:[{t:0,lead:1,straight:1}]},
+ {n:'ZIGZAG',  d:'좌우로 흔들리며 오는 탄', specs:[{t:0,zig:1}]},
+ {n:'CURVE',   d:'양옆으로 크게 돌아 들어오는 2발', specs:[{t:0,ang:0.9},{t:0.3,ang:-0.9}]},
+ {n:'RING',    d:'사방으로 퍼지는 6발', specs:[0,1,2,3,4,5].map(k=>({t:0,ang:k*Math.PI/3,straight:1}))},
+ {n:'STAGGER', d:'속도가 다른 3발', specs:[{t:0,fast:0.5},{t:0.12},{t:0.24,feint:1}]}
 ];
 /* v1.3 — 등급별 패턴 풀. 잡몹은 기본기, 엘리트는 조건 시험.
    v2.6부터 등급마다 고유 패턴(RUSH/VOLLEY/CLEAVE/JAB)을 하나씩 섞어 실루엣이 겹치지 않게 했다 */
 const POOL={
-  mobEarly:[0,1], mob:[0,1,3],
-  elite:[1,2,3,4,5],
-  bulwark:[0,2,6],
-  splitter:[0,1,7],
+  mobEarly:[0,1,11], mob:[0,1,3,10,11,12,13,14],
+  elite:[1,2,3,4,5,10,12,16],
+  bulwark:[0,2,6,11],
+  splitter:[0,1,7,13],
   splinter:[0,8],
-  cannon:[9]
+  cannon:[9],
+  gunner:[10,10,16,12],
+  weaver:[13,14,15],
+  mortar:[0,1],
+  illusion:[1,3]
 };
 /* v1.3 — 알레테이아 전용 패턴 (ang: 발사 각도 오프셋 rad, odir: 우회 방향 고정) */
 const BOSS_PATTERNS=[
@@ -216,7 +239,11 @@ const BOSS_PATTERNS=[
  {late:1, n:'FEINT RAIN', d:'느리게 오다 갑자기 빨라지는 3발',
   specs:[{t:0,feint:1,ang:-0.3},{t:0.25,feint:1},{t:0.5,feint:1,ang:0.3}]},
  {late:1, n:'ORBIT CAGE', d:'양쪽에서 두 번 감싸는 우회탄 4발',
-  specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.6,orbit:1,odir:1},{t:0.6,orbit:1,odir:-1}]}
+  specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.6,orbit:1,odir:1},{t:0.6,orbit:1,odir:-1}]},
+ {n:'RING',    d:'사방 8발 링', specs:[0,1,2,3,4,5,6,7].map(k=>({t:0,ang:k*Math.PI/4,straight:1}))},
+ {n:'SWEEP',   d:'훑으며 쏘는 7발', specs:[0,1,2,3,4,5,6].map(k=>({t:k*0.1,ang:-0.9+k*0.3}))},
+ {late:1, n:'LEAD BURST', d:'내다보고 쏘는 고속 3연사', specs:[{t:0,lead:1,straight:1,fast:0.75},{t:0.2,lead:1,straight:1,fast:0.75},{t:0.4,lead:1,straight:1,fast:0.75}]},
+ {late:1, n:'ZIG FAN', d:'흔들리며 오는 부채꼴 3발', specs:[{t:0,zig:1,ang:-0.4},{t:0,zig:1},{t:0,zig:1,ang:0.4}]}
 ];
 /* 체력 50% 이하 2페이즈 전용 */
 const BOSS_P2S=[

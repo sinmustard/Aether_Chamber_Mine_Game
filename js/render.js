@@ -239,7 +239,7 @@ function drawEnemyBody(e){
     ctx.save(); ctx.strokeStyle=C.cyan; ctx.globalAlpha=.65; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+8,(e.r+8)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore();
   }
-  if(!img){ drawBody(e.x,e.y,e.r,G(e).relay?C.warn:G(e).sniper?'#ff7a3d':C.red,e.hurt); return; }   // v2.65 저격수는 주황
+  if(!img){ if(e.grade==='illusion'){ ctx.save(); ctx.globalAlpha=.5+.25*Math.sin(performance.now()/90); } drawBody(e.x,e.y,e.r,G(e).relay?C.warn:G(e).sniper?'#ff7a3d':(ENEMY_COL[e.grade]||C.red),e.hurt); if(e.grade==='illusion') ctx.restore(); return; }   // v2.65 저격수는 주황
   const p=proj(e.x,e.y);
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],e.r*.86,e.r*.86*SQUASH,0,0,TAU);ctx.fill();
@@ -293,6 +293,14 @@ function dirSprite(a){
   if(a>Math.PI/4&&a<=Math.PI*3/4) return SPRITES.player_down;
   if(a>-Math.PI*3/4&&a<=-Math.PI/4) return SPRITES.player_up;
   return SPRITES.player_left;
+}
+function drawMortars(){
+  if(!run||!run.mortars) return;
+  run.mortars.forEach(z=>{ const q=proj(z.x,z.y), k=1-z.t/z.max;
+    ctx.save(); ctx.translate(q[0],q[1]); ctx.scale(1,SQUASH);
+    ctx.globalAlpha=.12+.18*k; ctx.fillStyle='#ffb84d'; ctx.beginPath(); ctx.arc(0,0,z.r*k,0,TAU); ctx.fill();
+    ctx.globalAlpha=.85; ctx.strokeStyle='#ffb84d'; ctx.lineWidth=2; ctx.setLineDash([6,5]); ctx.beginPath(); ctx.arc(0,0,z.r,0,TAU); ctx.stroke();
+    ctx.restore(); });
 }
 function drawWallPreview(){
   if(!CFG.wallMax||P.wallCd>0)return;
@@ -491,7 +499,7 @@ function drawRelayLinks(){
 /* v2.68 보스 변종 표시 — 발밑 고리 색 (수호형 파랑, 환영형 보라) */
 function drawBossMarks(){
   ens.forEach(e=>{ if(!e.variant||e.variant==='core') return; const p=proj(e.x,e.y);
-    ctx.save(); ctx.strokeStyle=e.variant==='warden'?'#5fa8ff':'#c27cff'; ctx.lineWidth=3;
+    ctx.save(); ctx.strokeStyle=e.variant==='warden'?'#5fa8ff':e.variant==='collapse'?'#ff8a3d':'#c27cff'; ctx.lineWidth=3;
     ctx.globalAlpha=e.variant==='phantom'?(0.45+0.35*Math.sin(performance.now()/160)):0.7;
     ctx.beginPath(); ctx.ellipse(p[0],p[1],e.r+14,(e.r+14)*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); });
 }
@@ -726,7 +734,7 @@ function render(){
   ctx.setTransform(DPR*ZK,0,0,DPR*ZK,0,CAMY*DPR);   // v2.85 전장: 가로 꽉 채우기 + 세로 카메라
   ctx.save();
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
-  drawGrid();drawObstacles();drawWallPreview();drawZone();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();drawBulletDebug();
+  drawGrid();drawObstacles();drawWallPreview();drawZone();drawMortars();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();drawBulletDebug();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     drawEnemyBody(e); drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;

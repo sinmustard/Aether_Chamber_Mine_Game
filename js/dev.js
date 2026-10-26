@@ -152,6 +152,7 @@ function botTick(dt){
   if(ne){ const d=dist(ne.x,ne.y,P.x,P.y), a=Math.atan2(P.y-ne.y,P.x-ne.x), k=d<220?(220-d)/220:(d>420?-(d-420)/400:0); mx+=Math.cos(a)*k; my+=Math.sin(a)*k; }
   mx+=(WORLD.w/2-P.x)/WORLD.w*0.8; my+=(WORLD.h/2-P.y)/WORLD.h*0.8;
   allWalls().forEach(({col:o})=>{ const cx=clamp(P.x,o.x,o.x+o.w), cy=clamp(P.y,o.y,o.y+o.h), d=Math.hypot(P.x-cx,P.y-cy); if(d<70&&d>0){ mx+=(P.x-cx)/d*(70-d)/70*1.5; my+=(P.y-cy)/d*(70-d)/70*1.5; } });
+  (run.mortars||[]).forEach(z=>{ const d=dist(z.x,z.y,P.x,P.y); if(d<z.r+40){ const a=Math.atan2(P.y-z.y,P.x-z.x)+(d<1?Math.random()*TAU:0); mx+=Math.cos(a)*3; my+=Math.sin(a)*3; } });
   const vis=ne&&!wallBetween(P.x,P.y,ne.x,ne.y);
   if(ne&&!vis&&!ens.some(e=>!wallBetween(P.x,P.y,e.x,e.y))) c.hideT+=dt; else c.hideT=0;
   if(c.wpT>0){ c.wpT-=dt; const a=Math.atan2(c.wp[1]-P.y,c.wp[0]-P.x); mx+=Math.cos(a)*2.5; my+=Math.sin(a)*2.5; }
