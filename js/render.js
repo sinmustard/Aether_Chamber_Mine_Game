@@ -210,7 +210,7 @@ function readPImgFile(file,removeBg){
   else if(OPT.pimgMode==='4dir'){ ['up','down','left','right'].forEach(k=>{ const d=getPImg(k); if(d) applyPImg(k,d); }); }
 })();
 loadSprite('bulwark','assets/enemies/bulwark.png');
-loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
+loadSprite('bulwark_shield','assets/enemies/bulwark_shield.webp'); loadSprite('warden_shield','assets/enemies/warden_shield.webp');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
 ['relay','splitter','splinter','tracker','summoner','minion','healer','sniper','cannon']
   .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
@@ -319,7 +319,7 @@ function drawShield(e){
   const q=proj(e.x,e.y), half=(sh/2)*Math.PI/180;
   const facing=e.sa!=null?e.sa:Math.atan2(P.y-e.y,P.x-e.x);
   const exposed=angDiff(facing,Math.atan2(P.y-e.y,P.x-e.x))>half;   // 플레이어가 사각에 있음
-  const img=SPRITES.bulwark_shield;
+  const img=(e.variant==='warden'&&SPRITES.warden_shield)||SPRITES.bulwark_shield;
   if(img){
     /* v2.3 에너지 실드 스프라이트 — 뷰박스 중심(100,100)이 본체 피벗과 겹치도록 그려져 있어서
        정사각형으로 그대로 회전시키면 된다. 길쭉해지는 문제가 없다 */
