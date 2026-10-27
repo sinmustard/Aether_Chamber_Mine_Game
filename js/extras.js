@@ -20,9 +20,13 @@ spawnBullet=function(q){ const n=bullets.length; _spawnBullet(q);
     bullets[i].from=s?(s.grade==='boss'?'알레테이아 · '+(VKO[s.variant]||'기본형'):KO[s.grade]||s.grade):'적'; } };
 
 /* ---- 적 등장: 엘리트 접두사 · 보스 시간 · 경고 띠 ---- */
-const AFFIX=[['강철','최대 체력 ×1.6','#9fb3c8'],['재생','맞지 않으면 체력 회복','#57e389'],['분노','발사 간격 ×0.6','#ff4d6a'],
-  ['신속','이동 속도 ×1.5','#ffd34d'],['분열','죽으면 잡졸 2기로 갈라짐','#ff9f43'],['흡혈','이 적의 탄에 맞으면 그 적이 1칸 회복','#ff4d8d'],
-  ['다중','쏠 때마다 양옆으로 탄이 하나씩 더','#c77dff'],['점멸','4초마다 근처 다른 자리로 순간이동','#6fd3ff'],['가시','내 탄에 맞을 때마다 탄 2발로 반격','#ff7a3d']];
+/* 다른 적의 특성과 겹치지 않게 고른다 (재생=힐러 · 분열=분열형 · 다중=분사병 · 점멸=환영형이라 v3.97에 뺌) */
+const AFFIX=[['강철','최대 체력 ×1.6','#9fb3c8'],['냉기','이 적의 탄에 맞으면 2초 동안 이동 −40%','#8fe3ff'],['분노','발사 간격 ×0.6','#ff4d6a'],
+  ['신속','이동 속도 ×1.5','#ffd34d'],['불굴','처음 쓰러질 때 한 번 1칸 남기고 버팀','#e8c27a'],['흡혈','이 적의 탄에 맞으면 그 적이 1칸 회복','#ff4d8d'],
+  ['원한','죽으면 남은 적이 모두 곧바로 한 번씩 쏨','#c77dff'],['은신','멀리 있으면 거의 안 보이고 체력바도 숨음','#b9c6d3'],['가시','내 탄에 맞을 때마다 탄 2발로 반격','#ff7a3d']];
+const CLOAK_R=260;
+const cloaked=e=>e.affix==='은신'&&dist(e.x,e.y,P.x,P.y)>CLOAK_R;
+window.exCloaked=cloaked;
 window.ELITE_AFFIX=AFFIX;   // 테스트 · 도감에서 읽음
 const affixCol=a=>(AFFIX.find(x=>x[0]===a)||[])[2]||C.red;
 function exShot(x,y,dir,src,from){ const s=CFG.spd;   // 접두사 · 흡수체가 직접 내보내는 적 탄 (유도 없이 직선)
@@ -49,6 +53,7 @@ onHurt=function(){ const I=run&&exRun();
     else name='알 수 없음';
     exBlame(I,loss,name); I.lastHp=P.hp;
     const sE=hit&&hit.srcE; if(sE&&sE.affix==='흡혈'&&ens.includes(sE)&&loss>0){ sE.hp=Math.min(sE.hpMax,sE.hp+HIT_UNIT); burst(sE.x,sE.y,'#ff4d8d',10,140); }
+    if(sE&&sE.affix==='냉기'&&loss>0){ if(!(P.chillT>0)){ P.chillMv=CFG.moveSpd*0.4; CFG.moveSpd-=P.chillMv; say('냉기 · 느려짐','cyan'); } P.chillT=2; }
     if(feat('streak')){ if(I.streak>=5) say('연속 패링 '+I.streak+' 끊김','red'); I.streak=0; } }
   return _onHurt.apply(this,arguments); };
 
@@ -62,7 +67,7 @@ sfx=function(k){
     exLastParry=now; }
   return _sfx.apply(this,arguments); };
 
-/* ---- 매 프레임: 맞기 전 상황 기록 · 웨이브별 집계 · 재생/분노 · 심장 소리 ---- */
+/* ---- 매 프레임: 맞기 전 상황 기록 · 웨이브별 집계 · 접두사 · 심장 소리 ---- */
 const _update=update;
 update=function(dt){
   if(!run||screen!=='game') return _update(dt);
@@ -83,18 +88,13 @@ update=function(dt){
     b.from=best?(best.grade==='boss'?'알레테이아 · '+(VKO[best.variant]||'기본형'):KO[best.grade]||best.grade):'적'; } });
   ens.forEach(e=>{ if(!e.affix) return;
     if(e.affix==='분노'&&e._pf!=null&&e.fireT>e._pf+0.05) e.fireT*=0.6;
-    if(e.affix==='재생'){ if(e._ph!=null&&e.hp<e._ph) e._rw=2; e._rw=(e._rw||0)-dt;
-      if(e._rw<=0&&e.hp>0) e.hp=Math.min(e.hpMax,e.hp+e.hpMax*0.05*dt); }
     const held=e.bindT>0||e.frozenT>0;
     if(e.affix==='신속'&&!held&&e._pax!=null){ const nx=clamp(e.ax+(e.ax-e._pax)*0.5,40,WORLD.w-40), ny=clamp(e.ay+(e.ay-e._pay)*0.5,40,WORLD.h-40);
       [e.ax,e.ay]=wallSlide(e.ax,e.ay,nx,ny,e.r); }
-    if(e.affix==='점멸'&&!held){ e._blk=(e._blk==null?4:e._blk)-dt;
-      if(e._blk<=0){ e._blk=4; const sp=enemySpot(e,true); if(sp){ burst(e.x,e.y,'#6fd3ff',12,160); e.ax=e.x=sp[0]; e.ay=e.y=sp[1]; e.wp=null; burst(e.x,e.y,'#6fd3ff',12,160); } } }
     if(e.affix==='가시'&&e._ph!=null&&e.hp<e._ph&&e.hp>0){ const a=Math.atan2(P.y-e.y,P.x-e.x);
       [-0.18,0.18].forEach(o=>exShot(e.x+Math.cos(a+o)*(e.r+8),e.y+Math.sin(a+o)*(e.r+8),a+o,e,'엘리트 · 가시')); } });
-  // 다중: 이 엘리트가 막 쏜 탄 옆에 하나씩 더 (한 발에 한 번만)
-  for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.owner!=='enemy'||b._mx||!b.srcE||b.srcE.affix!=='다중'||b.age>0.15) continue;
-    b._mx=1; [-0.22,0.22].forEach(o=>bullets.push(Object.assign({},b,{dir:b.dir+o,trail:[],tried:[],_mx:1}))); }
+  // 냉기: 느려진 시간이 끝나면 이동 속도를 되돌린다
+  if(P.chillT>0){ P.chillT-=dt; if(P.chillT<=0){ CFG.moveSpd+=P.chillMv||0; P.chillMv=0; } }
   if(I.warn>0) I.warn-=dt;
   if(feat('lowhp')&&P.hp>0&&P.hp<=CFG.hpMax*0.3&&!paused){ I.hb-=dt;
     if(I.hb<=0){ I.hb=P.hp<=CFG.hpMax*0.15?0.55:0.85; tone(72,48,0.13,'sine',0.22); tone(66,44,0.1,'sine',0.16,0.17); } }
@@ -120,8 +120,10 @@ drawBullet=function(b){ _drawBullet(b);
     ctx.save(); ctx.font='800 '+(11+Math.min(b.returns,8))+'px ui-monospace,monospace'; ctx.textAlign='left';
     ctx.lineWidth=3; ctx.strokeStyle='rgba(8,12,17,.85)'; ctx.strokeText('×'+b.returns,p[0]+12,p[1]-10);
     ctx.fillStyle=b.returns>=5?C.warn:C.cyan; ctx.fillText('×'+b.returns,p[0]+12,p[1]-10); ctx.restore(); } };
+const _drawHpBar=drawHpBar;
+drawHpBar=function(e){ if(!cloaked(e)) _drawHpBar(e); };
 const _drawEnemyBody=drawEnemyBody;
-drawEnemyBody=function(e){ _drawEnemyBody(e);
+drawEnemyBody=function(e){ const cl=cloaked(e); if(cl){ ctx.save(); ctx.globalAlpha=0.12; } _drawEnemyBody(e); if(cl){ ctx.restore(); return; }
   if(e.affix&&feat('affix')){ const p=proj(e.x,e.y);
     ctx.save(); ctx.font='700 11px ui-monospace,monospace'; ctx.textAlign='center';
     const t='« '+e.affix+' »', w=ctx.measureText(t).width+10;
@@ -356,11 +358,12 @@ update=function(dt){
 /* ---- 처치: 랠리 피니시 · 흡수체 폭발 · 보스 러시 · 진동 ---- */
 const _killEnemy2=killEnemy;
 killEnemy=function(e){
+  if(e&&e.affix==='불굴'&&!e._ub&&ens.includes(e)){ e._ub=1; e.hp=HIT_UNIT; e.hurt=.3; burst(e.x,e.y,'#e8c27a',18,200); say('불굴','warn'); return; }   // 한 번 버팀
   let fin=null;
   if(feat('finish')&&run&&!run.tut&&e) bullets.forEach(b=>{ if(b.owner==='player'&&b.returns>=5&&dist(b.x,b.y,e.x,e.y)<e.r+R_BULLET+30&&(!fin||b.returns>fin.returns)) fin=b; });
   const r=_killEnemy2.apply(this,arguments);
   if(!run||!e) return r;
-  if(e.affix==='분열'){ [-1,1].forEach(o=>spawnEnemyAt('minion',e.x+o*28,e.y)); say('분열','warn'); }   // 접두사 분열: 잡졸 2기
+  if(e.affix==='원한'){ ens.forEach(o=>{ if(o.grade!=='boss') o.fireT=Math.min(o.fireT,0.12); }); say('원한 — 일제 사격','red'); }
   if(fin){ const bonus=Math.round((G(e).score||50)*0.5*(CFG.scoreMul||1)); run.score+=bonus;
     announce('랠리 피니시 ×'+fin.returns+'  +'+bonus,'warn'); burst(e.x,e.y,'warn',30,320); shake=Math.max(shake,12); missionAdd('rally'); }
   if(e.grade==='absorber'&&e.pAbs){ const bonus=Math.round(GRADES.absorber.eatScore*e.pAbs*(CFG.scoreMul||1)); run.score+=bonus; say('흡수 보너스 +'+bonus,'warn'); }
