@@ -330,8 +330,11 @@ function update(dt){
     if(b.owner==='enemy'){
       if(b.feint) b.spd = b.age<0.55 ? b.base*0.35 : Math.min(b.base*1.35,cap());
       if(b.orbitAmt>0) b.orbitAmt=Math.max(0,b.orbitAmt-dt*1.05);
-      const want=Math.atan2(aimPt().y-b.y,aimPt().x-b.x)+b.orbitDir*b.orbitAmt+(b.zig?Math.sin(b.age*8)*0.9:0);
-      if(P.phase<=0 && !b.armor && !b.straight) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
+      const toP=Math.atan2(aimPt().y-b.y,aimPt().x-b.x), want=toP+b.orbitDir*b.orbitAmt+(b.zig?Math.sin(b.age*8)*0.9:0);
+      if(b.trap&&!b.trapGo){ if(b.age<0.35) b.spd=b.base*0.9; else if(b.age<1.9) b.spd=0; else { b.trapGo=1; b.spd=Math.min(b.base*1.3,cap()); b.dir=toP; b.straight=1; } }
+      if(b.curl&&b.age<1.05) b.dir+=b.curl*2.7*dt;
+      else if(b.sway&&P.phase<=0){ if(b.sb==null) b.sb=b.dir; b.sb+=norm(toP-b.sb)*Math.min(1,dt*2.2); b.dir=b.sb+Math.sin(b.age*7)*0.85*b.sway; }
+      else if(P.phase<=0 && !b.armor && !b.straight && !(b.trap&&!b.trapGo)) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
     } else {
       /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
       /* v2.46 유도가 강하면 탄환이 적 주위를 원을 그리며 계속 도는 문제가 있었다.
@@ -555,7 +558,9 @@ function spawnBullet(q){
   bullets.push({x:q.ex,y:q.ey,dir:a,spd:s0,base:s0,owner:'enemy',returns:0,boss:q.boss?(q.src&&q.src.p2?2:1):0,   // v2.62
     age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
     feint:q.spec.feint||0, orbitDir:q.spec.orbit?(q.spec.odir||(Math.random()<.5?1:-1)):0,
-    orbitAmt:q.spec.orbit?1.5:0, straight:q.spec.straight?1:0, zig:q.spec.zig?1:0});
+    orbitAmt:q.spec.orbit?1.5:0, straight:q.spec.straight?1:0, zig:q.spec.zig?1:0,
+    sway:q.spec.sway||0, curl:q.spec.curl?q.spec.curl*(q.spec.curlRand&&Math.random()<.5?-1:1):0, trap:q.spec.trap?1:0});
+  if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
 }
 function bossVolley(e,specs){
   const room=CFG.maxB+8-(bullets.length+queue.length); if(room<=0) return;

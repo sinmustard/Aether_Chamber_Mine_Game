@@ -63,9 +63,11 @@ const GRADES={
   gunner:  {hits:2,  r:R_ENEMY, pool:'gunner',  score:90,   seize:0.44},
   weaver:  {hits:2,  r:R_ENEMY, pool:'weaver',  score:110,  seize:0.44},
   mortar:  {hits:3,  r:38,      pool:'mortar',  score:150,  seize:0.46, mortar:true},
-  illusion:{hits:1,  r:40,      pool:'illusion',score:30,   seize:0.30}
+  illusion:{hits:1,  r:40,      pool:'illusion',score:30,   seize:0.30},
+  sprayer: {hits:2,  r:R_ENEMY, pool:'sprayer', score:100,  seize:0.44},
+  trapper: {hits:2,  r:R_ENEMY, pool:'trapper', score:120,  seize:0.44}
 };
-const ENEMY_COL={gunner:'#c77dff', weaver:'#57e389', mortar:'#ffb84d', illusion:'#ff6b81'};
+const ENEMY_COL={gunner:'#c77dff', weaver:'#57e389', mortar:'#ffb84d', illusion:'#ff6b81', sprayer:'#ff8fd1', trapper:'#6fd3ff'};
 function spawnNear(g,e,d0,d1){
   const r=(GRADES[g]||GRADES.mob).r;
   for(let k=0;k<14;k++){
@@ -204,19 +206,28 @@ const PATTERNS=[
  {n:'ZIGZAG',  d:'좌우로 흔들리며 오는 탄', specs:[{t:0,zig:1}]},
  {n:'CURVE',   d:'양옆으로 크게 돌아 들어오는 2발', specs:[{t:0,ang:0.9},{t:0.3,ang:-0.9}]},
  {n:'RING',    d:'사방으로 퍼지는 6발', specs:[0,1,2,3,4,5].map(k=>({t:0,ang:k*Math.PI/3,straight:1}))},
- {n:'STAGGER', d:'속도가 다른 3발', specs:[{t:0,fast:0.5},{t:0.12},{t:0.24,feint:1}]}
+ {n:'STAGGER', d:'속도가 다른 3발', specs:[{t:0,fast:0.5},{t:0.12},{t:0.24,feint:1}]},
+ {n:'SWAY',    d:'좌우로 흔들리며 다가오는 탄', specs:[{t:0,sway:1}]},
+ {n:'SWAY PAIR', d:'서로 반대로 흔들리는 2발', specs:[{t:0,sway:1},{t:0.25,sway:-1}]},
+ {n:'CURL',    d:'크게 휘어 돌아 들어오는 탄', specs:[{t:0,curl:1,curlRand:1}]},
+ {n:'ARC PAIR',d:'양쪽으로 크게 휘어 모이는 2발', specs:[{t:0,curl:1,ang:-0.35},{t:0,curl:-1,ang:0.35}]},
+ {n:'SPIRAL',  d:'소용돌이치며 퍼졌다 모이는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:k*Math.PI/2,curl:1}))},
+ {n:'SPRAY',   d:'부채꼴로 흩뿌리는 느린 5발', specs:[0,1,2,3,4].map(k=>({t:k*0.07,ang:-0.5+k*0.25,slow:0.75}))},
+ {n:'TRAP',    d:'퍼져서 멈춰 있다가 한꺼번에 날아오는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:Math.PI/4+k*Math.PI/2,trap:1}))}
 ];
 /* v1.3 — 등급별 패턴 풀. 잡몹은 기본기, 엘리트는 조건 시험.
    v2.6부터 등급마다 고유 패턴(RUSH/VOLLEY/CLEAVE/JAB)을 하나씩 섞어 실루엣이 겹치지 않게 했다 */
 const POOL={
-  mobEarly:[0,1,11], mob:[0,1,3,10,11,12,13,14],
-  elite:[1,2,3,4,5,10,12,16],
+  mobEarly:[0,1,11], mob:[0,1,3,10,11,12,13,14,17],
+  elite:[1,2,3,4,5,10,12,16,18],
   bulwark:[0,2,6,11],
   splitter:[0,1,7,13],
   splinter:[0,8],
   cannon:[9],
   gunner:[10,10,16,12],
-  weaver:[13,14,15],
+  weaver:[19,20,21],
+  sprayer:[22,22,17],
+  trapper:[23],
   mortar:[0,1],
   illusion:[1,3]
 };

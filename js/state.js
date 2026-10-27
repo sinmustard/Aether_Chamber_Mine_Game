@@ -86,7 +86,9 @@ function enemyPool(){
     {g:'sniper',   from:5, w:1, cap:2, ok:()=>run.cycle>=2},
     {g:'gunner',   from:4, w:2, cap:2},
     {g:'weaver',   from:3, w:1, cap:1, ok:()=>run.cycle>=2},
-    {g:'mortar',   from:4, w:1, cap:1, ok:()=>run.cycle>=2}   // v2.65 2사이클 5웨이브부터
+    {g:'mortar',   from:4, w:1, cap:1, ok:()=>run.cycle>=2},
+    {g:'sprayer',  from:6, w:1, cap:1},
+    {g:'trapper',  from:4, w:1, cap:1, ok:()=>run.cycle>=2}   // v2.65 2사이클 5웨이브부터
   ];
 }
 function rollWave(n){
@@ -116,7 +118,7 @@ function waveSpawn(){
   if(boss) bossSpawn(['core','warden','phantom','collapse'][(run.cycle-1)%4]);
   else if(run.mode==='chaosx'){
     const n=Math.min(6, Math.min(5,1+Math.ceil(run.wave/2))+(run.cycle>=2?1:0));
-    const pool=['mob','splitter','elite','bulwark','healer','relay','tracker','summoner','cannon','sniper','gunner','weaver','mortar'];
+    const pool=['mob','splitter','elite','bulwark','healer','relay','tracker','summoner','cannon','sniper','gunner','weaver','mortar','sprayer','trapper'];
     const order=[]; let bossRoll=false;
     for(let i=0;i<n;i++){ if(Math.random()<0.025){ bossRoll=true; break; } order.push(pool[Math.floor(Math.random()*pool.length)]); }
     if(bossRoll) bossSpawn(['core','warden','phantom','collapse'][Math.floor(Math.random()*4)]);
