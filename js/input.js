@@ -210,6 +210,9 @@ function doParry(force){
     .sort((a,b)=>pScore(a)-pScore(b)).slice(0,Math.max(1,CFG.multi|0));
   /* v2.34 장갑탄 — 첫 패링은 장갑만 깎고, 두 번째 패링에서 그대로 빼앗는다 */
   ts.forEach(b=>{ if(b.armor>0){ b.armor--; b.shell=1; b.glow=1; burst(b.x,b.y,'warn',8,150); } });
+  const fakes=ts.filter(b=>b.fake&&!b.armor);
+  if(fakes.length){ fakes.forEach(f=>{ burst(f.x,f.y,'#c27cff',12,170); const k=bullets.indexOf(f); if(k>=0) bullets.splice(k,1); }); ts=ts.filter(b=>!b.fake);
+    if(!ts.length){ say('환상탄 — 헛손질','warn'); sfx('miss'); P.lock=CFG.whiff*0.6; P.lockMax=Math.max(0.01,P.lock); P.lockKind='miss'; return; } }
   const blocked=ts.filter(b=>b.armor>0);
   ts=ts.filter(b=>!b.armor);
   if(blocked.length && !ts.length){

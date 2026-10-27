@@ -285,8 +285,12 @@ const VARIANT_PATTERNS={
     {n:'AFTERIMAGE', d:'페인트탄 바로 뒤 같은 방향 고속탄', specs:[{t:0,feint:1},{t:0.18,fast:0.85,straight:1}]},
     {n:'WRAITH',     d:'양쪽 우회 + 정면 페인트', specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.3,feint:1}]},
     {n:'PHASE LEAD', d:'시차 예측 사격 2발', specs:[{t:0,lead:1,straight:1},{t:0.45,lead:1,straight:1,ang:0.15}]},
-    {late:1, n:'ECHO', d:'지그재그 + 페인트 섞어 3발', specs:[{t:0,zig:1},{t:0.2,feint:1,ang:-0.3},{t:0.4,zig:1,ang:0.3}]}
+    {late:1, n:'ECHO', d:'지그재그 + 페인트 섞어 3발', specs:[{t:0,zig:1},{t:0.2,feint:1,ang:-0.3},{t:0.4,zig:1,ang:0.3}]},
+    {n:'PHANTASM',   d:'환상탄 — 5발 중 몇 발은 닿아도 아프지 않은 가짜, 가짜를 패링하면 헛손질', specs:[-0.6,-0.3,0,0.3,0.6].map(a=>({t:0,ang:a,fakeP:0.6}))},
+    {n:'BLINK',      d:'환상탄 — 날아오다 사라져 더 가까이서 다시 나타나는 3발', specs:[{t:0,blink:1,ang:-0.25},{t:0.2,blink:1},{t:0.4,blink:1,ang:0.25}]},
+    {late:1, n:'MIRAGE BLINK', d:'환상탄 — 순간이동하는 4발, 그중 일부는 가짜', specs:[-0.45,-0.15,0.15,0.45].map((a,k)=>({t:k*0.08,ang:a,blink:1,fakeP:0.5}))}
   ], p2:[
+    {n:'PHANTASMAGORIA', d:'환상탄 — 진짜 · 가짜가 섞인 순간이동 6발', specs:[-0.75,-0.45,-0.15,0.15,0.45,0.75].map((a,k)=>({t:k*0.06,ang:a,blink:1,fakeP:0.5}))},
     {n:'NIGHTMARE', d:'페인트 4발 뒤 양쪽 우회', specs:[{t:0,feint:1,ang:-0.6},{t:0.15,feint:1,ang:-0.2},{t:0.3,feint:1,ang:0.2},{t:0.45,feint:1,ang:0.6},{t:0.6,orbit:1,odir:1},{t:0.6,orbit:1,odir:-1}]}
   ]},
   /* 붕괴형 — 영역 압박: 넓게 퍼지는 탄 · 링 */

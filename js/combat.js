@@ -332,6 +332,8 @@ function update(dt){
       if(b.orbitAmt>0) b.orbitAmt=Math.max(0,b.orbitAmt-dt*1.05);
       const toP=Math.atan2(aimPt().y-b.y,aimPt().x-b.x), want=toP+b.orbitDir*b.orbitAmt+(b.zig?Math.sin(b.age*8)*0.9:0);
       if(b.trap&&!b.trapGo){ if(b.age<0.35) b.spd=b.base*0.9; else if(b.age<1.9) b.spd=0; else { b.trapGo=1; b.spd=Math.min(b.base*1.3,cap()); b.dir=toP; b.straight=1; } }
+      if(b.blink===1&&b.age>=0.45){ b.blink=2; const jump=Math.min(120,dist(b.x,b.y,P.x,P.y)-90), nx=b.x+Math.cos(b.dir)*jump, ny=b.y+Math.sin(b.dir)*jump;
+        if(jump>20&&!wallBetween(b.x,b.y,nx,ny)){ burst(b.x,b.y,'#c27cff',6,110); b.x=nx; b.y=ny; b.trail.length=0; burst(b.x,b.y,'#c27cff',8,130); } }
       if(b.curl&&b.age<1.05) b.dir+=b.curl*2.7*dt;
       else if(b.sway&&P.phase<=0){ if(b.sb==null) b.sb=b.dir; b.sb+=norm(toP-b.sb)*Math.min(1,dt*2.2); b.dir=b.sb+Math.sin(b.age*7)*0.85*b.sway; }
       else if(P.phase<=0 && !b.armor && !b.straight && !(b.trap&&!b.trapGo)) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
@@ -492,6 +494,7 @@ function update(dt){
     } else if(P.decoyT>0&&P.decoy&&dist(b.x,b.y,P.decoy.x,P.decoy.y)<R_PLAYER+R_BULLET){
       burst(b.x,b.y,'cyan',8); bullets.splice(i,1); continue;
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+((P.guard>0||P.absorbT>0)?14:0)){
+      if(b.fake){ burst(b.x,b.y,'#c27cff',10,150); say('환상탄','warn'); bullets.splice(i,1); continue; }
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.absorbT>0){ if(CFG.skillR) P.rChg=Math.min(CFG.rNeed,P.rChg+2); say('흡수','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
       else if(P.barrier>0&&P.inv<=0&&!CFG.god){ P.barrier--; P.inv=0.4; say(P.barrier?'보호막 · 남은 '+P.barrier:'보호막 깨짐','cyan'); sfx('block'); burst(b.x,b.y,'cyan',14,180); }
@@ -559,6 +562,7 @@ function spawnBullet(q){
     age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
     feint:q.spec.feint||0, orbitDir:q.spec.orbit?(q.spec.odir||(Math.random()<.5?1:-1)):0,
     orbitAmt:q.spec.orbit?1.5:0, straight:q.spec.straight?1:0, zig:q.spec.zig?1:0,
+    fake:(q.spec.fake||(q.spec.fakeP&&Math.random()<q.spec.fakeP))?1:0, blink:q.spec.blink?1:0,
     sway:q.spec.sway||0, curl:q.spec.curl?q.spec.curl*(q.spec.curlRand&&Math.random()<.5?-1:1):0, trap:q.spec.trap?1:0});
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
 }

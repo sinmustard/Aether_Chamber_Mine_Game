@@ -579,12 +579,14 @@ function drawZone(){
 }
 function drawBullet(b){
   const col=b.owner==='player'?C.cyan:C.red;
+  let fa=b.fake&&b.owner!=='player'?0.5+0.35*Math.abs(Math.sin(performance.now()/120+b.x*0.02)):1;
+  if(b.blink===1&&b.age>0.3) fa*=Math.max(0.05,(0.45-b.age)/0.15);
   b.trail.forEach((q,i)=>{
     const p=proj(q[0],q[1]);
-    ctx.globalAlpha=(i/b.trail.length)*.3;ctx.fillStyle=col;
+    ctx.globalAlpha=(i/b.trail.length)*.3*fa;ctx.fillStyle=col;
     ctx.beginPath();ctx.arc(p[0],p[1],4*(i/b.trail.length)+1,0,TAU);ctx.fill();
   });
-  ctx.globalAlpha=1;
+  ctx.globalAlpha=fa;
   const p=proj(b.x,b.y);
   if(b.armor>0){   // v2.34 장갑탄 표시
     ctx.save(); ctx.strokeStyle=C.warn; ctx.globalAlpha=.85; ctx.lineWidth=3;
