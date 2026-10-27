@@ -317,6 +317,12 @@ module.exports = {
       } return out; });
     for (const [gr, r] of Object.entries(fired)) t.ok(r.n > 0 && r.own, gr + ' 은(는) 자기 패턴 풀에서 쏨', JSON.stringify(r));
     t.ok(fired.mortar.mort > 0, '박격병은 포격 원을 그림');
+    const sd = await p.evaluate(() => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight';
+      spawnEnemyAt('sprayer', 750, 300); const e = ens[ens.length - 1]; e.fireT = 0; const op = pickPattern, seen = new Set();
+      pickPattern = x => x === e ? PATTERNS.find(q => q.n === 'SPRAY DOUBLE') : op(x);
+      for (let i = 0; i < 60; i++) { hitstop = 0; update(1 / 60); if (i === 0) e.fireT = 99; bullets.forEach(b => { if (b.owner === 'enemy') seen.add(b); }); }
+      pickPattern = op; return seen.size; });
+    t.eq(sd, 9, '분사병 SPRAY DOUBLE은 9발이 다 나감 (v3.79)');
     noErrors(t, g, '새 적'); await p.close();
   },
 
@@ -330,9 +336,14 @@ module.exports = {
       const step = (n, f) => { for (let i = 0; i < n; i++) { hitstop = 0; hold(); update(1 / 60); if (f) f(); } };
       const fire = spec => { queue.push({ t: 0, spec, ex: 700, ey: 300, boss: false, hack: false, src: dummy }); step(1); return bullets[bullets.length - 1]; };
       const o = {}; CFG.god = 1;
-      const tb = fire({ t: 0, ang: 0.6, trap: 1 }); let stopSpd = -1, goSpd = 0, goStraight = 0;
-      step(150, () => { if (tb.age > 1.0 && tb.age < 1.2) stopSpd = tb.spd; if (tb.trapGo && !goSpd) { goSpd = tb.spd; goStraight = tb.straight; } });
-      o.trap = stopSpd === 0 && goSpd > 0 && goStraight === 1;
+      const tb = fire({ t: 0, ang: 0.6, trap: 1 }); let p1 = null, p2 = null, goSpd = 0, goStraight = 0;
+      step(150, () => { if (tb.age > 0.6 && !p1) p1 = [tb.x, tb.y]; if (tb.age > 1.7 && !p2) p2 = [tb.x, tb.y]; if (tb.trapGo && !goSpd) { goSpd = tb.spd; goStraight = tb.straight; } });
+      o.trap = p1 && p2 && dist(p1[0], p1[1], p2[0], p2[1]) < 0.5 && goSpd > 0 && goStraight === 1;
+      /* v3.74 멈춰 있는 덫 탄을 빼앗으면 내 탄이 되어 날아가야 한다 (예전엔 속도 0이라 그 자리에 굳음) */
+      bullets.length = 0; P.x = 150; const hb = fire({ t: 0, ang: 0, trap: 1 }); step(50);
+      P.x = hb.x - 70; P.y = hb.y; P.face = Math.atan2(hb.y - P.y, hb.x - P.x); hb.ready = true; hb.coy = 1; P.lock = 0; P.pbuf = 0; doParry(true);
+      const h0 = [hb.x, hb.y]; step(20); o.trapSeize = hb.owner === 'player' && dist(h0[0], h0[1], hb.x, hb.y) > 30;
+      P.x = 150; P.y = 300;
       bullets.length = 0; const cb = fire({ t: 0, curl: 1 }); const d0 = cb.dir; step(55); o.curl = Math.abs(norm(cb.dir - d0)) > 1.5;
       bullets.length = 0; queue.length = 0; PATTERNS.find(q => q.n === 'ARC PAIR').specs.forEach(sp => queue.push({ t: 0, spec: sp, ex: 700, ey: 300, boss: false, hack: false, src: dummy }));
       step(1); o.arc = bullets.length === 2 && bullets[0].curl === -bullets[1].curl;
@@ -342,7 +353,8 @@ module.exports = {
       o.mortarHit = boom(P.x, P.y).hp < 80; o.mortarMiss = boom(P.x + 300, P.y).hp === 80;
       const bar = boom(P.x, P.y, () => { P.barrier = 1; }); o.mortarBarrier = bar.hp === 80 && bar.barrier === 0;
       CFG.god = 1; return o; });
-    t.ok(r.trap, '덫 탄: 퍼진 뒤 멈춰 있다가(속도 0) 플레이어 쪽 직선으로 날아감');
+    t.ok(r.trap, '덫 탄: 퍼진 뒤 제자리에 멈춰 있다가 플레이어 쪽 직선으로 날아감');
+    t.ok(r.trapSeize, '멈춰 있는 덫 탄을 패링하면 내 탄이 되어 날아감 (v3.74)');
     t.ok(r.curl, '곡선 탄: 처음 1초 동안 크게 휨'); t.ok(r.arc, 'ARC PAIR: 두 발이 서로 반대로 휨'); t.ok(r.slow, '분사 탄: 기본 탄속의 0.75배');
     t.ok(r.mortarHit, '포격 원 안에 있으면 1.3초 뒤 피해'); t.ok(r.mortarMiss, '포격 원 밖이면 피해 없음'); t.ok(r.mortarBarrier, '보호막이 있으면 보호막이 대신 깨짐');
     noErrors(t, g, '새 탄'); await p.close();
@@ -358,6 +370,12 @@ module.exports = {
       const ill = () => ens.filter(e => e.grade === 'illusion'), o = {};
       let b = boss('phantom'); b.blinkT = 0.01; step(2); o.illSpawn = ill().length === 2 && ill().every(e => e.ttl > 6);
       b.blinkT = 999; ill().forEach(e => { e.fireT = 99; }); step(60 * 7.3); o.illGone = ill().length === 0;
+      /* v3.79 보스가 죽으면 분신도 바로 사라짐 → 웨이브가 분신 수명(7초)을 기다리지 않음 */
+      b = boss('phantom'); run.wave = 11; b.blinkT = 0.01; step(2); const had = ill().length; killEnemy(b); step(2); o.illBossDeath = had === 2 && ill().length === 0;
+      /* v3.79 분신 처치 — 점수 · 처치 수 · R 충전은 그대로, 처치 회복만 없음 */
+      b = boss('phantom'); b.blinkT = 0.01; step(2); run.boons.leech = 1; P.rChg = 0;
+      P.hp = 50; let k0 = run.kills, s0 = run.score; killEnemy(ill()[0]); o.illReward = P.hp === 50 && run.kills === k0 + 1 && run.score > s0 && P.rChg > 0;
+      spawnEnemyAt('mob', 400, 500); P.hp = 50; killEnemy(ens[ens.length - 1]); o.mobLeech = P.hp > 50; delete run.boons.leech;
       b = boss('collapse'); b.spiralT = 0.01; step(2); o.spiral = bullets.length + queue.length >= 8;
       b = boss('collapse'); b.mortT = 0.01; step(2); o.mortar = run.mortars.length === 3;
       b = boss('collapse'); b.p2 = 1; b.gunT = 0.01; step(2); o.gunners = ens.filter(e => e.grade === 'gunner').length === 2;
@@ -366,6 +384,8 @@ module.exports = {
       P.stasis = { x: 750, y: 300, r: 190, t: 999 }; step(60); o.mortarStasis = run.mortars.length === 0; P.stasis = null;
       return o; });
     t.ok(r.illSpawn, '환영형 순간이동 → 분신 2기 (7초 수명)'); t.ok(r.illGone, '분신은 7초 뒤 사라짐');
+    t.ok(r.illBossDeath, '보스가 죽으면 분신도 바로 사라짐 (v3.79)');
+    t.ok(r.illReward, '분신 처치: 점수 · 처치 수 · R 충전은 들어오고 처치 회복은 없음 (v3.79)'); t.ok(r.mobLeech, '일반 적 처치 회복은 그대로');
     t.ok(r.spiral, '붕괴형 나선 탄막'); t.ok(r.mortar, '붕괴형 포격 3발'); t.ok(r.gunners, '붕괴형 2페이즈 연사병 2기 호출');
     t.ok(r.stasis, '정지장 안 붕괴형은 나선 · 포격을 멈춤'); t.ok(r.mortarStasis, '정지장 안 박격병은 포격을 못 함');
     noErrors(t, g, '보스'); await p.close();
