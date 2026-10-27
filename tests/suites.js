@@ -435,7 +435,7 @@ module.exports = {
       o.bad = performance.getEntriesByType('resource').filter(e => e.initiatorType === 'img' && e.responseStatus >= 400).map(e => e.name);
       const want = [...document.querySelectorAll('#debugSpawn [data-spawn]')].map(b => b.dataset.spawn).filter(k => k !== 'clear')
         .map(k => k.startsWith('boss') ? (k.includes(':') ? 'boss_' + k.split(':')[1] : 'boss') : k).concat(['illusion']);
-      o.missing = want.filter(k => !(SPRITES[k] && SPRITES[k].naturalWidth > 0));
+      o.missing = want.filter(k => !(GRADES[k] && GRADES[k].vector) && !(SPRITES[k] && SPRITES[k].naturalWidth > 0));   // vector: 일부러 도형으로 그리는 적
       const real = AC; let resumed = 0; AC = { state: 'interrupted', resume() { resumed++; } }; ac(); AC = real; o.resumed = resumed;
       ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; dropMortar(P.x, P.y); const hp = P.hp;
       for (let i = 0; i < 10; i++) { hitstop = 0; update(1 / 60); }
@@ -447,5 +447,137 @@ module.exports = {
     t.ok(r.resumed === 1, "아이폰 소리가 'interrupted'로 멈추면 다시 켬");
     t.ok(r.cleared, '웨이브가 끝나면 남은 박격포 장판도 지워짐'); t.ok(r.noHit, '웨이브가 끝난 뒤 박격포에 안 맞음');
     noErrors(t, g, '이미지 · 소리 · 박격포'); await p.close();
+  },
+
+  /* ---- v3.89 추가 기능 (js/extras.js) ---- */
+  async '추가 기능: 전투 표시 · 결과 화면 (v3.89)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1500);
+    const a = await p.evaluate(async () => { const o = {}, sleep = ms => new Promise(r => setTimeout(r, ms));
+      ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 1;
+      const rnd = Math.random; Math.random = () => 0.1;
+      run.cycle = 1; spawnEnemy('elite'); o.affix1 = ens[ens.length - 1].affix || '';
+      run.cycle = 2; spawnEnemy('elite'); const el = ens[ens.length - 1]; o.affix2 = el.affix;
+      Math.random = () => 0.9; spawnEnemy('elite'); const plain = ens[ens.length - 1]; o.plain = plain.affix || ''; o.hpMul = el.hpMax / plain.hpMax;
+      Math.random = rnd; run.cycle = 1; ens.length = 0;
+      for (let i = 0; i < 6; i++) { sfx('parry', 2); await sleep(60); }
+      o.streak = run.ex.streak; P.inv = 0; onHurt(); o.streakAfter = run.ex.streak; o.best = run.ex.best;
+      spawnEnemy('boss'); const b = ens[ens.length - 1]; b.variant = 'warden'; o.warn = run.ex.warn > 0;
+      b.exT0 = run.time - 61.2; killEnemy(b); o.boss = run.ex.boss.map(x => x.v + ':' + x.t.toFixed(1)).join(); o.warnOff = run.ex.warn === 0;
+      try { o.stored = JSON.parse(localStorage.getItem('aether_x_bossT')).hasOwnProperty('normal:warden'); } catch (e) { o.stored = false; }
+      P.hp = Math.round(CFG.hpMax * 0.2); await sleep(200);
+      return o; });
+    t.eq(a.affix1, '', '1사이클 엘리트는 접두사 없음');
+    t.ok(a.affix2 === '강철' && a.plain === '' && Math.abs(a.hpMul - 1.6) < 0.01, '2사이클 엘리트 절반에 접두사 — 강철은 체력 ×1.6', a.affix2 + ' ×' + a.hpMul);
+    t.ok(a.streak === 6 && a.streakAfter === 0 && a.best === 6, '무피격 연속 패링: 패링마다 +1, 맞으면 0 (최고 기록은 남음)', JSON.stringify(a));
+    t.ok(a.warn && a.warnOff, '보스 등장 경고 띠 → 보스가 죽으면 바로 꺼짐');
+    t.ok(a.boss === 'warden:61.2' && a.stored, '보스 처치 시간 기록 (변형별, 이 기기에 최고 기록 저장)', a.boss);
+    // 연사병 탄에 쓰러지기 → 결과 화면
+    await p.evaluate(() => { ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 0; P.inv = 0; run.revives = 0; P.barrier = 0; run.phase = 'fight';
+      document.querySelector('#debugSpawn [data-spawn="gunner"]').click(); const e = ens[ens.length - 1]; e.x = P.x + 200; e.y = P.y; e.fireT = 0.1; P.hp = 1; });
+    for (let i = 0; i < 40 && await p.evaluate(() => screen) === 'game'; i++) await wait(250);
+    const r = await p.evaluate(() => ({ screen, txt: ($('#exRes') || {}).innerText || '', bars: document.querySelectorAll('#exRes [title*="피해"]').length,
+      copy: !!$('#exCopy'), rp: !!$('#exRpBtn'), share: exShareText(run, run.ex, true) }));
+    t.eq(r.screen, 'result', '쓰러지면 결과 화면');
+    t.ok(/쓰러진 원인 — 연사병 탄/.test(r.txt), '쓰러진 원인 — 연사병 탄', r.txt.split('\n').slice(0, 3).join(' / '));
+    t.ok(/가장 많이 맞은 것/.test(r.txt) && /최장 무피격 연속 패링 — 6/.test(r.txt) && /보스 처치 시간 — 수호형 1:01.2/.test(r.txt), '피해 출처 · 연속 패링 · 보스 처치 시간 줄');
+    t.ok(r.bars > 0, '웨이브별 피해 · 처치 막대', 'bars ' + r.bars);
+    t.ok(/패링 \d+회 · 빗나감 \d+회 · 성공률 \d+%/.test(r.txt), '패링 통계 줄');
+    t.ok(r.copy && /^에테르 챔버 v[\d.]+ · 노멀\n/.test(r.share) && /쓰러진 원인: 연사병 탄/.test(r.share), '결과 문구 복사 — 모드 · 점수 · 웨이브 이모지 · 원인', r.share.replace(/\n/g, ' / '));
+    t.ok(r.rp, '마지막 5초 보기 버튼');
+    if (r.rp) { await click(p, '#exRpBtn'); await wait(500); t.ok(await p.evaluate(() => !!$('#exRp') && $('#modal').classList.contains('on')), '리플레이 창이 열림'); }
+    await p.evaluate(() => { $('#modal').classList.remove('on'); go('title'); }); await wait(300);
+    await click(p, '#exDex'); await wait(300);
+    const dex = await p.evaluate(() => ({ n: $('#modalBox').querySelectorAll('img').length, txt: $('#modalBox').innerText }));
+    t.ok(dex.n >= 21 && /흡수체/.test(dex.txt) && /붕괴형/.test(dex.txt), '적 도감 — 모든 적 · 보스 변형 + 흡수체', 'img ' + dex.n);
+    noErrors(t, g, '추가 기능 전투 표시'); await p.close();
+  },
+
+  async '추가 기능: 새 적 · 웨이브 · 모드 · 설정 (v3.89)'(t, { browser, url }) {
+    const g = await openGame(browser, url, { save: { opt: { tutSeen: 1, chaos: 0 } } }), p = g.page;
+    const ids = await p.evaluate(() => ['exDex', 'exPrac', 'exRush', 'exMis'].filter(id => !$('#' + id)));
+    t.eq(ids.join(','), '', '타이틀 버튼: 도감 · 연습장 · 보스 러시 · 일일 미션');
+    // 설정: 패링 목표 미리보기 (기본 꺼짐)
+    await p.evaluate(() => openModal('opt')); await wait(200);
+    const opt0 = await p.evaluate(() => ({ v: OPT.aimPrev, row: !!document.querySelector('[data-opt=aimPrev]') }));
+    await click(p, '[data-opt=aimPrev]'); await wait(150);
+    t.ok(opt0.row && opt0.v === 0 && await p.evaluate(() => OPT.aimPrev) === 1, '설정 "패링 목표 미리보기" — 기본 꺼짐, 누르면 켜짐');
+    await p.evaluate(() => $('#modal').classList.remove('on'));
+    // HUB 프리셋
+    await toHub(p);
+    const pre = await p.evaluate(() => { META.cur = 5000; const u = UPG.find(x => !x.phoneOnly && x.cost && x.cost[0] <= META.cur); u.lv = 1; META.cur -= u.cost[0]; save(); renderCards();
+      const cur1 = META.cur; $('#exPreA').click(); $('#cfYes').click();
+      u.lv = 0; META.cur += u.cost[0]; renderCards(); $('#exPreA').click(); $('#cfYes').click();
+      return { lv: u.lv, ok: META.cur === cur1 }; });
+    t.ok(pre.lv === 1 && pre.ok, '강화 프리셋 A: 저장 → 강화를 바꾼 뒤 불러오면 그 빌드로 돌아오고 재화도 맞음', JSON.stringify(pre));
+    await p.evaluate(() => closeConfirm());
+    await launchRun(p); await wait(1500);
+    const a = await p.evaluate(async () => { const o = {}, sleep = ms => new Promise(r => setTimeout(r, ms));
+      o.first = (run.ex.firstQ || []).map(f => f.g).join(); CFG.god = 1; run.phase = 'fight';
+      // 흡수체: 다가오는 적 탄을 먹고, 죽으면 모은 만큼 터뜨림
+      ens.length = 0; bullets.length = 0; queue.length = 0; spawnEnemy('absorber'); const ab = ens[0]; ab.x = ab.ax = 700; ab.y = ab.ay = 300;
+      const mk = (x, y, dir) => ({ x, y, dir, spd: 200, base: 200, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1 });
+      bullets.push(mk(560, 300, 0), mk(700, 160, Math.PI / 2), mk(560, 380, -0.2)); await sleep(1300);
+      o.charge = ab.charge; killEnemy(ab); o.boom = bullets.filter(b => b.from === '흡수체 폭발').length;
+      // 거울 벽: 내 탄이 닿으면 적 쪽으로 꺾임
+      bullets.length = 0; ens.length = 0; const m = run.mapWalls.find(w => w.mirror); o.mirrorWall = !!m && !m.prism;
+      if (m) { const c = m.col; spawnEnemyAt('mob', 100, 100); const up = c.y > 120, sy = up ? c.y - 60 : c.y + c.h + 60;
+        bullets.push({ x: c.x + c.w / 2, y: sy, dir: up ? Math.PI / 2 : -Math.PI / 2, spd: 300, base: 300, owner: 'player', returns: 1, age: 0, trail: [], glow: 1, hcd: 0.4, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, pierceLeft: 0 });
+        await sleep(900); o.bent = run.ex.mirror || 0; }
+      // 랠리 피니시
+      ens.length = 0; bullets.length = 0; const e = spawnEnemyAt('mob', P.x + 200, P.y), s0 = run.score;
+      bullets.push({ x: e.x, y: e.y, dir: 0, spd: 1, base: 1, owner: 'player', returns: 6, age: 0, trail: [], glow: 1, hcd: 9, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0 });
+      killEnemy(e); o.finish = msgs.some(m => /랠리 피니시 ×6/.test(m.text)) ? Math.round(run.score - s0) : 0;
+      bullets.length = 0;
+      return o; });
+    t.ok(/mob/.test(a.first), '첫 등장 안내 — 처음 보는 잡몹', a.first);
+    t.ok(a.charge >= 3 && a.boom === Math.min(18, 4 + a.charge), '흡수체: 적 탄을 빨아들이고 죽으면 4+모은 수만큼 터짐', a.charge + ' → ' + a.boom);
+    t.ok(a.mirrorWall && a.bent >= 1, '거울 벽(프리즘 아님)에 닿은 내 탄이 적 쪽으로 꺾임', JSON.stringify({ w: a.mirrorWall, b: a.bent }));
+    t.ok(a.finish > 0, '왕복 5회 이상 탄으로 처치 → 랠리 피니시 보너스', '+' + a.finish);
+    // 위험 계약: 웨이브 비우기 → 3초 안에 T → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
+    await p.evaluate(() => { ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
+    for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);
+    const offer = await p.evaluate(() => run.riskOffer); await p.keyboard.press('t'); await wait(100);
+    const next = await p.evaluate(() => run.riskNext);
+    t.ok(offer === 1 && next === 1, '웨이브 클리어 직후 T → 위험 계약 수락');
+    for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
+      if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+    const risk = await p.evaluate(() => ({ on: run.riskOn, sr0: run.startRewards || 0 }));
+    await p.evaluate(() => { ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
+    for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);
+    t.ok(risk.on === 1 && await p.evaluate(() => run.startRewards || 0) === risk.sr0 + 1, '계약한 웨이브를 비우면 다음 보상 1개 더');
+    // 탄 폭풍 (강제)
+    await p.evaluate(() => { run.forceStorm = 1; });
+    for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
+      if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+    await wait(1500);
+    const storm = await p.evaluate(() => ({ s: run.storm, ens: ens.length, b: bullets.filter(b => b.from === '탄 폭풍').length, q: queue.length }));
+    t.ok(storm.s === 1 && storm.ens === 0 && storm.b > 0 && storm.q > 0, '탄 폭풍 웨이브: 적 없이 탄만', JSON.stringify(storm));
+    // 일일 미션
+    const mis = await p.evaluate(() => { run.cheat = 0; ['parries', 'kills', 'noHit', 'bossKills'].forEach(k => stat(k, 1)); const M0 = JSON.parse(localStorage.getItem('aether_x_mission')); const k = M0.list.find(x => ['parries', 'kills', 'noHit', 'bossKills'].includes(x)) || M0.list[0];
+      const map = { parries: 1, kills: 1, noHit: 1, bossKills: 1 };
+      const M1 = JSON.parse(localStorage.getItem('aether_x_mission')); return { n: M0.list.length, k, prog: M1.prog[k] || 0, statKey: !!map[k] }; });
+    t.ok(mis.n === 3 && (!mis.statKey || mis.prog === 1), '일일 미션 3개, 기록이 미션 진행에 들어감', JSON.stringify(mis));
+    await p.evaluate(() => go('hub')); await wait(300);
+    // 연습장: 저격수, 쓰러져도 안 끝남 · 기록 안 함
+    await p.evaluate(() => go('title')); await wait(200); await click(p, '#exPrac'); await wait(200);
+    await p.evaluate(() => $('#modalBox [data-prac="sniper"]').click()); await wait(2500);
+    const pr = await p.evaluate(async () => { const o = { p: !!run.practice, cheat: run.cheat, g: ens.map(e => e.grade).join() }; P.hp = 0; await new Promise(r => setTimeout(r, 300)); o.screen = screen; o.hp = P.hp; return o; });
+    t.ok(pr.p && pr.cheat === 1 && /sniper/.test(pr.g), '연습장 — 고른 적만 나오고 기록 안 함', JSON.stringify(pr));
+    t.ok(pr.screen === 'game' && pr.hp > 0, '연습장에선 쓰러져도 체력이 다시 참');
+    await p.evaluate(() => go('hub')); await wait(200);
+    // 보스 러시: 네 변형 → 결과
+    await p.evaluate(() => go('title')); await wait(200); await click(p, '#exRush'); await wait(2500);
+    const order = [];
+    for (let k = 0; k < 4; k++) {
+      for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
+        if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+      order.push(await p.evaluate(() => { CFG.god = 1; const b = ens.find(e => e.grade === 'boss'); const v = b && b.variant; if (b) killEnemy(b); ens.slice().forEach(e => killEnemy(e)); queue.length = 0; return v; }));
+      for (let i = 0; i < 30 && await p.evaluate(() => screen === 'game' && run.phase === 'fight'); i++) await wait(100);   // 처치 직후엔 아직 fight — 단계가 넘어갈 때까지
+    }
+    for (let i = 0; i < 60 && await p.evaluate(() => screen) === 'game'; i++) { if (await p.evaluate(() => $('#reward').classList.contains('on'))) { await wait(500); await p.keyboard.press('1'); } await wait(250); }
+    const rush = await p.evaluate(() => ({ screen, txt: ($('#exMore') || {}).innerText || '', cheat: run && run.cheat }));
+    t.eq(order.join(), 'core,warden,phantom,collapse', '보스 러시 순서: 기본형 → 수호형 → 환영형 → 붕괴형');
+    t.ok(rush.screen === 'result' && /보스 러시 — 완주/.test(rush.txt), '네 변형을 다 잡으면 완주 시간과 함께 결과 화면', rush.txt.replace(/\n/g, ' / '));
+    noErrors(t, g, '추가 기능 새 적 · 모드'); await p.close();
   },
 };

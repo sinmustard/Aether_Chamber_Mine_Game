@@ -470,13 +470,15 @@ function openModal(kind){
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
               ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통'],
-              ['피해 숫자','dmgNum',OPT.dmgNum?'켬':'끔']]   // v2.68
+              ['피해 숫자','dmgNum',OPT.dmgNum?'켬':'끔'],   // v2.68
+              ['패링 목표 미리보기','aimPrev',OPT.aimPrev?'켬 · 날아갈 적에게 점선':'끔']]   // v3.88
               .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링'],
                 ['버튼 위치 (폰)','padPos',({bottom:'아래',top:'위',right:'오른쪽',left:'왼쪽'})[OPT.padPos]||'아래'],
                 ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔'],
                 ['이동 조이스틱 고정 (폰)','fixMove',OPT.fixMove?'켬 · 정해진 자리':'끔 · 누른 곳에서 시작'],
                 ['패링 조이스틱 고정 (폰)','fixAim',OPT.fixAim?'켬 · 정해진 자리':'끔 · 누른 곳에서 시작'],
-                ['스킬 버튼 위치 (폰)','skillRing',OPT.skillRing?'패링 조이스틱 옆':'아래 버튼 줄']]:[]);   // v2.79   // v2.63   // v2.42 · v2.49
+                ['스킬 버튼 위치 (폰)','skillRing',OPT.skillRing?'패링 조이스틱 옆':'아래 버튼 줄'],
+                ['진동 (폰)','vibe',OPT.vibe?'켬':'끔']]:[]);   // v3.88 진동   // v2.79   // v2.63   // v2.42 · v2.49
   /* v2.68 ⑦ 설정을 탭으로 — 게임 · 조작 · 소리 · 계정 */
   const R2=ks=>ks.map(k=>rows.find(r=>r[1]===k)).filter(Boolean).map(([a,k,v])=>'<div class="opt-row opt-tg" data-opt="'+k+'"><span>'+a+'</span><i>'+v+'</i></div>').join('');
   const tabH='<div class="optTabs">'+[['game','게임'],['ctrl','조작'],['sound','소리'],['acct','계정']].map(([k,n])=>'<button data-otab="'+k+'" class="'+(optTab===k?'on':'')+'">'+n+'</button>').join('')+'</div>';
@@ -491,10 +493,10 @@ function openModal(kind){
     '<button class="buy" id="optReset" style="color:var(--red);border-color:var(--line)">저장 데이터 초기화</button>';
   const stickEditRow=isTouchDev()?'<div class="opt-row opt-tg" data-stickedit="1"><span>조이스틱 자리 편집 (폰)</span><i>'+((OPT.posMove||OPT.posAim)?'직접 지정함 · ':'')+'끌어서 옮기기</i></div>':'';   // v2.81
   const pimgRow='<div class="opt-row opt-tg" data-appearance="1"><span>캐릭터 이미지</span><i>'+({off:'기본 원',single:'이미지 1장',"4dir":'4방향 이미지'}[OPT.pimgMode]||'기본 원')+'</i></div>';   // v2.89
-  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixMove','fixAim'])+stickEditRow+R2(['skillRing','padPos','swapSticks'])+phoneDesc+keyRows
+  const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixMove','fixAim'])+stickEditRow+R2(['skillRing','padPos','swapSticks','vibe'])+phoneDesc+keyRows
            : optTab==='sound'? R2(['vol','bgm'])
            : optTab==='acct'? acct
-           : R2(['shake','lowfx','cb','inputBuf','dmgNum'])+pimgRow+fsRow;
+           : R2(['shake','lowfx','cb','inputBuf','dmgNum','aimPrev'])+pimgRow+fsRow;
   $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+tabH+body;
   $('#modal').classList.add('on');
 }
