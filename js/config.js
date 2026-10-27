@@ -252,14 +252,53 @@ const BOSS_P2S=[
  {late:1, n:'MELTDOWN',  d:'고속 3연사 뒤 장갑탄', specs:[{t:0,fast:0.85,ang:-0.22},{t:0.22,fast:0.85},{t:0.44,fast:0.85,ang:0.22},{t:0.9,heavy:1}]},
  {late:1, n:'TEMPEST',   d:'우회 + 페인트 + 고속이 한꺼번에', specs:[{t:0,orbit:1,odir:1},{t:0.15,feint:1},{t:0.3,orbit:1,odir:-1},{t:0.7,fast:0.9}]}
 ];
+/* v3.69 변종 전용 보스 패턴 — 기본형은 위 BOSS_PATTERNS, 수호형 · 환영형 · 붕괴형은 각자 여기서만 고른다.
+   p2는 그 변종의 2페이즈 전용 (공용 BOSS_P2S와 반반 섞음). 한 번에 나가는 탄은 maxB(8발)에서 잘리므로 8발 이하로 */
+const RING8=off=>[0,1,2,3,4,5,6,7].map(k=>({t:0,ang:(k+off)*Math.PI/4,straight:1}));
+const VARIANT_PATTERNS={
+  /* 수호형 — 방패 요새: 무겁고 곧은 탄 + 옆으로 돌아 들어오는 탄 */
+  warden:{base:[
+    {n:'BULWARK',  d:'가운데 장갑탄 + 양옆 우회 2발', specs:[{t:0,heavy:1},{t:0.15,orbit:1,odir:1},{t:0.15,orbit:1,odir:-1}]},
+    {n:'LANCE',    d:'고속 직선탄 3발 일렬', specs:[{t:0,straight:1,fast:0.7},{t:0.12,straight:1,fast:0.7},{t:0.24,straight:1,fast:0.7}]},
+    {n:'RAMPART',  d:'넓은 5발 부채꼴', specs:[-0.8,-0.4,0,0.4,0.8].map(a=>({t:0,ang:a}))},
+    {n:'FLANK',    d:'양옆 우회 2발 뒤 정면 직선탄', specs:[{t:0,orbit:1,odir:1,ang:0.3},{t:0.25,orbit:1,odir:-1,ang:-0.3},{t:0.5,straight:1}]},
+    {late:1, n:'SIEGE', d:'장갑탄 2발 시차 + 예측 고속탄', specs:[{t:0,heavy:1,ang:-0.25},{t:0.4,heavy:1,ang:0.25},{t:0.8,lead:1,straight:1,fast:0.75}]}
+  ], p2:[
+    {n:'FORTRESS', d:'장갑탄 3발 부채꼴 뒤 고속탄', specs:[{t:0,heavy:1,ang:-0.35},{t:0,heavy:1},{t:0,heavy:1,ang:0.35},{t:0.6,fast:0.85}]}
+  ]},
+  /* 환영형 — 속임수: 페인트 · 시차 · 예측 */
+  phantom:{base:[
+    {n:'MIRAGE',     d:'시차 페인트 3발', specs:[{t:0,feint:1,ang:-0.5},{t:0.35,feint:1,ang:0.5},{t:0.7,feint:1}]},
+    {n:'AFTERIMAGE', d:'페인트탄 바로 뒤 같은 방향 고속탄', specs:[{t:0,feint:1},{t:0.18,fast:0.85,straight:1}]},
+    {n:'WRAITH',     d:'양쪽 우회 + 정면 페인트', specs:[{t:0,orbit:1,odir:1},{t:0,orbit:1,odir:-1},{t:0.3,feint:1}]},
+    {n:'PHASE LEAD', d:'시차 예측 사격 2발', specs:[{t:0,lead:1,straight:1},{t:0.45,lead:1,straight:1,ang:0.15}]},
+    {late:1, n:'ECHO', d:'지그재그 + 페인트 섞어 3발', specs:[{t:0,zig:1},{t:0.2,feint:1,ang:-0.3},{t:0.4,zig:1,ang:0.3}]}
+  ], p2:[
+    {n:'NIGHTMARE', d:'페인트 4발 뒤 양쪽 우회', specs:[{t:0,feint:1,ang:-0.6},{t:0.15,feint:1,ang:-0.2},{t:0.3,feint:1,ang:0.2},{t:0.45,feint:1,ang:0.6},{t:0.6,orbit:1,odir:1},{t:0.6,orbit:1,odir:-1}]}
+  ]},
+  /* 붕괴형 — 영역 압박: 넓게 퍼지는 탄 · 링 */
+  collapse:{base:[
+    {n:'SHATTER',    d:'엇갈린 사방 8발 링', specs:RING8(0.5)},
+    {n:'AVALANCHE',  d:'넓게 훑으며 쏘는 8발', specs:[0,1,2,3,4,5,6,7].map(k=>({t:k*0.08,ang:-1.4+k*0.4}))},
+    {n:'FAULT LINE', d:'십자 4방향 직선 두 겹', specs:[0,1,2,3].flatMap(k=>[{t:0,ang:k*Math.PI/2,straight:1},{t:0.35,ang:k*Math.PI/2,straight:1}])},
+    {n:'DEBRIS',     d:'넓은 지그재그 5발 부채꼴', specs:[-0.8,-0.4,0,0.4,0.8].map(a=>({t:0,ang:a,zig:1}))},
+    {late:1, n:'QUAKE', d:'십자 4발 뒤 대각선 고속 4발', specs:[0,1,2,3].map(k=>({t:0,ang:k*Math.PI/2,straight:1})).concat([0,1,2,3].map(k=>({t:0.45,ang:(k+0.5)*Math.PI/2,straight:1,fast:0.7})))}
+  ], p2:[
+    {n:'CATACLYSM', d:'한 바퀴 도는 8발 나선', specs:[0,1,2,3,4,5,6,7].map(k=>({t:k*0.09,ang:k*Math.PI/4,straight:1}))}
+  ]}
+};
+/* v3.69 변종이 처음 나오는 사이클 (기본형 1 → 수호형 2 → 환영형 3 → 붕괴형 4) */
+const VARIANT_FIRST={core:1,warden:2,phantom:3,collapse:4};
 function pickPattern(e){
   if(e.grade==='boss'){
-    /* v3.02 노멀 1사이클에서는 나중에 추가한 어려운 보스 패턴(late)을 빼고, 2사이클부터 섞는다. 하드는 처음부터 전부 */
-    const early=run.mode!=='hard'&&run.mode!=='hotd'&&run.mode!=='chaosx'&&run.cycle<2, ok=p=>!(early&&p.late);
+    /* v3.02 노멀 1사이클에서는 나중에 추가한 어려운 보스 패턴(late)을 빼고, 2사이클부터 섞는다. 하드는 처음부터 전부
+       v3.69 변종도 처음 나오는 사이클에서는 late를 뺀다 (예전엔 1사이클 기본형에만 걸렸다) */
+    const vp=VARIANT_PATTERNS[e.variant];
+    const early=run.mode!=='hard'&&run.mode!=='hotd'&&run.mode!=='chaosx'&&run.cycle<=(VARIANT_FIRST[e.variant]||1), ok=p=>!(early&&p.late);
     const pick=a=>a[Math.floor(Math.random()*a.length)];
-    const p2=BOSS_P2S.filter(ok), base=BOSS_PATTERNS.filter(ok);
-    if(e.p2&&p2.length&&Math.random()<0.45) return pick(p2);   // v2.62
-    if(e.variant==='phantom'){ const ph=base.filter(p=>p.specs.some(sp=>sp.feint||sp.orbit)); return pick(ph.length?ph:base); }   // v2.68
+    const p2=BOSS_P2S.filter(ok), base=(vp?vp.base:BOSS_PATTERNS).filter(ok);
+    if(e.p2&&p2.length&&Math.random()<0.45) return (vp&&Math.random()<0.5)?pick(vp.p2):pick(p2);   // v2.62 · v3.69 변종 전용 2페이즈와 공용을 반반
+    if(vp) return pick(base);   // v3.69 일반 패턴(TWIN · ORBIT · OVERLOAD) 섞기는 기본형만
     return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)] : pick(base);
   }
   const key = G(e).pool;
