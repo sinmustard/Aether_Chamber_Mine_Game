@@ -43,10 +43,10 @@ function rarePick(list){
 function chaosPrismTrap(){ return {k:'c_ptrap',n:'강화 프리즘',d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 <span class="t-plus">+3</span><span class="t-minus">−3</span>',tag:'특수 특전',max:1,sp:1,chaos:1,fn:()=>{
   run.prismAdj=(run.prismAdj||0)-3; announce('함정! 프리즘 가르기 횟수 −3','red'); sfx('breach'); shake=10; }}; }
 function chaosDisguise(){
-  const pool=BOONS.filter(b=>boonLv(b.k)<b.max); if(!pool.length) return chaosPick();
+  const pool=BOONS.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok())); if(!pool.length) return chaosPick();
   const look=pool[Math.floor(Math.random()*pool.length)];
   return {k:'c_dis',look:look.k,n:look.n,d:look.d,tag:look.tag,max:look.max,chaos:1,fn:()=>{
-    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&x.k!=='s_prismdur');
+    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&x.k!=='s_prismdur'&&(!x.ok||x.ok()));
     if(sp.length&&Math.random()<0.6){ const r=rarePick(sp); run.boons[r.k]=(run.boons[r.k]||0)+1; r.fn(); stat('specials'); announce('위장된 특수 특전! — '+r.n,'warn'); }
     else { const c=chaosPick(); c.fn(); }
   }};
@@ -56,7 +56,7 @@ function openReward(afterBoss,fromReroll){
   if(!fromReroll) rwOpenAt=performance.now();
   if(run.phase!=='reward') run.rwPrev=run.phase;   // v3.62 보상을 고른 뒤 돌아갈 단계 (출격 직후 보상은 벽 설치 단계)
   run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+run.wave*50+run.rwRoll);   // v3.62
-  const pool=BOONS.filter(b=>boonLv(b.k)<b.max);
+  const pool=BOONS.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
   if(!pool.length){ endReward(); return; }
   unlockMouse();   // v3.62 마우스가 잠긴 채면 커서가 안 보이고 클릭이 카드 대신 캔버스(패링)로 갔다
   rwPicks=[];
@@ -71,7 +71,7 @@ function openReward(afterBoss,fromReroll){
     rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=pick;
   }
   else if(CFG.specialChance>0 && Math.random()<spChance){
-    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&!(run.mode==='chaosx'&&x.k==='s_prismdur'));
+    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&!(run.mode==='chaosx'&&x.k==='s_prismdur')&&(!x.ok||x.ok()));
     if(sp.length){ const pick=rarePick(sp);   // v2.52 특수 특전이 들어가는 칸도 무작위
       if(rwPicks.length<3) rwPicks.splice(Math.floor(Math.random()*(rwPicks.length+1)),0,pick);
       else rwPicks[Math.floor(Math.random()*rwPicks.length)]=pick; }

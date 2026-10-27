@@ -25,7 +25,8 @@ const BOONS=[
  {k:'counter',   n:'역습',        d:'맞으면 2초 동안 이동 속도 +40 · 패링 사거리 +0.4m (레벨당)',  max:2, tag:'생존',   fn:()=>{}},   // v3.50
  {k:'fury',      n:'분노',        d:'맞을 때마다 R 충전 +5 (레벨당)',                          max:2, tag:'스킬',   fn:()=>{}},   // v3.50
  {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}},   // v2.52
- {k:'prismdur',  n:'프리즘 공명', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +1',  max:3, tag:'프리즘', fn:()=>{}}
+ {k:'prismdur',  n:'프리즘 공명', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +1',  max:3, tag:'프리즘', fn:()=>{}},
+ {k:'decoyabs',  n:'미끼 흡수',   d:'미끼가 주변 적 탄을 빨아들임 — 대신 시간이 아니라 체력으로 버팀 (체력 6, 탄 1발에 −1)', max:1, tag:'미끼', ok:()=>CFG.qSkill==='decoy', fn:()=>{}}
 ];
 /* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
 const SPECIALS=[
@@ -40,7 +41,8 @@ const SPECIALS=[
  {k:'s_range',  n:'장거리 감응', d:'패링 사거리 +20%',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.rangeM*=1.2;}},
  {k:'s_fov',    n:'광역 감응',   d:'패링 시야각 +25°',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.fov=Math.min(180,CFG.fov+25);}},
  {k:'s_prismsplit', n:'분광',   d:'프리즘 벽에서 갈라지는 탄환 +2 (피해를 합치면 그대로)',   max:1, tag:'특수 특전', sp:1, fn:()=>{}},
- {k:'s_prismdur',   n:'강화 프리즘', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +3',      max:1, tag:'특수 특전', sp:1, fn:()=>{}}
+ {k:'s_prismdur',   n:'강화 프리즘', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +3',      max:1, tag:'특수 특전', sp:1, fn:()=>{}},
+ {k:'s_decoyhp',    n:'미끼 강화',   d:'미끼 체력 +6',   max:1, tag:'특수 특전', sp:1, ok:()=>CFG.qSkill==='decoy'&&boonLv('decoyabs')>0, fn:()=>{ if(P.decoyHp!=null){ P.decoyHp+=6; P.decoyHpMax+=6; } }}
 ];
 const boonDef=k=>BOONS.find(x=>x.k===k)||SPECIALS.find(x=>x.k===k);
 const boonLv=k=>(run&&run.boons&&run.boons[k])||0;

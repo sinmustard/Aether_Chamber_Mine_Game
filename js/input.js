@@ -390,6 +390,7 @@ function doQ(){
     let x=clamp(P.x+Math.cos(P.face)*120,40,WORLD.w-40), y=clamp(P.y+Math.sin(P.face)*120,40,WORLD.h-40);
     [x,y]=pushOutOfWalls(x,y,R_PLAYER+6);
     P.decoy={x,y}; P.decoyT=P.decoyMax=CFG.decoyDur; P.wallCd=P.qCdMax=CFG.decoyCd;
+    if(boonLv('decoyabs')){ P.decoyHp=P.decoyHpMax=6+(boonLv('s_decoyhp')?6:0); P.decoyT=P.decoyMax=10; } else P.decoyHp=null;
     say('미끼','cyan'); sfx('phase'); burst(x,y,'cyan',14,160);
   } else if(CFG.qSkill==='gravity'){
     if(paused||P.wallCd>0||P.hp<=0)return;

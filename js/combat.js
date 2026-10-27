@@ -94,7 +94,7 @@ function update(dt){
   if(P.blazeT>0){ P.blazeT-=dt; if(P.blazeT<=0){ P.blazeT=0; say('오버클럭 끝','dim'); } }
   if(P.stasis){ P.stasis.t-=dt; if(P.stasis.t<=0) P.stasis=null; }
   if(P.slowT>0)P.slowT-=dt; if(P.absorbT>0)P.absorbT-=dt; if(P.shockFx>0)P.shockFx-=dt;
-  if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; } }
+  if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; P.decoyHp=null; } }
   if(P.autoT>0){ P.autoT-=dt; if(P.autoT<=0){ P.autoT=0; say(touchMode?'과부하 억제 끝':'자동 패링 끝','dim'); } }   // v3.16
 
   if(run.tut) tutTick(dt);   // v2.60 체험판
@@ -337,7 +337,8 @@ function update(dt){
         if(jump>20&&!wallBetween(b.x,b.y,nx,ny)){ burst(b.x,b.y,'#c27cff',6,110); b.x=nx; b.y=ny; b.trail.length=0; burst(b.x,b.y,'#c27cff',8,130); } }
       if(b.curl&&b.age<1.05) b.dir+=b.curl*2.7*dt;
       else if(b.sway&&P.phase<=0){ if(b.sb==null) b.sb=b.dir; b.sb+=norm(toP-b.sb)*Math.min(1,dt*2.2); b.dir=b.sb+Math.sin(b.age*7)*0.85*b.sway; }
-      else if(P.phase<=0 && !b.armor && !b.straight && !(b.trap&&!b.trapGo)) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
+      else if(P.phase<=0 && !b.armor && !b.straight && !(b.trap&&!b.trapGo)) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);
+      if(P.decoyHp!=null&&P.decoyT>0&&P.decoy&&!b.armor){ const dd=dist(b.x,b.y,P.decoy.x,P.decoy.y); if(dd<DECOY_PULL){ b.dir+=norm(Math.atan2(P.decoy.y-b.y,P.decoy.x-b.x)-b.dir)*Math.min(1,dt*9); b.straight=0; } }   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
     } else {
       /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
       /* v2.46 유도가 강하면 탄환이 적 주위를 원을 그리며 계속 도는 문제가 있었다.
@@ -495,7 +496,9 @@ function update(dt){
         bullets.splice(i,1); continue;
       }
     } else if(P.decoyT>0&&P.decoy&&dist(b.x,b.y,P.decoy.x,P.decoy.y)<R_PLAYER+R_BULLET){
-      burst(b.x,b.y,'cyan',8); bullets.splice(i,1); continue;
+      burst(b.x,b.y,'cyan',8); bullets.splice(i,1);
+      if(P.decoyHp!=null){ P.decoyHp--; if(P.decoyHp<=0){ burst(P.decoy.x,P.decoy.y,'cyan',20,200); say('미끼 파괴','dim'); sfx('breach'); P.decoyT=0; P.decoy=null; P.decoyHp=null; } }
+      continue;
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+((P.guard>0||P.absorbT>0)?14:0)){
       if(b.fake){ burst(b.x,b.y,'#c27cff',10,150); say('환상탄','warn'); bullets.splice(i,1); continue; }
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(b.x,b.y,'cyan',10); }
@@ -569,6 +572,7 @@ function spawnBullet(q){
     sway:q.spec.sway||0, curl:q.spec.curl?q.spec.curl*(q.spec.curlRand&&Math.random()<.5?-1:1):0, trap:q.spec.trap?1:0});
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
 }
+const DECOY_PULL=130;
 function prismSplit(b,w){
   const n=(w.prism===3?2:4)+(boonLv('s_prismsplit')?2:0), step=w.prism===3?(n===2?0.48:0.3):(n===4?0.34:0.28), base=b.dir;
   const spreads=Array.from({length:n},(_,k)=>(k-(n-1)/2)*step);
