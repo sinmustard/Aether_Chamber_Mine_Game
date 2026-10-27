@@ -237,10 +237,12 @@ function killEnemy(e){
   run.score+=Math.round(bonus*CFG.scoreMul); run.kills++;
   if(!run.tut){ stat('kills'); if(e.grade==='boss'){ stat('bossKills'); if(run.mode==='hard'||run.mode==='hotd') stat('hardBoss'); } }   // v2.68 · v3.53 핫드(하드보다 어려움)도 하드 보스 격파로 셈
   P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
-  if(boonLv('leech')&&P.hp>0) P.hp=Math.min(CFG.hpMax,P.hp+(e.grade==='boss'?10:2)*boonLv('leech'));
+  /* v3.79 환영 분신은 처치 회복 없음 — 보스를 살려 두고 계속 생기는 분신으로 체력을 채울 수 있었다 (점수 · 처치 수 · R 충전은 그대로) */
+  if(boonLv('leech')&&P.hp>0&&e.grade!=='illusion') P.hp=Math.min(CFG.hpMax,P.hp+(e.grade==='boss'?10:2)*boonLv('leech'));
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
   if(e.grade==='boss') hitstop=0.18; sfx(e.grade==='boss'?'boss':'kill');   // v2.61 일반 처치는 멈추지 않는다 (보스만 짧게) · v3.63 일반 처치가 hitstop을 0으로 덮어써 보스 처치 멈춤을 끊던 문제
-  if(e.grade==='boss'){ run.bossKills++; announce('보스 격파  +'+bonus,'cyan'); shake=20; }
+  if(e.grade==='boss'){ run.bossKills++; announce('보스 격파  +'+bonus,'cyan'); shake=20;
+    ens.forEach(o=>{ if(o.grade==='illusion') o.ttl=0; }); }   // v3.79 보스가 죽으면 환영 분신도 사라짐 — 예전엔 분신 수명(7초)이 끝날 때까지 웨이브가 안 끝나고 계속 쐈다
   else say('처치  +'+bonus,'cyan');
   ens.splice(idx,1);
   if(e.grade==='splitter') spawnSplinters(e);   // v2.1 분열형 — 처치되면 분열체 2기

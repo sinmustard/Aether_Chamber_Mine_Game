@@ -305,7 +305,8 @@ function update(dt){
       const room=CFG.maxB-(bullets.length+queue.length);
       if(room<=0){ e.fireT=0.25; return; }               // v1.7 A-3: 자리가 없으면 잠깐 뒤 재시도
       const p=pickPattern(e);
-      p.specs.slice(0,room).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:e.grade==='boss',
+      /* v3.79 big 패턴(8발 넘는 탄막)은 보스 탄막처럼 maxB+8까지 — 예전엔 SPRAY DOUBLE 9발이 maxB(8)에서 잘렸다 */
+      p.specs.slice(0,room+(p.big?8:0)).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:e.grade==='boss',
         hack:(e.hackT>0), src:e}));   // v2.29 해킹 중이면 내 편 탄환으로 나간다
       e.fireT=CFG.fire*(e.grade==='boss'?(e.p2?0.7:0.9):1)*(0.8+Math.random()*0.5);
     }
