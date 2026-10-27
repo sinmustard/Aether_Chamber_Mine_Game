@@ -64,7 +64,9 @@ function drawBody(x,y,r,color,hurt){
    assets/enemies/<grade>.png 하나만 넣어도 그 적만 이미지로 바뀐다 */
 const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
-loadSprite('mob','assets/enemies/mob.png');   // v3.11 원래 AI 이미지로 복귀
+loadSprite('mob','assets/enemies/mob.png');
+['gunner','weaver','mortar'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
+loadSprite('illusion','assets/enemies/boss.svg');   // v3.11 원래 AI 이미지로 복귀
 /* v2.89 커스텀 캐릭터 이미지 — 설정 → 게임에서 직접 올린다. 이 브라우저에만 저장되고(localStorage),
    단일 이미지(회전)나 4방향 이미지(위/아래/왼쪽/오른쪽, 방향에 맞춰 교체) 중 고를 수 있다 */
 function pimgKey(d){ return 'aether_pimg_'+d; }
@@ -219,7 +221,7 @@ function enemyFacing(e){
      추적자는 돌진 중엔 돌진 방향, 그 밖(추격 · 예비 동작 · 대기)엔 플레이어 쪽 — 예비 동작 중 lungeDir가 비어 엉뚱한 쪽을 보던 문제(v3.10.1) 해결 */
   if(e.grade==='tracker') return e.lungePhase==='dash'&&e.lungeDir!=null?e.lungeDir:toP;
   if(e.grade==='sniper') return e.aimOn&&e.aimAng!=null?e.aimAng:toP;
-  if(e.grade==='cannon') return toP;
+  if(e.grade==='cannon'||e.grade==='gunner') return toP;
   return null;
 }
 function drawEnemyBody(e){
@@ -736,7 +738,8 @@ function render(){
   if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
   drawGrid();drawObstacles();drawWallPreview();drawZone();drawMortars();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();drawBulletDebug();
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
-    drawEnemyBody(e); drawShield(e); drawHpBar(e);
+    if(e.grade==='illusion'){ ctx.save(); ctx.globalAlpha=.45+.2*Math.sin(performance.now()/90); drawEnemyBody(e); ctx.restore(); } else drawEnemyBody(e);
+    drawShield(e); drawHpBar(e);
     if(e.seizeFx>0){ const q=proj(e.x,e.y); ctx.save(); ctx.globalAlpha=e.seizeFx/0.35; ctx.strokeStyle=C.red; ctx.lineWidth=3;
       ctx.beginPath(); ctx.ellipse(q[0],q[1],e.r+SEIZE_R*(1.2-e.seizeFx),(e.r+SEIZE_R*(1.2-e.seizeFx))*SQUASH,0,0,TAU); ctx.stroke(); ctx.restore(); }
   });
