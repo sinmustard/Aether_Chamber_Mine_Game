@@ -34,11 +34,13 @@ function openStatChoice(){
   const rr=$('#rwReroll'); rr.disabled=true;
   renderRwRow(); sfx('ui');
 }
+function chaosPrismTrap(){ return {k:'c_ptrap',n:'강화 프리즘',d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 <span class="t-plus">+3</span><span class="t-minus">−3</span>',tag:'특수 특전',max:1,sp:1,chaos:1,fn:()=>{
+  run.prismAdj=(run.prismAdj||0)-3; announce('함정! 프리즘 가르기 횟수 −3','red'); sfx('breach'); shake=10; }}; }
 function chaosDisguise(){
   const pool=BOONS.filter(b=>boonLv(b.k)<b.max); if(!pool.length) return chaosPick();
   const look=pool[Math.floor(Math.random()*pool.length)];
   return {k:'c_dis',look:look.k,n:look.n,d:look.d,tag:look.tag,max:look.max,chaos:1,fn:()=>{
-    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max);
+    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&x.k!=='s_prismdur');
     if(sp.length&&Math.random()<0.6){ const r=sp[Math.floor(Math.random()*sp.length)]; run.boons[r.k]=(run.boons[r.k]||0)+1; r.fn(); stat('specials'); announce('위장된 특수 특전! — '+r.n,'warn'); }
     else { const c=chaosPick(); c.fn(); }
   }};
@@ -59,11 +61,11 @@ function openReward(afterBoss,fromReroll){
   /* v2.41 보스를 잡은 직후 보상은 특수 특전 확률 +30%p (최대 90%) */
   const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(run.mode==='chaosx'&&Math.random()<Math.max(spChance,0.25)){
-    const r=Math.random(), pick=r<0.25?chaosDisguise():r<0.42?chaosTrap():r<0.6?chaosPick():r<0.78?chaosPickHidden():chaosPlayerPick();
+    const r=Math.random(), pick=r<0.22?chaosDisguise():r<0.36?chaosTrap():r<0.46?chaosPrismTrap():r<0.62?chaosPick():r<0.8?chaosPickHidden():chaosPlayerPick();
     rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=pick;
   }
   else if(CFG.specialChance>0 && Math.random()<spChance){
-    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max);
+    const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&!(run.mode==='chaosx'&&x.k==='s_prismdur'));
     if(sp.length){ const pick=sp[Math.floor(Math.random()*sp.length)];   // v2.52 특수 특전이 들어가는 칸도 무작위
       if(rwPicks.length<3) rwPicks.splice(Math.floor(Math.random()*(rwPicks.length+1)),0,pick);
       else rwPicks[Math.floor(Math.random()*rwPicks.length)]=pick; }

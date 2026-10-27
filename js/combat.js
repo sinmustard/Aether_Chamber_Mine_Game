@@ -570,7 +570,8 @@ function spawnBullet(q){
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
 }
 function prismSplit(b,w){
-  const spreads=w.prism===3?[-0.24,0.24]:[-0.51,-0.17,0.17,0.51], base=b.dir;
+  const n=(w.prism===3?2:4)+(boonLv('s_prismsplit')?2:0), step=w.prism===3?(n===2?0.48:0.3):(n===4?0.34:0.28), base=b.dir;
+  const spreads=Array.from({length:n},(_,k)=>(k-(n-1)/2)*step);
   b.prismed=1; b.pdm=(b.pdm||1)/spreads.length; b.dir=base+spreads[0]; b.htg=null; b.trail.length=0;
   for(let k=1;k<spreads.length&&bullets.length<160;k++)
     bullets.push(Object.assign({},b,{dir:base+spreads[k],trail:[],tried:(b.tried||[]).slice(),htg:null}));
@@ -582,7 +583,7 @@ function prismSplit(b,w){
     burst(cx,cy,'#9be7ff',26,240); burst(cx,cy,'#c27cff',12,180); say('프리즘 깨짐','cyan'); sfx('breach'); shake=Math.max(shake,6);
   }
 }
-function prismMax(w){ return w.prism===3?8:5; }
+function prismMax(w){ return Math.max(1,(w.prism===3?8:5)+boonLv('prismdur')+boonLv('s_prismdur')*3+(run.prismAdj||0)); }
 function bossVolley(e,specs){
   const room=CFG.maxB+8-(bullets.length+queue.length); if(room<=0) return;
   specs.slice(0,room).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:true,hack:(e.hackT>0),src:e}));

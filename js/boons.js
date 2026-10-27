@@ -24,7 +24,8 @@ const BOONS=[
  {k:'leech',     n:'처치 회복',   d:'적을 처치할 때마다 체력 +2 (보스는 +10), 최대 3중첩',  max:3, tag:'생존',   fn:()=>{}},
  {k:'counter',   n:'역습',        d:'맞으면 2초 동안 이동 속도 +40 · 패링 사거리 +0.4m (레벨당)',  max:2, tag:'생존',   fn:()=>{}},   // v3.50
  {k:'fury',      n:'분노',        d:'맞을 때마다 R 충전 +5 (레벨당)',                          max:2, tag:'스킬',   fn:()=>{}},   // v3.50
- {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}}   // v2.52
+ {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}},   // v2.52
+ {k:'prismdur',  n:'프리즘 공명', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +1',  max:3, tag:'프리즘', fn:()=>{}}
 ];
 /* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
 const SPECIALS=[
@@ -37,7 +38,9 @@ const SPECIALS=[
  {k:'s_score',  n:'고득점 회로', d:'이번 판 점수 배율 ×1.35',                              max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.scoreMul*=1.35;}},
  /* v2.45 패링 범위 — 각각 한 번만 */
  {k:'s_range',  n:'장거리 감응', d:'패링 사거리 +20%',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.rangeM*=1.2;}},
- {k:'s_fov',    n:'광역 감응',   d:'패링 시야각 +25°',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.fov=Math.min(180,CFG.fov+25);}}
+ {k:'s_fov',    n:'광역 감응',   d:'패링 시야각 +25°',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.fov=Math.min(180,CFG.fov+25);}},
+ {k:'s_prismsplit', n:'분광',   d:'프리즘 벽에서 갈라지는 탄환 +2 (피해를 합치면 그대로)',   max:1, tag:'특수 특전', sp:1, fn:()=>{}},
+ {k:'s_prismdur',   n:'강화 프리즘', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +3',      max:1, tag:'특수 특전', sp:1, fn:()=>{}}
 ];
 const boonDef=k=>BOONS.find(x=>x.k===k)||SPECIALS.find(x=>x.k===k);
 const boonLv=k=>(run&&run.boons&&run.boons[k])||0;
