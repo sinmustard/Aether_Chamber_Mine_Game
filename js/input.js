@@ -368,7 +368,8 @@ function wallCandidate(){
 function wallProblem(o){
   if(rectHit(P.x,P.y,R_PLAYER+4,o.col)) return 'TOO CLOSE';
   if(ens.some(e=>rectHit(e.ax,e.ay,e.r+60,o.col))) return 'ENEMY IN THE WAY';
-  const keep=(run.walls.length>=CFG.wallMax?run.walls.slice(1):run.walls).concat(run.mapWalls);   // 꽉 찼으면 가장 오래된 벽은 곧 사라짐. 맵 장애물은 항상 유지
+  const own=o.prism?run.walls.filter(q=>!q.prism):run.walls;
+  const keep=(own.length>=CFG.wallMax?own.slice(1):own).concat(run.mapWalls);   // 꽉 찼으면 가장 오래된 벽은 곧 사라짐. 맵 장애물은 항상 유지
   if(keep.some(q=>rectGap(q.col,o.col)<WALL_GAP)) return 'NEED SPACE';
   return '';
 }
@@ -465,6 +466,7 @@ function doWall(){
   if(paused||!CFG.wallMax||P.wallCd>0||P.hp<=0)return;
   const o=wallCandidate(), err=wallProblem(o);
   if(err){ say(err,'red'); sfx('miss'); P.wallCd=0.25; return; }
+  if(o.prism&&run.walls.some(q=>q.prism)){ run.walls=run.walls.filter(q=>!q.prism); say('이전 프리즘은 사라짐','dim'); }
   if(run.walls.length>=CFG.wallMax) run.walls.shift();
   run.walls.push(o); P.wallCd=P.qCdMax=(run.phase==='build'?0.2:WALL_CD*(CFG.cdrMul||1));
   say('벽 '+run.walls.length+' / '+CFG.wallMax,'cyan'); sfx('wall');

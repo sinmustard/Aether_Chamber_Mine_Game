@@ -40,6 +40,7 @@ function prismPts(o,n){
 function drawPrism(o,ghost,bad){
   const HG=WALL_HG, n=o.prism, g=prismPts(o,n), t=g.map(p=>[p[0],p[1]-HG]);
   ctx.save();
+  if(!ghost&&o.hits) ctx.globalAlpha=0.45+0.55*(1-o.hits/prismMax(o));
   if(ghost){ ctx.setLineDash([5,6]); ctx.lineWidth=1.5; ctx.strokeStyle=bad?'rgba(255,59,82,.5)':'rgba(155,231,255,.6)';
     ctx.beginPath(); t.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke();
     ctx.beginPath(); g.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); ctx.restore(); return; }
@@ -50,7 +51,9 @@ function drawPrism(o,ghost,bad){
   ctx.fillStyle='rgba(190,240,255,.30)'; ctx.beginPath(); t.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill();
   const xs=t.map(p=>p[0]), gr=ctx.createLinearGradient(Math.min(...xs),0,Math.max(...xs),0);
   ['#ff6b81','#ffd34d','#57e389','#6fd3ff','#c27cff'].forEach((c,i)=>gr.addColorStop(i/4,c));
-  ctx.strokeStyle=gr; ctx.lineWidth=1.6; ctx.globalAlpha=.85+.15*Math.sin(performance.now()/300); ctx.stroke();
+  ctx.strokeStyle=gr; ctx.lineWidth=1.6; ctx.globalAlpha*=.85+.15*Math.sin(performance.now()/300); ctx.stroke();
+  if(o.hits){ ctx.strokeStyle='rgba(230,250,255,.7)'; ctx.lineWidth=1; const c=t.reduce((a,p)=>[a[0]+p[0]/n,a[1]+p[1]/n],[0,0]);
+    for(let k=0;k<Math.min(o.hits,n);k++){ const p=t[k]; ctx.beginPath(); ctx.moveTo(c[0],c[1]); ctx.lineTo(c[0]+(p[0]-c[0])*0.8,c[1]+(p[1]-c[1])*0.8); ctx.stroke(); } }
   ctx.restore();
 }
 function drawObstacles(){
