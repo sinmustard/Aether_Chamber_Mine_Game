@@ -213,7 +213,9 @@ const PATTERNS=[
  {n:'ARC PAIR',d:'양쪽으로 크게 휘어 모이는 2발', specs:[{t:0,curl:1,ang:-0.35},{t:0,curl:-1,ang:0.35}]},
  {n:'SPIRAL',  d:'소용돌이치며 퍼졌다 모이는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:k*Math.PI/2,curl:1}))},
  {n:'SPRAY',   d:'부채꼴로 흩뿌리는 느린 5발', specs:[0,1,2,3,4].map(k=>({t:k*0.07,ang:-0.9+k*0.45,slow:0.75,straight:1}))},
- {n:'TRAP',    d:'퍼져서 멈춰 있다가 한꺼번에 날아오는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:Math.PI/4+k*Math.PI/2,trap:1}))}
+ {n:'TRAP',    d:'퍼져서 멈춰 있다가 한꺼번에 날아오는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:Math.PI/4+k*Math.PI/2,trap:1}))},
+ {n:'SPRAY DOUBLE', d:'두 번 연달아 엇갈려 흩뿌리는 9발', specs:[0,1,2,3,4].map(k=>({t:k*0.06,ang:-0.9+k*0.45,slow:0.75,straight:1})).concat([0,1,2,3].map(k=>({t:0.45+k*0.06,ang:-0.675+k*0.45,slow:0.7,straight:1})))},
+ {n:'SPRAY RAKE', d:'좌우로 훑으며 흩뿌리는 7발', specs:[0,1,2,3,4,5,6].map(k=>({t:k*0.09,ang:-1.0+k*0.333,slow:0.8,straight:1}))}
 ];
 /* v1.3 — 등급별 패턴 풀. 잡몹은 기본기, 엘리트는 조건 시험.
    v2.6부터 등급마다 고유 패턴(RUSH/VOLLEY/CLEAVE/JAB)을 하나씩 섞어 실루엣이 겹치지 않게 했다 */
@@ -226,7 +228,7 @@ const POOL={
   cannon:[9],
   gunner:[10,10,16,12],
   weaver:[19,20,21],
-  sprayer:[22,22,17],
+  sprayer:[22,22,24,25],
   trapper:[23],
   mortar:[0,1],
   illusion:[1,3]
