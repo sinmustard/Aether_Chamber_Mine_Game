@@ -252,6 +252,7 @@ function doParry(force){
     const echoes=[];
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
+      if(t.trap){ t.trapGo=1; t.spd=Math.max(t.spd,t.base); }
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce');                                   // v3.1 관통 스택 — 패링마다 갱신
       t.glow=1; t.hcd=0.15; t.ready=false;
@@ -389,6 +390,7 @@ function doR(){
     const all=ens.slice().sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y));
     ts.forEach((t,i)=>{
       t.owner='player'; t.returns++; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime;   // v2.46
+      if(t.trap){ t.trapGo=1; t.spd=Math.max(t.spd,t.base); }
       t.spd=Math.min(t.spd*CFG.accel,cap());
       t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.tried=[]; t.ready=false;
       /* v3.00 예전엔 플레이어 기준 가까운 순서로 돌려가며 노려서, 탄환 자리에서 벽 · 방패 뒤인 적에게도 쏴 벽에 튕겼다 → 탄환 자리에서 보이는 적 우선 */
@@ -424,6 +426,7 @@ function doR(){
       const seen=ens.filter(e=>!G(e).shield&&!wallBetween(t.x,t.y,e.x,e.y)).sort((a,b)=>dist(a.x,a.y,t.x,t.y)-dist(b.x,b.y,t.x,t.y));
       const pool=seen.length?seen:ens, tg=pool.length?pool[i%Math.min(pool.length,3)]:null;
       t.owner='player'; t.returns+=g?2:1; t.feint=0; t.orbitAmt=0; t.homeT=CFG.homeTime; t.armor=0;
+      if(t.trap){ t.trapGo=1; t.spd=Math.max(t.spd,t.base); }
       t.spd=Math.min(t.spd*CFG.accel*(g?1.3:1),cap()); t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.ready=false;
       t.tried=ens.filter(e=>dist(e.x,e.y,t.x,t.y)<e.r+SEIZE_R+20); t.htg=tg;
       t.dir=tg?Math.atan2(tg.y-t.y,tg.x-t.x):Math.atan2(t.y-cy,t.x-cx);
