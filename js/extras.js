@@ -20,7 +20,14 @@ spawnBullet=function(q){ const n=bullets.length; _spawnBullet(q);
     bullets[i].from=s?(s.grade==='boss'?'알레테이아 · '+(VKO[s.variant]||'기본형'):KO[s.grade]||s.grade):'적'; } };
 
 /* ---- 적 등장: 엘리트 접두사 · 보스 시간 · 경고 띠 ---- */
-const AFFIX=[['강철','최대 체력 ×1.6'],['재생','맞지 않으면 체력 회복'],['분노','발사 간격 ×0.6']];
+const AFFIX=[['강철','최대 체력 ×1.6','#9fb3c8'],['재생','맞지 않으면 체력 회복','#57e389'],['분노','발사 간격 ×0.6','#ff4d6a'],
+  ['신속','이동 속도 ×1.5','#ffd34d'],['분열','죽으면 잡졸 2기로 갈라짐','#ff9f43'],['흡혈','이 적의 탄에 맞으면 그 적이 1칸 회복','#ff4d8d'],
+  ['다중','쏠 때마다 양옆으로 탄이 하나씩 더','#c77dff'],['점멸','4초마다 근처 다른 자리로 순간이동','#6fd3ff'],['가시','내 탄에 맞을 때마다 탄 2발로 반격','#ff7a3d']];
+window.ELITE_AFFIX=AFFIX;   // 테스트 · 도감에서 읽음
+const affixCol=a=>(AFFIX.find(x=>x[0]===a)||[])[2]||C.red;
+function exShot(x,y,dir,src,from){ const s=CFG.spd;   // 접두사 · 흡수체가 직접 내보내는 적 탄 (유도 없이 직선)
+  bullets.push({x,y,dir,spd:s,base:s,owner:'enemy',returns:0,boss:0,age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
+    feint:0,orbitDir:0,orbitAmt:0,straight:1,zig:0,fake:0,blink:0,from,srcE:src}); }
 const _spawnEnemy=spawnEnemy;
 spawnEnemy=function(grade){ const n=ens.length, r=_spawnEnemy.apply(this,arguments), e=ens.length>n?ens[ens.length-1]:null;
   if(e&&run){ const I=exRun();
@@ -41,6 +48,7 @@ onHurt=function(){ const I=run&&exRun();
     else if(ens.some(e=>e.grade==='tracker'&&dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER+40)) name='추적자 돌진';
     else name='알 수 없음';
     exBlame(I,loss,name); I.lastHp=P.hp;
+    const sE=hit&&hit.srcE; if(sE&&sE.affix==='흡혈'&&ens.includes(sE)&&loss>0){ sE.hp=Math.min(sE.hpMax,sE.hp+HIT_UNIT); burst(sE.x,sE.y,'#ff4d8d',10,140); }
     if(feat('streak')){ if(I.streak>=5) say('연속 패링 '+I.streak+' 끊김','red'); I.streak=0; } }
   return _onHurt.apply(this,arguments); };
 
@@ -62,7 +70,7 @@ update=function(dt){
   I.lastHp=P.hp;
   I.snap={near:bullets.filter(b=>b.owner==='enemy'&&dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+60),
           mort:(run.mortars||[]).filter(z=>dist(z.x,z.y,P.x,P.y)<z.r)};
-  ens.forEach(e=>{ if(e.affix){ e._pf=e.fireT; e._ph=e.hp; } });
+  ens.forEach(e=>{ if(e.affix){ e._pf=e.fireT; e._ph=e.hp; e._pax=e.ax; e._pay=e.ay; } });
   _update(dt);
   if(!run||run.ex!==I) return;
   if(P.hp<I.lastHp&&P.hp>0) exBlame(I,I.lastHp-P.hp,'가장자리 압박');
@@ -76,7 +84,17 @@ update=function(dt){
   ens.forEach(e=>{ if(!e.affix) return;
     if(e.affix==='분노'&&e._pf!=null&&e.fireT>e._pf+0.05) e.fireT*=0.6;
     if(e.affix==='재생'){ if(e._ph!=null&&e.hp<e._ph) e._rw=2; e._rw=(e._rw||0)-dt;
-      if(e._rw<=0&&e.hp>0) e.hp=Math.min(e.hpMax,e.hp+e.hpMax*0.05*dt); } });
+      if(e._rw<=0&&e.hp>0) e.hp=Math.min(e.hpMax,e.hp+e.hpMax*0.05*dt); }
+    const held=e.bindT>0||e.frozenT>0;
+    if(e.affix==='신속'&&!held&&e._pax!=null){ const nx=clamp(e.ax+(e.ax-e._pax)*0.5,40,WORLD.w-40), ny=clamp(e.ay+(e.ay-e._pay)*0.5,40,WORLD.h-40);
+      [e.ax,e.ay]=wallSlide(e.ax,e.ay,nx,ny,e.r); }
+    if(e.affix==='점멸'&&!held){ e._blk=(e._blk==null?4:e._blk)-dt;
+      if(e._blk<=0){ e._blk=4; const sp=enemySpot(e,true); if(sp){ burst(e.x,e.y,'#6fd3ff',12,160); e.ax=e.x=sp[0]; e.ay=e.y=sp[1]; e.wp=null; burst(e.x,e.y,'#6fd3ff',12,160); } } }
+    if(e.affix==='가시'&&e._ph!=null&&e.hp<e._ph&&e.hp>0){ const a=Math.atan2(P.y-e.y,P.x-e.x);
+      [-0.18,0.18].forEach(o=>exShot(e.x+Math.cos(a+o)*(e.r+8),e.y+Math.sin(a+o)*(e.r+8),a+o,e,'엘리트 · 가시')); } });
+  // 다중: 이 엘리트가 막 쏜 탄 옆에 하나씩 더 (한 발에 한 번만)
+  for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.owner!=='enemy'||b._mx||!b.srcE||b.srcE.affix!=='다중'||b.age>0.15) continue;
+    b._mx=1; [-0.22,0.22].forEach(o=>bullets.push(Object.assign({},b,{dir:b.dir+o,trail:[],tried:[],_mx:1}))); }
   if(I.warn>0) I.warn-=dt;
   if(feat('lowhp')&&P.hp>0&&P.hp<=CFG.hpMax*0.3&&!paused){ I.hb-=dt;
     if(I.hb<=0){ I.hb=P.hp<=CFG.hpMax*0.15?0.55:0.85; tone(72,48,0.13,'sine',0.22); tone(66,44,0.1,'sine',0.16,0.17); } }
@@ -108,7 +126,7 @@ drawEnemyBody=function(e){ _drawEnemyBody(e);
     ctx.save(); ctx.font='700 11px ui-monospace,monospace'; ctx.textAlign='center';
     const t='« '+e.affix+' »', w=ctx.measureText(t).width+10;
     ctx.fillStyle='rgba(8,12,17,.75)'; ctx.fillRect(p[0]-w/2,p[1]+e.r*0.75+4,w,15);
-    ctx.fillStyle=e.affix==='강철'?'#9fb3c8':e.affix==='재생'?'#57e389':C.red; ctx.fillText(t,p[0],p[1]+e.r*0.75+15); ctx.restore(); } };
+    ctx.fillStyle=affixCol(e.affix); ctx.fillText(t,p[0],p[1]+e.r*0.75+15); ctx.restore(); } };
 const _drawHUD=drawHUD;
 drawHUD=function(){ const I=run&&exRun(), W=VW;
   if(I&&feat('lowhp')&&P.hp>0&&P.hp<=CFG.hpMax*0.3){ const beat=Math.max(0,Math.sin(performance.now()/(P.hp<=CFG.hpMax*0.15?90:140)));
@@ -342,6 +360,7 @@ killEnemy=function(e){
   if(feat('finish')&&run&&!run.tut&&e) bullets.forEach(b=>{ if(b.owner==='player'&&b.returns>=5&&dist(b.x,b.y,e.x,e.y)<e.r+R_BULLET+30&&(!fin||b.returns>fin.returns)) fin=b; });
   const r=_killEnemy2.apply(this,arguments);
   if(!run||!e) return r;
+  if(e.affix==='분열'){ [-1,1].forEach(o=>spawnEnemyAt('minion',e.x+o*28,e.y)); say('분열','warn'); }   // 접두사 분열: 잡졸 2기
   if(fin){ const bonus=Math.round((G(e).score||50)*0.5*(CFG.scoreMul||1)); run.score+=bonus;
     announce('랠리 피니시 ×'+fin.returns+'  +'+bonus,'warn'); burst(e.x,e.y,'warn',30,320); shake=Math.max(shake,12); missionAdd('rally'); }
   if(e.grade==='absorber'&&e.pAbs){ const bonus=Math.round(GRADES.absorber.eatScore*e.pAbs*(CFG.scoreMul||1)); run.score+=bonus; say('흡수 보너스 +'+bonus,'warn'); }

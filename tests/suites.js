@@ -596,4 +596,43 @@ module.exports = {
     t.ok(rush.screen === 'result' && /보스 러시 — 완주/.test(rush.txt), '네 변형을 다 잡으면 완주 시간과 함께 결과 화면', rush.txt.replace(/\n/g, ' / '));
     noErrors(t, g, '추가 기능 새 적 · 모드'); await p.close();
   },
+
+  async '엘리트 접두사 9종 (v3.95)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1500);
+    const r = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
+      const fresh = (aff) => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1;
+        spawnEnemyAt('elite', 500, 300); const e = ens[ens.length - 1]; e.affix = aff; e.fireT = 99; return e; };
+      o.count = (window.ELITE_AFFIX || []).length;
+      // 신속: 같은 상태에서 30프레임 — 접두사 있을 때 더 멀리
+      const rnd = Math.random; Math.random = () => 0.5;
+      let e = fresh(''); e.wp = [e.ax + 400, e.ay]; e.wpLos = false; e.wpT = 0; const S = JSON.stringify({ ax: e.ax, ay: e.ay, x: e.x, y: e.y, drift: e.drift, wp: e.wp });
+      const ax0 = e.ax; step(30); const plain = Math.abs(e.ax - ax0);
+      Object.assign(e, JSON.parse(S), { wpT: 0, affix: '신속' }); step(30); const fast = Math.abs(e.ax - ax0);
+      Math.random = rnd; o.speed = plain > 0 ? fast / plain : 0;
+      // 분열
+      e = fresh('분열'); const n0 = ens.length; killEnemy(e); o.split = ens.filter(x => x.grade === 'minion').length;
+      // 다중
+      e = fresh('다중'); bullets.push({ x: e.x - 50, y: e.y, dir: Math.PI, spd: 100, base: 100, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1, srcE: e });
+      step(1); o.multi = bullets.filter(b => b.srcE === e).length;
+      // 점멸
+      e = fresh('점멸'); const bx = e.x, by = e.y; e._blk = 0.01; step(2); o.blink = Math.hypot(e.x - bx, e.y - by);
+      // 가시: 내 탄에 맞으면 탄 2발
+      e = fresh('가시'); e.bindT = 99; const hp0 = e.hp;
+      bullets.push({ x: e.x - 60, y: e.y, dir: 0, spd: 300, base: 300, owner: 'player', returns: 1, age: 0, trail: [], glow: 1, hcd: 0, tried: [e], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, pierceLeft: 0, htg: e });
+      step(20); o.thornHit = e.hp < hp0; o.thorn = bullets.filter(b => b.from === '엘리트 · 가시').length;
+      // 흡혈: 이 적의 탄에 맞으면 1칸 회복
+      e = fresh('흡혈'); e.hp = e.hpMax - HIT_UNIT * 2; const hv = e.hp; CFG.god = 0; P.inv = 0; P.barrier = 0; P.guard = 0; P.absorbT = 0; P.phase = 0; P.hp = CFG.hpMax;
+      bullets.push({ x: P.x + 40, y: P.y, dir: Math.PI, spd: 200, base: 200, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1, srcE: e, _mx: 1 });
+      step(20); o.leechHurt = P.hp < CFG.hpMax; o.leech = Math.round((e.hp - hv) / HIT_UNIT * 100) / 100; CFG.god = 1;
+      return o; }).catch(e => ({ err: e.message }));
+    t.ok(!r.err, '접두사 동작 확인 중 오류 없음', r.err);
+    t.eq(r.count, 9, '접두사 9종');
+    t.ok(r.speed > 1.3, '신속: 같은 상황에서 더 멀리 움직임', '×' + (r.speed || 0).toFixed(2));
+    t.eq(r.split, 2, '분열: 죽으면 잡졸 2기');
+    t.eq(r.multi, 3, '다중: 쏜 탄 1발 → 3발');
+    t.ok(r.blink > 40, '점멸: 순간이동', Math.round(r.blink || 0) + 'px');
+    t.ok(r.thornHit && r.thorn === 2, '가시: 내 탄에 맞으면 탄 2발로 반격', JSON.stringify({ hit: r.thornHit, n: r.thorn }));
+    t.ok(r.leechHurt && r.leech === 1, '흡혈: 이 적의 탄에 맞으면 그 적이 1칸 회복', JSON.stringify({ hurt: r.leechHurt, heal: r.leech }));
+    noErrors(t, g, '접두사'); await p.close();
+  },
 };
