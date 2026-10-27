@@ -63,7 +63,8 @@ function drawBody(x,y,r,color,hurt){
 /* v2.2 적 스프라이트 — 등급별 이미지가 있으면 그걸 쓰고, 없으면 기존 벡터 도형으로 대체한다.
    assets/enemies/<grade>.png 하나만 넣어도 그 적만 이미지로 바뀐다 */
 const SPRITES={};
-function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
+const ASSET_V=(((document.querySelector('.caption')||{}).textContent||'').match(/v([0-9.]+)/)||[])[1]||'';
+function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src+(ASSET_V&&src.indexOf('assets/')===0?'?v='+ASSET_V:''); }
 loadSprite('mob','assets/enemies/mob.png');
 ['gunner','weaver','mortar','sprayer','trapper','elite','boss'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
 ['warden','phantom','collapse'].forEach(v=>loadSprite('boss_'+v,'assets/enemies/boss_'+v+'.webp'));
