@@ -65,7 +65,7 @@ function drawBody(x,y,r,color,hurt){
 const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
 loadSprite('mob','assets/enemies/mob.png');
-['gunner','weaver','mortar','sprayer','trapper'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
+['gunner','weaver','mortar','sprayer','trapper','elite','boss'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
 ['warden','phantom','collapse'].forEach(v=>loadSprite('boss_'+v,'assets/enemies/boss_'+v+'.webp'));
 loadSprite('illusion','assets/enemies/boss_phantom.webp');   // v3.11 원래 AI 이미지로 복귀
 /* v2.89 커스텀 캐릭터 이미지 — 설정 → 게임에서 직접 올린다. 이 브라우저에만 저장되고(localStorage),
@@ -212,7 +212,7 @@ function readPImgFile(file,removeBg){
 loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.svg');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
-['elite','boss','relay','splitter','splinter','tracker','summoner','minion','healer','sniper','cannon']
+['relay','splitter','splinter','tracker','summoner','minion','healer','sniper','cannon']
   .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
 /* v3.10.1 분열체는 항상 플레이어 쪽을 보고 회전한다(계속 다가붙는 적이라 방향이 보이는 게 자연스럽다) */
 function enemyFacing(e){
