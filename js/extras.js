@@ -221,9 +221,9 @@ const normalRun=()=>run&&!run.tut&&!run.practice&&!run.rush;
 const exMode=()=>run&&run.mode!=='daily'&&run.mode!=='chaosx';
 
 /* ---- 새 적: 흡수체 ---- */
-GRADES.absorber={hits:3,r:34,pool:'mob',score:140,seize:0.44,noFire:true,vector:true};   // vector: 전용 이미지 없이 도형으로 그림
+GRADES.absorber={hits:3,r:34,pool:'mob',score:140,seize:0.44,noFire:true,eatP:0.3,eatScore:40};   // eatP: 내 탄을 먹을 확률 · eatScore: 먹은 내 탄 1발당 처치 점수
 ENEMY_COL.absorber='#9b6bff'; KO.absorber='흡수체';
-DEX2.push(['absorber','주변 적 탄을 빨아들여 커지고, 죽으면 모은 만큼 사방으로 터뜨린다.']);
+DEX2.push(['absorber','적 탄을 빨아들여 커지고 내 탄도 30%는 먹는다. 죽으면 모은 만큼 터지고, 먹은 내 탄마다 점수 +40.']);
 { const dbg=$('#debugSpawn'); if(dbg){ const b=document.createElement('button'); b.dataset.spawn='absorber'; b.textContent='흡수체';
   dbg.insertBefore(b,dbg.querySelector('[data-spawn=clear]')); } }
 
@@ -294,9 +294,20 @@ drawObstacles=function(){ _drawObstacles(); if(!run||!run.mapWalls) return; cons
     ctx.strokeStyle=C.cyan; ctx.lineWidth=1.5; ctx.strokeRect(a[0]+.5,a[1]-HG+.5,w-1,d-1);
     ctx.fillStyle='#e9f7ff'; ctx.font='700 10px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillText('거울',a[0]+w/2,a[1]-HG+d/2+4); }); };
 
+/* ---- 흡수체가 내 탄을 먹는다: 닿기 직전 30% — 먹으면 충전 +2(터질 때 탄 +2), 잡을 때 점수 +40씩 ---- */
+
+function absorbPlayerShots(dt){
+  for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.owner!=='player') continue;
+    for(const e of ens){ if(e.grade!=='absorber'||e.hp<=0||(b.absRoll&&b.absRoll.includes(e))) continue;
+      if(dist(b.x,b.y,e.x,e.y)>e.r+R_BULLET+b.spd*dt+4) continue;
+      (b.absRoll||(b.absRoll=[])).push(e);   // 적 하나당 한 번만 굴린다
+      if(Math.random()<GRADES.absorber.eatP){ bullets.splice(i,1); e.charge=(e.charge||0)+2; e.pAbs=(e.pAbs||0)+1;
+        e.r=Math.min(64,GRADES.absorber.r+e.charge*2.5); burst(e.x,e.y,'cyan',12,140); say('흡수당함 · 충전 +2','warn'); break; } } } }
+
 /* ---- 매 프레임: 웨이브 끝 정산 · 흡수체 · 거울 · 반응 시간 · 안내 시간 ---- */
 const _update2=update;
 update=function(dt){
+  if(run&&screen==='game') absorbPlayerShots(dt);
   const ph0=run&&run.phase; _update2(dt);
   if(!run||screen!=='game') return;
   const I=exRun();
@@ -333,7 +344,8 @@ killEnemy=function(e){
   if(!run||!e) return r;
   if(fin){ const bonus=Math.round((G(e).score||50)*0.5*(CFG.scoreMul||1)); run.score+=bonus;
     announce('랠리 피니시 ×'+fin.returns+'  +'+bonus,'warn'); burst(e.x,e.y,'warn',30,320); shake=Math.max(shake,12); missionAdd('rally'); }
-  if(e.grade==='absorber'&&e.charge>0){ const n=Math.min(18,4+e.charge);
+  if(e.grade==='absorber'&&e.pAbs){ const bonus=Math.round(GRADES.absorber.eatScore*e.pAbs*(CFG.scoreMul||1)); run.score+=bonus; say('흡수 보너스 +'+bonus,'warn'); }
+  if(e.grade==='absorber'&&e.charge>0){ const n=Math.min(24,4+e.charge);
     for(let i=0;i<n;i++){ const a=i/n*TAU, s=CFG.spd*0.8;
       bullets.push({x:e.x+Math.cos(a)*(e.r+8),y:e.y+Math.sin(a)*(e.r+8),dir:a,spd:s,base:s,owner:'enemy',returns:0,boss:0,age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
         feint:0,orbitDir:0,orbitAmt:0,straight:1,zig:0,fake:0,blink:0,from:'흡수체 폭발',fromAbs:1}); }

@@ -514,9 +514,9 @@ module.exports = {
     const a = await p.evaluate(async () => { const o = {}, sleep = ms => new Promise(r => setTimeout(r, ms));
       o.first = (run.ex.firstQ || []).map(f => f.g).join(); CFG.god = 1; run.phase = 'fight';
       // 흡수체: 다가오는 적 탄을 먹고, 죽으면 모은 만큼 터뜨림
-      ens.length = 0; bullets.length = 0; queue.length = 0; spawnEnemy('absorber'); const ab = ens[0]; ab.x = ab.ax = 700; ab.y = ab.ay = 300;
+      ens.length = 0; bullets.length = 0; queue.length = 0; spawnEnemy('absorber'); const ab = ens[0]; ab.x = ab.ax = 700; ab.y = ab.ay = 300; ab.bindT = 99;
       const mk = (x, y, dir) => ({ x, y, dir, spd: 200, base: 200, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1 });
-      bullets.push(mk(560, 300, 0), mk(700, 160, Math.PI / 2), mk(560, 380, -0.2)); await sleep(1300);
+      await sleep(50); bullets.push(mk(ab.x - 140, ab.y, 0), mk(ab.x, ab.y - 140, Math.PI / 2), mk(ab.x - 130, ab.y + 50, -0.37)); await sleep(1300);   // 흡수체 실제 자리 기준 (벽에 밀려 옮겨질 수 있음)
       o.charge = ab.charge; killEnemy(ab); o.boom = bullets.filter(b => b.from === '흡수체 폭발').length;
       // 거울 벽: 내 탄이 닿으면 적 쪽으로 꺾임
       bullets.length = 0; ens.length = 0; const m = run.mapWalls.find(w => w.mirror); o.mirrorWall = !!m && !m.prism;
@@ -530,7 +530,7 @@ module.exports = {
       bullets.length = 0;
       return o; });
     t.ok(/mob/.test(a.first), '첫 등장 안내 — 처음 보는 잡몹', a.first);
-    t.ok(a.charge >= 3 && a.boom === Math.min(18, 4 + a.charge), '흡수체: 적 탄을 빨아들이고 죽으면 4+모은 수만큼 터짐', a.charge + ' → ' + a.boom);
+    t.ok(a.charge >= 3 && a.boom === Math.min(24, 4 + a.charge), '흡수체: 적 탄을 빨아들이고 죽으면 4+모은 수만큼 터짐', a.charge + ' → ' + a.boom);
     t.ok(a.mirrorWall && a.bent >= 1, '거울 벽(프리즘 아님)에 닿은 내 탄이 적 쪽으로 꺾임', JSON.stringify({ w: a.mirrorWall, b: a.bent }));
     t.ok(a.finish > 0, '왕복 5회 이상 탄으로 처치 → 랠리 피니시 보너스', '+' + a.finish);
     const solo = await p.evaluate(async () => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1;
@@ -538,6 +538,17 @@ module.exports = {
       for (let i = 0; i < 25; i++) { await new Promise(r => setTimeout(r, 100)); own = Math.max(own, bullets.filter(b => b.srcE === ab).length); }
       const o = { own, charge: ab.charge || 0 }; ens.length = 0; bullets.length = 0; return o; });
     t.ok(solo.own > 0 && solo.charge === 0, '흡수체 혼자 남으면 쏘고 자기 탄은 안 먹음 — 패링해서 잡을 수 있음', JSON.stringify(solo));
+    const pab = await p.evaluate(async () => { const sleep = ms => new Promise(r => setTimeout(r, ms)), o = {};
+      ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; const rnd = Math.random;
+      const shot = (e) => bullets.push({ x: e.x - 70, y: e.y, dir: 0, spd: 300, base: 300, owner: 'player', returns: 2, age: 0, trail: [], glow: 1, hcd: 0, tried: [e], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, pierceLeft: 0, htg: e });   // tried: 재탈취 안 함
+      spawnEnemy('absorber'); const ab = ens[ens.length - 1]; ab.x = ab.ax = 600; ab.y = ab.ay = 300; ab.fireT = 99; ab.bindT = 99; await sleep(50); const hp0 = ab.hp;   // 구속으로 제자리에
+      GRADES.absorber.eatP = 1; shot(ab); await sleep(600); o.ate = { charge: ab.charge || 0, pAbs: ab.pAbs || 0, hp: ab.hp === hp0 };
+      GRADES.absorber.eatP = 0; shot(ab); await sleep(600); o.hit = ab.hp < hp0 || !ens.includes(ab); GRADES.absorber.eatP = 0.3;
+      const s0 = run.score; if (ens.includes(ab)) killEnemy(ab); o.bonus = msgs.some(m => /흡수 보너스 \+40/.test(m.text)); o.gain = Math.round(run.score - s0);
+      ens.length = 0; bullets.length = 0; return o; });
+    t.ok(pab.ate.charge === 2 && pab.ate.pAbs === 1 && pab.ate.hp, '내 탄도 확률로 먹음 — 먹으면 피해 없이 충전 +2', JSON.stringify(pab.ate));
+    t.ok(pab.hit, '확률에 안 걸린 내 탄은 그대로 맞음');
+    t.ok(pab.bonus, '먹은 내 탄 1발 → 흡수체를 잡을 때 점수 +40', '+' + pab.gain);
     // 위험 계약: 웨이브 비우기 → 3초 안에 T → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
     await p.evaluate(() => { ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
     for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);
