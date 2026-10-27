@@ -155,6 +155,11 @@ $('#debugSpawn').addEventListener('click',e=>{
   const b=e.target.closest('[data-spawn]'); if(!b||screen!=='game'||!run)return;
   const k=b.dataset.spawn;
   if(k==='clear'){ ens.length=0; bullets.length=0; queue.length=0; say('전부 제거','warn'); }
+  else if(k==='boss'||k.startsWith('boss:')){ const v=k.split(':')[1]||'core'; spawnEnemy('boss'); const bb=ens[ens.length-1]; bb.variant=v;
+    if(v==='warden'){ bb.shieldArc=120; bb.sa=Math.atan2(P.y-bb.y,P.x-bb.x); bb.hp*=1.15; bb.hpMax=bb.hp; bb.wardT=6; }
+    if(v==='phantom'){ bb.hp*=0.85; bb.hpMax=bb.hp; bb.blinkT=4.5; }
+    if(v==='collapse'){ bb.hp*=1.35; bb.hpMax=bb.hp; }
+    say('소환 보스 · '+v,'warn'); }
   else{ spawnEnemy(k); say('소환 '+k,'warn'); }
   sfx('ui');
 });
