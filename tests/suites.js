@@ -293,4 +293,112 @@ module.exports = {
     t.ok(Object.values(r.fired).every(n => n >= 3), '실제 전투에서 변종마다 자기 패턴을 쏨', JSON.stringify(r.fired));
     noErrors(t, g, '보스 패턴'); await p.close();
   },
+
+  /* ---- v3.61 ~ v3.71 새 적 · 보스 · 판 기록표 ---- */
+  async '새 적 등장 조건 · 패턴 (v3.61 · v3.71)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const seen = await p.evaluate(() => { const out = {};
+      for (const c of [1, 2]) for (let w = 3; w <= 10; w++) { run.cycle = c; run.wave = w; const s = new Set();
+        for (let i = 0; i < 300; i++) rollWave(6).forEach(x => s.add(x)); out[c + '-' + w] = [...s]; }
+      return out; });
+    const rule = { gunner: (c, w) => w >= 4, sprayer: (c, w) => w >= 6, weaver: (c, w) => c >= 2 && w >= 3, mortar: (c, w) => c >= 2 && w >= 4, trapper: (c, w) => c >= 2 && w >= 4 };
+    for (const [gr, ok] of Object.entries(rule)) {
+      const bad = Object.entries(seen).filter(([k, s]) => { const [c, w] = k.split('-').map(Number); return s.includes(gr) !== ok(c, w); }).map(([k]) => k);
+      t.eq(bad.join(','), '', gr + ' 등장 조건 (사이클-웨이브)');
+    }
+    const fired = await p.evaluate(() => { run.phase = 'fight'; run.phaseT = 99; run.cycle = 2; run.mapWalls = []; CFG.god = 1; P.x = 150; P.y = 300; P.stasis = null;
+      const names = gr => POOL[gr].map(i => PATTERNS[i].n), out = {};
+      for (const gr of ['gunner', 'weaver', 'mortar', 'sprayer', 'trapper']) {
+        ens.length = 0; bullets.length = 0; queue.length = 0; run.mortars = [];
+        spawnEnemyAt(gr, 750, 300); const e = ens[ens.length - 1]; e.fireT = 0; let mort = 0;
+        const s = new Set(), op = pickPattern; pickPattern = function (x) { const q = op(x); if (x === e) s.add(q.n); return q; };
+        for (let i = 0; i < 60 * 15; i++) { hitstop = 0; update(1 / 60); mort = Math.max(mort, (run.mortars || []).length); if (!ens.includes(e)) break; }
+        pickPattern = op; out[gr] = { n: s.size, own: [...s].every(n => names(gr).includes(n)), mort };
+      } return out; });
+    for (const [gr, r] of Object.entries(fired)) t.ok(r.n > 0 && r.own, gr + ' 은(는) 자기 패턴 풀에서 쏨', JSON.stringify(r));
+    t.ok(fired.mortar.mort > 0, '박격병은 포격 원을 그림');
+    noErrors(t, g, '새 적'); await p.close();
+  },
+
+  async '새 탄 동작: 덫 · 곡선 · 느린 탄 · 포격 (v3.61 · v3.71)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const r = await p.evaluate(() => {
+      run.phase = 'fight'; run.phaseT = 99; run.mapWalls = []; P.x = 150; P.y = 300; P.stasis = null; ens.length = 0; bullets.length = 0; queue.length = 0;
+      /* 웨이브가 비어 끝나지 않게, 쏘지 못하는 적 하나를 정지장 안에 세워 둔다 */
+      spawnEnemyAt('mob', 900, 520); const dummy = ens[ens.length - 1]; dummy.ax = dummy.x = 900; dummy.ay = dummy.y = 520;
+      const hold = () => { P.stasis = { x: 900, y: 520, r: 60, t: 999 }; };
+      const step = (n, f) => { for (let i = 0; i < n; i++) { hitstop = 0; hold(); update(1 / 60); if (f) f(); } };
+      const fire = spec => { queue.push({ t: 0, spec, ex: 700, ey: 300, boss: false, hack: false, src: dummy }); step(1); return bullets[bullets.length - 1]; };
+      const o = {}; CFG.god = 1;
+      const tb = fire({ t: 0, ang: 0.6, trap: 1 }); let stopSpd = -1, goSpd = 0, goStraight = 0;
+      step(150, () => { if (tb.age > 1.0 && tb.age < 1.2) stopSpd = tb.spd; if (tb.trapGo && !goSpd) { goSpd = tb.spd; goStraight = tb.straight; } });
+      o.trap = stopSpd === 0 && goSpd > 0 && goStraight === 1;
+      bullets.length = 0; const cb = fire({ t: 0, curl: 1 }); const d0 = cb.dir; step(55); o.curl = Math.abs(norm(cb.dir - d0)) > 1.5;
+      bullets.length = 0; queue.length = 0; PATTERNS.find(q => q.n === 'ARC PAIR').specs.forEach(sp => queue.push({ t: 0, spec: sp, ex: 700, ey: 300, boss: false, hack: false, src: dummy }));
+      step(1); o.arc = bullets.length === 2 && bullets[0].curl === -bullets[1].curl;
+      bullets.length = 0; const sb = fire({ t: 0, slow: 0.75 }); o.slow = Math.abs(sb.base - CFG.spd * 0.75) < 1;
+      bullets.length = 0; CFG.god = 0; P.guard = 0; P.phase = 0;
+      const boom = (x, y, setup) => { P.inv = 0; P.barrier = 0; P.hp = 80; if (setup) setup(); run.mortars = []; dropMortar(x, y); step(90); return { hp: P.hp, barrier: P.barrier }; };
+      o.mortarHit = boom(P.x, P.y).hp < 80; o.mortarMiss = boom(P.x + 300, P.y).hp === 80;
+      const bar = boom(P.x, P.y, () => { P.barrier = 1; }); o.mortarBarrier = bar.hp === 80 && bar.barrier === 0;
+      CFG.god = 1; return o; });
+    t.ok(r.trap, '덫 탄: 퍼진 뒤 멈춰 있다가(속도 0) 플레이어 쪽 직선으로 날아감');
+    t.ok(r.curl, '곡선 탄: 처음 1초 동안 크게 휨'); t.ok(r.arc, 'ARC PAIR: 두 발이 서로 반대로 휨'); t.ok(r.slow, '분사 탄: 기본 탄속의 0.75배');
+    t.ok(r.mortarHit, '포격 원 안에 있으면 1.3초 뒤 피해'); t.ok(r.mortarMiss, '포격 원 밖이면 피해 없음'); t.ok(r.mortarBarrier, '보호막이 있으면 보호막이 대신 깨짐');
+    noErrors(t, g, '새 탄'); await p.close();
+  },
+
+  async '보스: 환영 분신 · 붕괴형 · 정지장 (v3.61)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const r = await p.evaluate(() => {
+      run.phase = 'fight'; run.phaseT = 99; run.cycle = 5; run.mapWalls = []; CFG.god = 1; P.x = 150; P.y = 300; P.stasis = null;
+      const step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
+      const boss = v => { ens.length = 0; bullets.length = 0; queue.length = 0; run.mortars = []; spawnEnemyAt('boss', 750, 300); const b = ens[ens.length - 1]; b.variant = v;
+        Object.assign(b, { fireT: 99, callT: 999, wardT: 999, blinkT: 999, spiralT: 999, mortT: 999, gunT: 999, ringT: 999 }); return b; };
+      const ill = () => ens.filter(e => e.grade === 'illusion'), o = {};
+      let b = boss('phantom'); b.blinkT = 0.01; step(2); o.illSpawn = ill().length === 2 && ill().every(e => e.ttl > 6);
+      b.blinkT = 999; ill().forEach(e => { e.fireT = 99; }); step(60 * 7.3); o.illGone = ill().length === 0;
+      b = boss('collapse'); b.spiralT = 0.01; step(2); o.spiral = bullets.length + queue.length >= 8;
+      b = boss('collapse'); b.mortT = 0.01; step(2); o.mortar = run.mortars.length === 3;
+      b = boss('collapse'); b.p2 = 1; b.gunT = 0.01; step(2); o.gunners = ens.filter(e => e.grade === 'gunner').length === 2;
+      b = boss('collapse'); b.spiralT = 0.01; b.mortT = 0.01; P.stasis = { x: 750, y: 300, r: 190, t: 999 }; step(60); o.stasis = run.mortars.length === 0 && bullets.length + queue.length === 0;
+      P.stasis = null; ens.length = 0; spawnEnemyAt('mortar', 750, 300); const m = ens[ens.length - 1]; m.mortarT = 0.01; m.fireT = 99; run.mortars = [];
+      P.stasis = { x: 750, y: 300, r: 190, t: 999 }; step(60); o.mortarStasis = run.mortars.length === 0; P.stasis = null;
+      return o; });
+    t.ok(r.illSpawn, '환영형 순간이동 → 분신 2기 (7초 수명)'); t.ok(r.illGone, '분신은 7초 뒤 사라짐');
+    t.ok(r.spiral, '붕괴형 나선 탄막'); t.ok(r.mortar, '붕괴형 포격 3발'); t.ok(r.gunners, '붕괴형 2페이즈 연사병 2기 호출');
+    t.ok(r.stasis, '정지장 안 붕괴형은 나선 · 포격을 멈춤'); t.ok(r.mortarStasis, '정지장 안 박격병은 포격을 못 함');
+    noErrors(t, g, '보스'); await p.close();
+  },
+
+  async '판 기록표 (#12, v3.68)'(t, { browser, url }) {
+    for (const mode of ['normal', 'hard']) {
+      const g = await openGame(browser, url, { save: { opt: { tutSeen: 1, chaos: 0 } } }), p = g.page; await toHub(p); await launchRun(p, mode); await wait(500);
+      const start = g.calls.find(c => c.fn === 'aether_run_start');
+      t.ok(start && start.body.p_mode === mode && start.body.p_pin === '1234', mode + ' 출격 → aether_run_start(p_mode=' + mode + ')');
+      await finishRun(p);
+      const subs = g.calls.filter(c => /submit/.test(c.fn));
+      t.ok(subs.length > 0 && subs.every(c => c.body.p_run === 'run-' + mode), mode + ' 랭킹 기록에 같은 기록표(p_run)', subs.map(c => c.fn + ':' + c.body.p_run).join(' '));
+      await p.close();
+    }
+    let g = await openGame(browser, url, { session: null }), p = g.page;
+    await click(p, '#title [data-go=hub]'); await wait(600); await p.evaluate(() => { offlineOK = true; $('#modal').classList.remove('on'); go('hub'); }); await wait(600);
+    await launchRun(p); await wait(400); t.ok(!g.calls.some(c => c.fn === 'aether_run_start'), '로그인 안 하면 기록표 안 받음'); await p.close();
+    g = await openGame(browser, url); p = g.page; await click(p, '#title [data-modal=tutorial]'); await wait(400);
+    if (await visible(p, '#tutPlay')) await p.click('#tutPlay'); await wait(1000);
+    t.ok(!g.calls.some(c => c.fn === 'aether_run_start'), '튜토리얼은 기록표 안 받음'); await p.close();
+  },
+
+  async '디버그 소환 버튼 (v3.70 · v3.71)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const r = await p.evaluate(() => { const out = {};
+      for (const b of document.querySelectorAll('#debugSpawn [data-spawn]')) { const k = b.dataset.spawn; if (k === 'clear') continue;
+        ens.length = 0; b.click(); const e = ens[ens.length - 1];
+        out[k] = !!e && (k.startsWith('boss') ? e.grade === 'boss' && e.variant === (k.split(':')[1] || 'core') : e.grade === k); }
+      return out; });
+    const keys = Object.keys(r);
+    t.ok(['gunner', 'weaver', 'mortar', 'sprayer', 'trapper', 'boss:warden', 'boss:phantom', 'boss:collapse'].every(k => keys.includes(k)), '새 적 · 보스 변형 버튼 있음', keys.join(' '));
+    t.eq(keys.filter(k => !r[k]).join(','), '', '버튼마다 그 적(보스는 그 변형)이 소환됨');
+    noErrors(t, g, '디버그 소환'); await p.close();
+  },
 };

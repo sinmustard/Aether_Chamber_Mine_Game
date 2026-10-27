@@ -68,6 +68,7 @@ function fakeSupabase(page, opts = {}) {
     if (fn === 'aether_cloud_stamp') return j(200, '2000-01-01T00:00:00Z');
     if (fn === 'aether_cloud_save') return j(200, '2026-01-01T00:00:01Z');
     if (fn === 'aether_is_dev') return j(200, false);
+    if (fn === 'aether_run_start') return j(200, 'run-' + body.p_mode);   // v3.68 판 기록표 (#12)
     return j(200, null);
   }).then(() => calls);
 }
