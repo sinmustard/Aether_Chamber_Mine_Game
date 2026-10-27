@@ -212,7 +212,7 @@ const PATTERNS=[
  {n:'CURL',    d:'크게 휘어 돌아 들어오는 탄', specs:[{t:0,curl:1,curlRand:1}]},
  {n:'ARC PAIR',d:'양쪽으로 크게 휘어 모이는 2발', specs:[{t:0,curl:1,ang:-0.35},{t:0,curl:-1,ang:0.35}]},
  {n:'SPIRAL',  d:'소용돌이치며 퍼졌다 모이는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:k*Math.PI/2,curl:1}))},
- {n:'SPRAY',   d:'부채꼴로 흩뿌리는 느린 5발', specs:[0,1,2,3,4].map(k=>({t:k*0.07,ang:-0.5+k*0.25,slow:0.75}))},
+ {n:'SPRAY',   d:'부채꼴로 흩뿌리는 느린 5발', specs:[0,1,2,3,4].map(k=>({t:k*0.07,ang:-0.9+k*0.45,slow:0.75,straight:1}))},
  {n:'TRAP',    d:'퍼져서 멈춰 있다가 한꺼번에 날아오는 4발', specs:[0,1,2,3].map(k=>({t:0,ang:Math.PI/4+k*Math.PI/2,trap:1}))}
 ];
 /* v1.3 — 등급별 패턴 풀. 잡몹은 기본기, 엘리트는 조건 시험.

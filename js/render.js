@@ -65,7 +65,7 @@ function drawBody(x,y,r,color,hurt){
 const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
 loadSprite('mob','assets/enemies/mob.png');
-['gunner','weaver','mortar'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
+['gunner','weaver','mortar','sprayer','trapper'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
 ['warden','phantom','collapse'].forEach(v=>loadSprite('boss_'+v,'assets/enemies/boss_'+v+'.webp'));
 loadSprite('illusion','assets/enemies/boss_phantom.webp');   // v3.11 원래 AI 이미지로 복귀
 /* v2.89 커스텀 캐릭터 이미지 — 설정 → 게임에서 직접 올린다. 이 브라우저에만 저장되고(localStorage),
@@ -222,7 +222,7 @@ function enemyFacing(e){
      추적자는 돌진 중엔 돌진 방향, 그 밖(추격 · 예비 동작 · 대기)엔 플레이어 쪽 — 예비 동작 중 lungeDir가 비어 엉뚱한 쪽을 보던 문제(v3.10.1) 해결 */
   if(e.grade==='tracker') return e.lungePhase==='dash'&&e.lungeDir!=null?e.lungeDir:toP;
   if(e.grade==='sniper') return e.aimOn&&e.aimAng!=null?e.aimAng:toP;
-  if(e.grade==='cannon'||e.grade==='gunner') return toP;
+  if(e.grade==='cannon'||e.grade==='gunner'||e.grade==='sprayer') return toP;
   return null;
 }
 function drawEnemyBody(e){
