@@ -34,8 +34,8 @@ function drawGrid(){
   }
 }
 function prismPts(o,n){
-  const cx=o.x+o.w/2, cy=o.y+o.h/2, R=o.w/2;
-  return Array.from({length:n},(_,k)=>{ const a=-Math.PI/2+k*TAU/n; return proj(cx+Math.cos(a)*R, cy+Math.sin(a)*R*1.0); });
+  const R=o.w*(n===3?0.577:0.526), cx=o.x+o.w/2, cy=o.y+o.h*(n===3?0.067:0.0245)+R;
+  return Array.from({length:n},(_,k)=>{ const a=-Math.PI/2+k*TAU/n; return proj(cx+Math.cos(a)*R, cy+Math.sin(a)*R); });
 }
 function drawPrism(o,ghost,bad){
   const HG=WALL_HG, n=o.prism, g=prismPts(o,n), t=g.map(p=>[p[0],p[1]-HG]);
