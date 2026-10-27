@@ -533,6 +533,11 @@ module.exports = {
     t.ok(a.charge >= 3 && a.boom === Math.min(18, 4 + a.charge), '흡수체: 적 탄을 빨아들이고 죽으면 4+모은 수만큼 터짐', a.charge + ' → ' + a.boom);
     t.ok(a.mirrorWall && a.bent >= 1, '거울 벽(프리즘 아님)에 닿은 내 탄이 적 쪽으로 꺾임', JSON.stringify({ w: a.mirrorWall, b: a.bent }));
     t.ok(a.finish > 0, '왕복 5회 이상 탄으로 처치 → 랠리 피니시 보너스', '+' + a.finish);
+    const solo = await p.evaluate(async () => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1;
+      spawnEnemy('absorber'); const ab = ens[ens.length - 1]; ab.fireT = 0.1; let own = 0;
+      for (let i = 0; i < 25; i++) { await new Promise(r => setTimeout(r, 100)); own = Math.max(own, bullets.filter(b => b.srcE === ab).length); }
+      const o = { own, charge: ab.charge || 0 }; ens.length = 0; bullets.length = 0; return o; });
+    t.ok(solo.own > 0 && solo.charge === 0, '흡수체 혼자 남으면 쏘고 자기 탄은 안 먹음 — 패링해서 잡을 수 있음', JSON.stringify(solo));
     // 위험 계약: 웨이브 비우기 → 3초 안에 T → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
     await p.evaluate(() => { ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
     for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);

@@ -245,7 +245,8 @@ const _waveSpawn=waveSpawn;
 waveSpawn=function(){
   if(run&&run.practice){ run.wave=1; P.barrier=CFG.barrier||0; const g=run.practice.g;
     if(g.indexOf('boss')===0) exBoss(g.split(':')[1]||'core');
-    else { const n=['elite','cannon','summoner','bulwark','mortar','absorber'].includes(g)?2:3; for(let i=0;i<n;i++) spawnEnemy(g); }
+    else if(g==='absorber'){ spawnEnemy('absorber'); spawnEnemy('mob'); spawnEnemy('mob'); }   // 흡수체는 먹을 탄이 있어야 연습이 된다
+    else { const n=['elite','cannon','summoner','bulwark','mortar'].includes(g)?2:3; for(let i=0;i<n;i++) spawnEnemy(g); }
     announce('연습장  ·  '+(g.indexOf('boss')===0?'알레테이아 · '+VKO[g.split(':')[1]||'core']:KO[g]),'cyan'); sfx('wave'); run.phase='fight'; return; }
   if(run&&run.rush){ const R=run.rush; run.wave=2; P.barrier=CFG.barrier||0;
     if(R.i>=4){ endRun(); return; }
@@ -273,7 +274,8 @@ openReward=function(){ if(run&&run.practice) return; return _openReward.apply(th
 
 /* ---- 탄 폭풍 탄의 출처 ---- */
 const _spawnBullet2=spawnBullet;
-spawnBullet=function(q){ const n=bullets.length; _spawnBullet2(q); if(q&&q.storm) for(let i=n;i<bullets.length;i++) bullets[i].from='탄 폭풍'; };
+spawnBullet=function(q){ const n=bullets.length; _spawnBullet2(q);
+  for(let i=n;i<bullets.length;i++){ bullets[i].srcE=q&&q.src; if(q&&q.storm) bullets[i].from='탄 폭풍'; } };   // srcE: 쏜 적 (흡수체는 흡수체 탄을 안 먹음)
 
 /* ---- 거울 벽: 맵이 바뀔 때 벽 하나를 거울로 ---- */
 const _rerollMap=rerollMap;
@@ -306,7 +308,7 @@ update=function(dt){
   if(run.phase!=='clear') run.riskOffer=0;
   // 흡수체: 주변 적 탄을 끌어당겨 삼킨다
   ens.forEach(e=>{ if(e.grade!=='absorber'||e.frozenT>0) return; e.charge=e.charge||0; e.spin=(e.spin||0)+dt*(2+e.charge*0.3);
-    for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.owner!=='enemy'||b.fromAbs) continue; const d=dist(b.x,b.y,e.x,e.y);
+    for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.owner!=='enemy'||b.fromAbs||(b.srcE&&b.srcE.grade==='absorber')) continue; const d=dist(b.x,b.y,e.x,e.y);   // 혼자 남아 쏜 자기 탄까지 먹으면 못 잡는다
       if(d<e.r+R_BULLET){ bullets.splice(i,1); e.charge++; e.r=Math.min(64,GRADES.absorber.r+e.charge*2.5); burst(e.x,e.y,'#9b6bff',6,100); continue; }
       if(d<170){ const a=Math.atan2(e.y-b.y,e.x-b.x); b.dir+=clamp(norm(a-b.dir),-3*dt,3*dt); } } });
   // 거울 벽: 내 탄이 거울에 튕기면 가장 가까운 적에게 꺾고 가속
