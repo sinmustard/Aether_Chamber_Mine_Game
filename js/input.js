@@ -36,7 +36,7 @@ addEventListener('keydown',e=>{
   if(run&&run.phase==='reward'){                 // v2.0 보상 선택
     if(e.repeat) return;                         // v3.62 꾹 누른 키의 반복 입력으로 새로고침이 다 쓰이거나 다음 보상이 저절로 골라지던 문제
     if('123'.includes(k)){ e.preventDefault(); takeReward(+k-1); }
-    else if(k==='r'||k===OPT.keyR){ e.preventDefault(); rerollReward(); }   // v2.52
+    else if(k==='r'||k===OPT.keyR){ e.preventDefault(); if(performance.now()-rwOpenAt>500) rerollReward(); }   // v2.52 · v3.67 창이 열리는 순간 R 스킬로 누른 키는 새로고침으로 안 씀
     return;
   }
   if(k==='enter'&&run&&run.phase==='build'){ e.preventDefault(); run.phaseT=0; return; }

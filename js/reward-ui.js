@@ -33,7 +33,9 @@ function chaosDisguise(){
     else { const c=chaosPick(); c.fn(); }
   }};
 }
+let rwOpenAt=0;   // v3.67 보상 창이 열린 시각 (R 키 새로고침 0.5초 막기)
 function openReward(afterBoss,fromReroll){
+  if(!fromReroll) rwOpenAt=performance.now();
   if(run.phase!=='reward') run.rwPrev=run.phase;   // v3.62 보상을 고른 뒤 돌아갈 단계 (출격 직후 보상은 벽 설치 단계)
   run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+run.wave*50+run.rwRoll);   // v3.62
   const pool=BOONS.filter(b=>boonLv(b.k)<b.max);

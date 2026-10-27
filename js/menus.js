@@ -115,8 +115,12 @@ function openLogin(){
       if(/없어요/.test(m)){   // 처음 쓰는 닉네임 → 지금 이 기기 진행 상황으로 새 계정
         if(nameBlocked(name)){ msg('사용할 수 없는 닉네임이에요. 다른 닉네임을 써 주세요.'); $('#lgGo').disabled=false; return; }
         if(HANGUL.test(pin)){ msg('새 계정 비밀번호에는 한글을 쓸 수 없어요. 한/영 키를 바꿔서 영어 · 숫자 · 기호로 써 주세요.'); $('#lgGo').disabled=false; return; }
-        try{ save(); const data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+        try{ save(); let data=JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
+          /* v3.67 이 기기 기록이 다른 계정 것이면(로그아웃 뒤 새 계정) 진행은 처음부터 — 설정만 가져간다.
+             예전엔 앞 계정의 재화 · 강화가 새 계정으로 그대로 복사됐다. 한 번도 로그인 안 한 오프라인 진행은 그대로 옮긴다 */
+          const fresh=!!myName()&&myName()!==name; if(fresh) data={opt:data.opt||OPT};
           const at=await cloudCall('aether_cloud_save',{p_name:name,p_pin:pin,p_data:data});
+          if(fresh) applySave(data);
           META.cloudAt=String(at||''); save();   // v2.68
           setSession(name,pin); tokenTried=false; $('#modal').classList.remove('on'); go('hub'); return;
         }catch(e2){ msg(/NAME_BLOCKED/.test(String(e2.message))?'사용할 수 없는 닉네임이에요. 다른 닉네임을 써 주세요.':/비밀번호/.test(String(e2.message))?'이미 있는 닉네임이에요. 비밀번호가 달라요.':'만들지 못했어요. 인터넷 연결을 확인해 주세요.'); }
