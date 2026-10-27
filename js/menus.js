@@ -255,7 +255,7 @@ async function openRankTable(tab){
                    :'aether_daily?select=name,score,cycle,wave&day=eq.'+day+'&order=score.desc,updated_at.asc&limit=50';
     const r=await fetch(RANK.url+'/rest/v1/'+q,{headers:{apikey:RANK.key}}); if(!r.ok) throw 0; const rows=await r.json();
     const me=(getSession()||{}).name||myName();
-    $('#rkList').innerHTML=rows.length? rows.map((r,i)=>'<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+rankName(r)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
+    $('#rkList').innerHTML=rows.length? rows.map((r,i)=>'<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+rankName(r)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">C'+Number(r.cycle)+' · W'+Number(r.wave)+'</span></li>').join('')
       : '<li>'+(cx?'아직 혼돈이야~ 기록이 없어요.':hot?'아직 핫드 기록이 없어요.':hard?'아직 하드 기록이 없어요.':'오늘은 아직 기록이 없어요. 첫 번째로 도전해 보세요.')+'</li>';
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
@@ -276,7 +276,7 @@ async function openDailyBest(year){
     const me=(getSession()||{}).name||myName();
     $('#rkList').innerHTML=rows.length? rows.map(r=>{ const [,m,d]=String(r.day).split('-').map(Number);
       return '<li class="'+(me&&r.name===me?'me':'')+'"><span class="no" style="width:64px;text-align:left">'+m+'월 '+d+'일</span><span class="nm">'+escH(r.name)+'</span>'+
-        '<span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">'+r.cycle+' 사이클 · '+r.wave+' 웨이브</span></li>'; }).join('')
+        '<span class="sc">'+Number(r.score).toLocaleString()+'</span><span class="cw">'+Number(r.cycle)+' 사이클 · '+Number(r.wave)+' 웨이브</span></li>'; }).join('')
       : '<li>'+(y===now?'올해':'작년')+' 데일리 기록이 아직 없어요.</li>';
   }catch(e){ $('#rkList').innerHTML='<li>기록을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }
 }
@@ -296,14 +296,14 @@ async function openRanking(tab){
     $('#rkList').innerHTML=rows.length? rows.map((r,i)=>
       '<li class="'+(i<3?'top ':'')+(me&&r.name===me?'me':'')+'"><span class="no">'+(i+1)+'</span>'+
       '<span class="nm">'+rankName(r)+'</span><span class="sc">'+Number(r.score).toLocaleString()+'</span>'+
-      '<span class="cw">C'+r.cycle+' · W'+r.wave+'</span></li>').join('')
+      '<span class="cw">C'+Number(r.cycle)+' · W'+Number(r.wave)+'</span></li>').join('')
       : '<li>아직 등록된 기록이 없어요. 첫 번째 주인공이 되어 보세요.</li>';
     /* v2.52 50위 밖이어도 내 순위를 아래에 붙인다 */
     if(me && !rows.some(r=>r.name===me)){
       try{ const r=await fetch(RANK.url+'/rest/v1/rpc/aether_verified_rank',{method:'POST',headers:{apikey:RANK.key,'Content-Type':'application/json'},body:JSON.stringify({p_name:me})});
         const d=r.ok? await r.json():[]; const m=Array.isArray(d)?d[0]:d;
         if(m&&m.rank) $('#rkList').insertAdjacentHTML('beforeend','<li class="me"><span class="no">'+m.rank+'</span><span class="nm">'+escH(me)+'</span>'+
-          '<span class="sc">'+Number(m.score).toLocaleString()+'</span><span class="cw">C'+m.cycle+' · W'+m.wave+'</span></li>');
+          '<span class="sc">'+Number(m.score).toLocaleString()+'</span><span class="cw">C'+Number(m.cycle)+' · W'+Number(m.wave)+'</span></li>');
       }catch(e){}
     }
   }catch(e){ $('#rkList').innerHTML='<li>랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</li>'; }

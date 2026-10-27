@@ -421,4 +421,31 @@ module.exports = {
     t.eq(keys.filter(k => !r[k]).join(','), '', '버튼마다 그 적(보스는 그 변형)이 소환됨');
     noErrors(t, g, '디버그 소환'); await p.close();
   },
+
+  /* ---- v3.82 ---- */
+  async '이미지 · 소리 · 랭킹 표시 · 박격포 (v3.82)'(t, { browser, url }) {
+    const rows = [{ name: '봉봉', score: 100, cycle: '<img src=x>', wave: 2, build: '3.80' }];
+    let g = await openGame(browser, url, { supabase: { rows } }), p = g.page;
+    await click(p, '#title [data-modal=rank]'); await wait(800);
+    t.eq(await p.$$eval('#rkList img', a => a.length), 0, '랭킹 숫자 칸에 HTML이 들어와도 그대로 그려지지 않음');
+    await p.close();
+
+    g = await openGame(browser, url); p = g.page; await toHub(p); await launchRun(p); await wait(1500);
+    const r = await p.evaluate(() => { const o = {};
+      o.bad = performance.getEntriesByType('resource').filter(e => e.initiatorType === 'img' && e.responseStatus >= 400).map(e => e.name);
+      const want = [...document.querySelectorAll('#debugSpawn [data-spawn]')].map(b => b.dataset.spawn).filter(k => k !== 'clear')
+        .map(k => k.startsWith('boss') ? (k.includes(':') ? 'boss_' + k.split(':')[1] : 'boss') : k).concat(['illusion']);
+      o.missing = want.filter(k => !(SPRITES[k] && SPRITES[k].naturalWidth > 0));
+      const real = AC; let resumed = 0; AC = { state: 'interrupted', resume() { resumed++; } }; ac(); AC = real; o.resumed = resumed;
+      ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; dropMortar(P.x, P.y); const hp = P.hp;
+      for (let i = 0; i < 10; i++) { hitstop = 0; update(1 / 60); }
+      o.cleared = run.phase !== 'fight' && run.mortars.length === 0;
+      for (let i = 0; i < 120; i++) { hitstop = 0; update(1 / 60); }
+      o.noHit = P.hp >= hp; return o; });
+    t.eq(r.bad.join(' '), '', '불러오는 이미지 중 없는 파일 없음');
+    t.eq(r.missing.join(','), '', '모든 적 · 보스 변형 · 분신 이미지가 실제로 불러와짐');
+    t.ok(r.resumed === 1, "아이폰 소리가 'interrupted'로 멈추면 다시 켬");
+    t.ok(r.cleared, '웨이브가 끝나면 남은 박격포 장판도 지워짐'); t.ok(r.noHit, '웨이브가 끝난 뒤 박격포에 안 맞음');
+    noErrors(t, g, '이미지 · 소리 · 박격포'); await p.close();
+  },
 };

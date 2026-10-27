@@ -3,7 +3,7 @@
 let AC=null;
 function ac(){
   if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;} }
-  if(AC.state==='suspended')AC.resume();
+  if(AC.state==='suspended'||AC.state==='interrupted')AC.resume();   // iOS는 전화·알림 뒤 'interrupted'로 멈춤
   return AC;
 }
 /* v2.52 배경음 — 외부 파일 없이 합성한 잔잔한 패드 + 느린 아르페지오. 효과음과 볼륨을 따로 쓴다 */
