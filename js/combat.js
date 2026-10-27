@@ -207,7 +207,9 @@ function update(dt){
     else{ e.x=e.ax+Math.cos(e.drift*0.8)*36; e.y=e.ay+Math.sin(e.drift)*54; [e.x,e.y]=wallSlide(e.ax,e.ay,e.x,e.y,e.r); }
     if(dt>0){ e.vx=(e.lx==null?0:(e.x-e.lx)/dt); e.vy=(e.ly==null?0:(e.y-e.ly)/dt); } e.lx=e.x; e.ly=e.y;   // v3.00 이동 속도 (패링 조준 예측용)
     /* v2.7 추적자 돌진 중 접촉 판정 — 실제로 그려지는 위치(e.x,e.y) 기준으로 한 번만 확인 */
-    if(e.grade==='tracker' && e.lungePhase==='dash' && !e.lungeHit && dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER){
+    /* v3.63 정지장 · 구속으로 멈춘 추적자는 돌진 단계가 'dash'로 남아도 부딪혀 피해를 주지 않는다 */
+    const halted=e.frozenT>0;   // v3.63 정지장 — 이동 · 발사뿐 아니라 소환 · 회복 · 순간이동 · 방패 회전 · 보스 패턴 타이머도 멈춘다
+    if(e.grade==='tracker' && e.lungePhase==='dash' && !e.lungeHit && !halted && !(e.bindT>0) && dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER){
       e.lungeHit=true;
       if(P.guard>0){ say('막음','cyan'); sfx('block'); burst(P.x,P.y,'cyan',10); }
       else if(P.inv<=0&&!CFG.god){
@@ -219,27 +221,27 @@ function update(dt){
     if(e.sa!=null){                                  // v1.8.1 방패 회전
       if(e.shieldDown>0){ e.shieldDown-=dt; if(e.shieldDown<=0){ e.shieldDown=0; say('배리어 복구','red'); burst(e.x,e.y,'red',12,160); } }
       if(e.saStun>0) e.saStun-=dt;                   // v1.9.1 반동 중에는 못 돈다
-      else{
+      else if(!halted){
         const want=Math.atan2(aimPt().y-e.y,aimPt().x-e.x);
         e.sa+=clamp(norm(want-e.sa),-SHIELD_TURN*dt,SHIELD_TURN*dt);
       }
     }
     /* v2.68 보스 변종 행동 */
-    if(e.variant==='warden'&&run.phase==='fight'){ e.wardT-=dt;
+    if(e.variant==='warden'&&run.phase==='fight'&&!halted){ e.wardT-=dt;
       if(e.wardT<=0){ e.wardT=9; for(let i=0;i<2;i++){ const a=Math.random()*TAU; spawnEnemyAt('minion',e.x+Math.cos(a)*95,e.y+Math.sin(a)*95); }
         say('수호형 — 잡졸 소환','red'); sfx('boss'); } }
-    if(e.variant==='core'&&run.phase==='fight'){ e.ringT=(e.ringT==null?7:e.ringT-dt);
+    if(e.variant==='core'&&run.phase==='fight'&&!halted){ e.ringT=(e.ringT==null?7:e.ringT-dt);
       if(e.ringT<=0){ e.ringT=e.p2?6:9; const n=e.p2?12:10; bossVolley(e,Array.from({length:n},(_,k)=>({t:0,ang:k*TAU/n,straight:1})));
         if(e.p2) bossVolley(e,Array.from({length:n},(_,k)=>({t:0.45,ang:(k+0.5)*TAU/n,straight:1})));
         say('알레테이아 — 링 탄막','red'); sfx('boss'); burst(e.x,e.y,'red',16,220); } }
-    if(e.variant==='collapse'&&run.phase==='fight'){
+    if(e.variant==='collapse'&&run.phase==='fight'&&!halted){
       e.spiralT=(e.spiralT==null?5:e.spiralT-dt); e.mortT=(e.mortT==null?8:e.mortT-dt); e.gunT=(e.gunT==null?10:e.gunT-dt);
       if(e.spiralT<=0){ e.spiralT=e.p2?5:7; const base=Math.random()*TAU; bossVolley(e,Array.from({length:12},(_,k)=>({t:k*0.11,ang:base+k*0.52,straight:1})));
         say('붕괴형 — 나선 탄막','red'); sfx('boss'); }
       if(e.mortT<=0){ e.mortT=e.p2?7:10; dropMortar(P.x,P.y,true); for(let k=0;k<2;k++){ const a=Math.random()*TAU; dropMortar(P.x+Math.cos(a)*130,P.y+Math.sin(a)*130); }
         say('붕괴형 — 포격','red'); sfx('fire'); }
       if(e.p2&&e.gunT<=0){ e.gunT=14; if(ens.length<12){ spawnNear('gunner',e,110,180); spawnNear('gunner',e,110,180); } say('붕괴형 — 연사병 호출','red'); sfx('boss'); } }
-    if(e.variant==='phantom'&&run.phase==='fight'){ e.blinkT-=dt;
+    if(e.variant==='phantom'&&run.phase==='fight'&&!halted&&!(e.bindT>0)){ e.blinkT-=dt;   // v3.63 순간이동은 이동이라 구속에도 막힌다
       if(e.blinkT<=0){ e.blinkT=e.p2?3.2+Math.random():5+Math.random()*1.5; burst(e.x,e.y,'red',14,200);
         if(ens.filter(o=>o.grade==='illusion').length<4){ for(let k=0;k<2;k++){ const il=spawnNear('illusion',e,60,120); il.ttl=7; il.fireT=0.8+k*0.4; } }
         for(let k=0;k<24;k++){ const nx=130+Math.random()*(WORLD.w-260), ny=130+Math.random()*(WORLD.h-260);
@@ -250,13 +252,13 @@ function update(dt){
     if(G(e).mortar&&run.phase==='fight'&&!(e.hackT>0)&&!inStasis(e.x,e.y)){ e.mortarT=(e.mortarT==null?2.5:e.mortarT-dt);
       if(e.mortarT<=0){ e.mortarT=4.2+Math.random()*1.2; dropMortar(P.x+(P.vx||0)*0.6,P.y+(P.vy||0)*0.6); sfx('fire'); burst(e.x,e.y,'warn',8,140); } }
     /* v2.19 소환사 */
-    if(G(e).summon){
+    if(G(e).summon&&!halted){
       if(e.summonFx>0) e.summonFx-=dt;
       e.summonT-=dt;
       if(e.summonT<=0 && ens.length<14) doSummon(e);
     }
     /* v2.19 보스는 추적자가 풀린 뒤(2사이클부터) 추적자를 1~2기 불러낸다 */
-    if(e.grade==='boss' && run.cycle>=2){
+    if(e.grade==='boss' && run.cycle>=2 && !halted){
       e.callT=(e.callT===undefined? 6.0 : e.callT-dt);
       if(e.callT<=0){
         const cnt=1+Math.floor(Math.random()*2);
@@ -268,7 +270,7 @@ function update(dt){
       }
     }
     /* v2.27 힐러 — 반경 안의 다른 적을 초당 0.2칸씩 회복시킨다 (자기 자신은 제외) */
-    if(G(e).heal){
+    if(G(e).heal&&!halted){
       ens.forEach(o=>{
         if(o===e||o.hp>=o.hpMax||dist(o.x,o.y,e.x,e.y)>HEAL_R) return;
         o.hp=Math.min(o.hpMax, o.hp+HIT_UNIT*G(e).heal*dt);
@@ -278,7 +280,7 @@ function update(dt){
     /* v2.65 저격수 — 자기 박자로만 쏜다 (일반 패턴 안 씀) */
     if(G(e).sniper){
       if(run.phase!=='fight') { e.snipeT=2.2; e.aimOn=0; return; }
-      if(e.hackT>0) return;
+      if(e.hackT>0||halted) return;   // v3.63 정지장 안의 저격수는 조준 · 발사를 멈춘다
       e.snipeT=(e.snipeT===undefined?2.2:e.snipeT-dt);
       if(e.snipeT<=1.0){ e.aimOn=1; if(e.snipeT>0.3) e.aimAng=Math.atan2(aimPt().y-e.y,aimPt().x-e.x); }
       if(e.snipeT<=0){

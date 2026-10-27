@@ -237,7 +237,7 @@ function killEnemy(e){
   P.rChg=Math.min(CFG.rNeed,P.rChg+2);   // v2.18 처치 +2
   if(boonLv('leech')&&P.hp>0) P.hp=Math.min(CFG.hpMax,P.hp+(e.grade==='boss'?10:2)*boonLv('leech'));
   burst(e.x,e.y,'red',e.grade==='boss'?60:22,e.grade==='boss'?360:240);
-  hitstop=e.grade==='boss'?0.18:0; sfx(e.grade==='boss'?'boss':'kill');   // v2.61 일반 처치는 멈추지 않는다 (보스만 짧게)
+  if(e.grade==='boss') hitstop=0.18; sfx(e.grade==='boss'?'boss':'kill');   // v2.61 일반 처치는 멈추지 않는다 (보스만 짧게) · v3.63 일반 처치가 hitstop을 0으로 덮어써 보스 처치 멈춤을 끊던 문제
   if(e.grade==='boss'){ run.bossKills++; announce('보스 격파  +'+bonus,'cyan'); shake=20; }
   else say('처치  +'+bonus,'cyan');
   ens.splice(idx,1);

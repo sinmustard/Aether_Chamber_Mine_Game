@@ -17,7 +17,7 @@ const BOONS=[
  {k:'flow',  n:'무결',      d:'패링에 성공하면 회복 경직이 없다', max:1, tag:'경직', fn:()=>{}},
  {k:'multi', n:'분배',      d:'한 번에 빼앗는 탄환 +1',        max:1, tag:'패링',   fn:()=>CFG.multi+=1},
  /* v3.1 웨이브 보상 3종 추가 */
- {k:'overload', n:'회로 과부하', d:'장착한 스킬(F·Q·R)의 재사용 대기시간 −10%', max:3, tag:'스킬',
+ {k:'overload', n:'회로 과부하', d:'장착한 F·Q 스킬의 재사용 대기시간 −10%', max:3, tag:'스킬',
   fn:()=>{ SKILL_CD_KEYS.forEach(k=>{ if(CFG[k]) CFG[k]*=0.9; }); CFG.cdrMul=(CFG.cdrMul||1)*0.9; }},   // v3.55 새 스킬 · 벽 생성도 포함
  {k:'stable',   n:'안정화',      d:'적의 재탈취 확률 −10%',                    max:3, tag:'탄환', fn:()=>CFG.seizeMul*=0.9},
  {k:'aftershock',n:'여진',       d:'적 처치 시 주변 적에게 0.4칸 추가 피해',     max:2, tag:'탄환', fn:()=>{}},
