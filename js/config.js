@@ -319,6 +319,14 @@ function pickPattern(e){
     return Math.random()<0.25 ? PATTERNS[2+Math.floor(Math.random()*3)] : pick(base);
   }
   const key = G(e).pool;
-  const pool = (key==='mob' && run.wave<=2) ? POOL.mobEarly : (POOL[key]||POOL.mob);
+  let pool = (key==='mob' && run.wave<=2) ? POOL.mobEarly : (POOL[key]||POOL.mob);
+  if(key!=='gunner'&&key!=='weaver'&&!advPatternsOK()){ const f=pool.filter(i=>!ADV_PATTERNS.includes(i)); if(f.length) pool=f; }
   return PATTERNS[pool[Math.floor(Math.random()*pool.length)]];
+}
+const ADV_PATTERNS=[10,12,16,13,14,15];
+function advPatternsOK(){
+  if(run.mode==='chaosx') return true;
+  if(run.mode==='hotd') return run.cycle>=2;
+  if(run.mode==='hard') return run.cycle>2||(run.cycle===2&&run.wave>=6);
+  return false;
 }
