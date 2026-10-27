@@ -90,7 +90,7 @@ const SPRITES={};
 const ASSET_V=(((document.querySelector('.caption')||{}).textContent||'').match(/v([0-9.]+)/)||[])[1]||'';
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src+(ASSET_V&&src.indexOf('assets/')===0?'?v='+ASSET_V:''); }
 loadSprite('mob','assets/enemies/mob.png');
-['gunner','weaver','mortar','sprayer','trapper','elite','boss'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
+['gunner','weaver','mortar','sprayer','trapper','elite','boss','absorber'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
 ['warden','phantom','collapse'].forEach(v=>loadSprite('boss_'+v,'assets/enemies/boss_'+v+'.webp'));
 loadSprite('illusion','assets/enemies/boss_phantom.webp');   // v3.11 원래 AI 이미지로 복귀
 /* v2.89 커스텀 캐릭터 이미지 — 설정 → 게임에서 직접 올린다. 이 브라우저에만 저장되고(localStorage),
