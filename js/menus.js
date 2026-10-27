@@ -29,7 +29,7 @@ async function rankFetch(limit){
 async function rankSend(row){
   const r=await fetch(RANK.url+'/rest/v1/rpc/submit_aether_normal',{method:'POST',
     headers:{apikey:RANK.key,'Content-Type':'application/json'},
-    body:JSON.stringify({p_name:row.name,p_score:row.score,p_cycle:row.cycle,p_wave:row.wave,p_kills:row.kills,p_build:row.build})});
+    body:JSON.stringify({p_name:row.name,p_pin:row.pin,p_score:row.score,p_cycle:row.cycle,p_wave:row.wave,p_kills:row.kills,p_build:row.build})});
   if(!r.ok) throw new Error('HTTP '+r.status);
   const d=await r.json(); return Array.isArray(d)?d[0]:d;   // {rank, best, updated}
 }
@@ -309,7 +309,7 @@ function setupRankBox(){
   /* v3.21 노멀 랭킹 결과는 #discStat 한 줄(aether_verified)로 보여 준다.
      aether_normal은 디스코드 봇(#1)이 aether_verified로 옮길 때까지만 화면 표시 없이 계속 올린다 */
   if(ss){ hide();
-    if(!run.cheat) rankSend({name:ss.name, score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:runBuild()})
+    if(!run.cheat) rankSend({name:ss.name, pin:pinOf(ss), score:Math.round(run.score), cycle:run.cycle, wave:run.wave, kills:run.kills, build:runBuild()})
       .then(()=>{ run.rankSent=true; }).catch(()=>{});
     return; }
   box.style.display='flex';

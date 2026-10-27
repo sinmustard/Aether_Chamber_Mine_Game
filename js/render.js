@@ -66,7 +66,8 @@ const SPRITES={};
 function loadSprite(grade,src){ const img=new Image(); img.onload=()=>{SPRITES[grade]=img;}; img.src=src; }
 loadSprite('mob','assets/enemies/mob.png');
 ['gunner','weaver','mortar'].forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
-loadSprite('illusion','assets/enemies/boss.svg');   // v3.11 원래 AI 이미지로 복귀
+['warden','phantom','collapse'].forEach(v=>loadSprite('boss_'+v,'assets/enemies/boss_'+v+'.webp'));
+loadSprite('illusion','assets/enemies/boss_phantom.webp');   // v3.11 원래 AI 이미지로 복귀
 /* v2.89 커스텀 캐릭터 이미지 — 설정 → 게임에서 직접 올린다. 이 브라우저에만 저장되고(localStorage),
    단일 이미지(회전)나 4방향 이미지(위/아래/왼쪽/오른쪽, 방향에 맞춰 교체) 중 고를 수 있다 */
 function pimgKey(d){ return 'aether_pimg_'+d; }
@@ -225,7 +226,7 @@ function enemyFacing(e){
   return null;
 }
 function drawEnemyBody(e){
-  const img=SPRITES[e.grade];
+  const img=(e.grade==='boss'&&e.variant&&SPRITES['boss_'+e.variant])||SPRITES[e.grade];
   if(e.hackT>0){   // v2.29 해킹 표시
     const q=proj(e.x,e.y);
     ctx.save(); ctx.strokeStyle=C.cyan; ctx.globalAlpha=.5+.35*Math.sin(performance.now()/60);
