@@ -436,9 +436,14 @@ function drawSkill(){
     ctx.save(); ctx.globalAlpha=.35+.15*Math.sin(now/120); ctx.fillStyle=C.cyan; ctx.beginPath(); ctx.ellipse(q[0],q[1],R_PLAYER,R_PLAYER*SQUASH*1.6,0,0,TAU); ctx.fill();
     if(P.decoyHp!=null){
       ctx.globalAlpha=.25; ctx.setLineDash([3,7]); ctx.strokeStyle=C.cyan; ctx.lineWidth=1.5; ctx.beginPath(); ctx.ellipse(q[0],q[1],DECOY_PULL,DECOY_PULL*SQUASH,0,0,TAU); ctx.stroke(); ctx.setLineDash([]);
-      const n=P.decoyHpMax, bw=Math.min(60,n*6), x0=q[0]-bw/2, y0=q[1]-R_PLAYER-18;
+      if(P.decoyBomb){ const bw=60, x0=q[0]-bw/2, y0=q[1]-R_PLAYER-18;
+        ctx.globalAlpha=.9; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(x0-1,y0-1,bw+2,6);
+        ctx.fillStyle=C.cyan; ctx.fillRect(x0,y0,bw*Math.max(0,P.decoyHp)/Math.max(1,P.decoyHpMax),4);
+        ctx.font='700 9px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle='#ffd34d';
+        ctx.fillText((P.decoyBag?P.decoyBag.length:0)+'발 · '+keyName(OPT.keyWall)+' 폭발',q[0],y0-5);
+      } else { const n=P.decoyHpMax, bw=Math.min(60,n*6), x0=q[0]-bw/2, y0=q[1]-R_PLAYER-18;
       ctx.globalAlpha=.9; ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(x0-1,y0-1,bw+2,6);
-      for(let i=0;i<n;i++){ ctx.fillStyle=i<P.decoyHp?C.cyan:'rgba(127,146,159,.35)'; ctx.fillRect(x0+i*bw/n+0.5,y0,bw/n-1,4); }
+      for(let i=0;i<n;i++){ ctx.fillStyle=i<P.decoyHp?C.cyan:'rgba(127,146,159,.35)'; ctx.fillRect(x0+i*bw/n+0.5,y0,bw/n-1,4); } }
     } else { ctx.globalAlpha=.9; ctx.strokeStyle=C.cyan; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(q[0],q[1]-R_PLAYER-14,8,-Math.PI/2,-Math.PI/2+TAU*k); ctx.stroke(); }
     ctx.font='700 10px ui-monospace,monospace'; ctx.textAlign='center'; ctx.fillStyle=C.fg; ctx.fillText('미끼',q[0],q[1]+4); ctx.restore();
   }

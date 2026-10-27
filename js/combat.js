@@ -94,7 +94,7 @@ function update(dt){
   if(P.blazeT>0){ P.blazeT-=dt; if(P.blazeT<=0){ P.blazeT=0; say('오버클럭 끝','dim'); } }
   if(P.stasis){ P.stasis.t-=dt; if(P.stasis.t<=0) P.stasis=null; }
   if(P.slowT>0)P.slowT-=dt; if(P.absorbT>0)P.absorbT-=dt; if(P.shockFx>0)P.shockFx-=dt;
-  if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; P.decoyHp=null; } }
+  if(P.decoyT>0){ P.decoyT-=dt; if(P.decoyT<=0){ P.decoyT=0; P.decoy=null; P.decoyHp=null; P.decoyBag=[]; } }
   if(P.autoT>0){ P.autoT-=dt; if(P.autoT<=0){ P.autoT=0; say(touchMode?'과부하 억제 끝':'자동 패링 끝','dim'); } }   // v3.16
 
   if(run.tut) tutTick(dt);   // v2.60 체험판
@@ -497,7 +497,8 @@ function update(dt){
       }
     } else if(P.decoyT>0&&P.decoy&&dist(b.x,b.y,P.decoy.x,P.decoy.y)<R_PLAYER+R_BULLET){
       burst(b.x,b.y,'cyan',8); bullets.splice(i,1);
-      if(P.decoyHp!=null){ P.decoyHp--; if(P.decoyHp<=0){ burst(P.decoy.x,P.decoy.y,'cyan',20,200); say('미끼 파괴','dim'); sfx('breach'); P.decoyT=0; P.decoy=null; P.decoyHp=null; } }
+      if(P.decoyBomb&&!b.fake&&P.decoyBag&&P.decoyBag.length<24) P.decoyBag.push(b);
+      if(P.decoyHp!=null){ P.decoyHp-=P.decoyBomb?decoyHitDmg(b):1; if(P.decoyHp<=0){ burst(P.decoy.x,P.decoy.y,'cyan',20,200); say('미끼 파괴','dim'); sfx('breach'); P.decoyT=0; P.decoy=null; P.decoyHp=null; P.decoyBag=[]; } }
       continue;
     } else if(dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+((P.guard>0||P.absorbT>0)?14:0)){
       if(b.fake){ burst(b.x,b.y,'#c27cff',10,150); say('환상탄','warn'); bullets.splice(i,1); continue; }
@@ -573,6 +574,20 @@ function spawnBullet(q){
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
 }
 const DECOY_PULL=130;
+function decoyHitDmg(b){ return Math.round((run.cycle===1&&run.wave<=4?EARLY_DMG:PLAYER_DMG)*(b.boss===2?1.75:b.boss?1.5:1)*dmgScale()*(1-(CFG.armor||0))); }
+function decoyBlast(){
+  const D=P.decoy, bag=(P.decoyBag||[]).slice(), n=bag.length;
+  burst(D.x,D.y,'cyan',30,260); burst(D.x,D.y,'#ffd34d',14,200); sfx('overwrite'); shake=Math.max(shake,12);
+  const seen=ens.filter(e=>!wallBetween(D.x,D.y,e.x,e.y)).sort((a,b)=>dist(a.x,a.y,D.x,D.y)-dist(b.x,b.y,D.x,D.y)), pool=seen.length?seen:ens;
+  bag.forEach((t,k)=>{ const a=k*TAU/Math.max(1,n);
+    t.x=D.x+Math.cos(a)*(R_PLAYER+6); t.y=D.y+Math.sin(a)*(R_PLAYER+6); t.dir=a; t.owner='player'; t.returns=(t.returns||0)+1;
+    t.feint=0; t.orbitAmt=0; t.orbitDir=0; t.armor=0; t.trap=0; t.trapGo=1; t.blink=0; t.curl=0; t.sway=0; t.zig=0; t.straight=0;
+    t.spd=Math.min(Math.max(t.base||0,CFG.spd||240)*CFG.accel,cap()); t.homeT=CFG.homeTime; t.htg=pool.length?pool[k%Math.min(pool.length,3)]:null; t.tried=[]; t.trail=[];
+    t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.ready=false; t.coy=0; t.age=0;
+    bullets.push(t); });
+  announce(n?'미끼 폭발 — 탄 '+n+'발':'미끼 폭발','cyan');
+  P.decoyT=0; P.decoy=null; P.decoyHp=null; P.decoyBag=[];
+}
 function prismSplit(b,w){
   const n=(w.prism===3?2:4)+(boonLv('s_prismsplit')?2:0), step=w.prism===3?(n===2?0.48:0.3):(n===4?0.34:0.28), base=b.dir;
   const spreads=Array.from({length:n},(_,k)=>(k-(n-1)/2)*step);
