@@ -213,7 +213,7 @@ loadSprite('bulwark','assets/enemies/bulwark.png');
 loadSprite('bulwark_shield','assets/enemies/bulwark_shield.webp'); loadSprite('warden_shield','assets/enemies/warden_shield.webp');   // v2.2 방패 — 임시 SVG, 기준 방향은 오른쪽(0rad)
 /* v3.7 나머지 적 전부 — 아직 AI 이미지가 없어서 벡터(SVG)로 임시 제작. 나중에 교체 가능 */
 ['relay','splitter','splinter','tracker','summoner','minion','healer','sniper','cannon']
-  .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.svg'));
+  .forEach(g=>loadSprite(g,'assets/enemies/'+g+'.webp'));
 /* v3.10.1 분열체는 항상 플레이어 쪽을 보고 회전한다(계속 다가붙는 적이라 방향이 보이는 게 자연스럽다) */
 function enemyFacing(e){
   const toP=Math.atan2(P.y-e.y,P.x-e.x);
