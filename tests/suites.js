@@ -454,7 +454,7 @@ module.exports = {
     const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1500);
     const a = await p.evaluate(async () => { const o = {}, sleep = ms => new Promise(r => setTimeout(r, ms));
       ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 1;
-      const rnd = Math.random; Math.random = () => 0.1;
+      const rnd = Math.random; Math.random = () => 0.05;   // 접두사 목록 첫째(강철) · 절반 확률 통과
       run.cycle = 1; spawnEnemy('elite'); o.affix1 = ens[ens.length - 1].affix || '';
       run.cycle = 2; spawnEnemy('elite'); const el = ens[ens.length - 1]; o.affix2 = el.affix;
       Math.random = () => 0.9; spawnEnemy('elite'); const plain = ens[ens.length - 1]; o.plain = plain.affix || ''; o.hpMul = el.hpMax / plain.hpMax;
@@ -598,10 +598,10 @@ module.exports = {
     noErrors(t, g, '추가 기능 새 적 · 모드'); await p.close();
   },
 
-  async '엘리트 접두사 9종 (v3.97)'(t, { browser, url }) {
+  async '엘리트 접두사 10종 (v3.99)'(t, { browser, url }) {
     const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1500);
     const r = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
-      const fresh = (aff) => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; run.mapWalls = []; run.walls = [];
+      const fresh = (aff) => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; run.mapWalls = []; run.walls = []; P.x = 200; P.y = 380;
         spawnEnemyAt('elite', 500, 300); const e = ens[ens.length - 1]; e.affix = aff; e.fireT = 99; return e; };
       const hitMe = (e) => { CFG.god = 0; P.inv = 0; P.barrier = 0; P.guard = 0; P.absorbT = 0; P.phase = 0; P.hp = CFG.hpMax;
         bullets.push({ x: P.x + 40, y: P.y, dir: Math.PI, spd: 200, base: 200, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1, srcE: e });
@@ -616,12 +616,23 @@ module.exports = {
       // 불굴: 첫 처치는 1칸으로 버티고, 두 번째는 죽음
       e = fresh('불굴'); killEnemy(e); o.ub1 = ens.includes(e) && Math.abs(e.hp - HIT_UNIT) < 1e-6; killEnemy(e); o.ub2 = !ens.includes(e);
       // 원한: 죽으면 남은 적이 곧바로 쏨
-      e = fresh('원한'); spawnEnemyAt('mob', 300, 200); const m = ens[ens.length - 1]; m.fireT = 5; killEnemy(e); o.grudge = m.fireT <= 0.12;
+      e = fresh('원한'); spawnEnemyAt('mob', 300, 200); const m = ens[ens.length - 1]; m.fireT = 5; m.bindT = 99; killEnemy(e); o.grudge = m.fireT <= 0.12;
+      o.ghost = (run.exZones || []).filter(z => z.kind === 'ghost').length; m.fireT = 99; step(100); o.ghostShots = bullets.filter(b => b.from === '엘리트 · 원한').length;
       // 은신: 멀면 숨고 가까우면 보임
       e = fresh('은신'); e.x = P.x + 400; e.y = P.y; const far = exCloaked(e); e.x = P.x + 100; o.cloak = far && !exCloaked(e);
       // 냉기: 맞으면 2초 동안 이동 −40%, 끝나면 되돌림
       e = fresh('냉기'); const sp0 = CFG.moveSpd; o.chillHurt = hitMe(e); o.chill = Math.round(CFG.moveSpd / sp0 * 100) / 100;
       step(130); o.chillBack = Math.abs(CFG.moveSpd - sp0) < 1e-6;
+      // 냉기가 죽으면 서리 장판: 안에 있으면 느려지고, 장판이 사라지면 되돌아옴
+      e = fresh('냉기'); spawnEnemyAt('mob', 100, 100); ens[ens.length - 1].bindT = 99; ens[ens.length - 1].fireT = 99;
+      const zx = e.x, zy = e.y; killEnemy(e); P.x = zx; P.y = zy; step(2); o.frost = Math.round(CFG.moveSpd / sp0 * 100) / 100;
+      step(220); o.frostBack = Math.abs(CFG.moveSpd - sp0) < 1e-6;
+      // 화염: 움직인 자리에 불길, 밟으면 피해 (원인: 화염 장판)
+      e = fresh('화염'); e.wp = [e.ax + 300, e.ay]; e.wpLos = false; e.wpT = 0; step(60); e.bindT = 99;
+      o.fireZones = (run.exZones || []).filter(z => z.kind === 'fire').length; const fz = run.exZones.filter(z => z.kind === 'fire').pop();
+      CFG.god = 0; P.inv = 0; P.phase = 0; P.hp = CFG.hpMax; P.x = fz.x; P.y = fz.y; step(40); o.burn = CFG.hpMax - P.hp; o.burnCause = (run.ex.src['화염 장판'] || 0) > 0; CFG.god = 1;
+      // 웨이브가 끝나면 장판도 지움
+      ens.length = 0; queue.length = 0; step(2); o.zonesCleared = (run.exZones || []).length === 0;
       // 가시: 내 탄에 맞으면 탄 2발
       e = fresh('가시'); e.bindT = 99; const hp0 = e.hp;
       bullets.push({ x: e.x - 60, y: e.y, dir: 0, spd: 300, base: 300, owner: 'player', returns: 1, age: 0, trail: [], glow: 1, hcd: 0, tried: [e], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, pierceLeft: 0, htg: e });
@@ -630,7 +641,11 @@ module.exports = {
       e = fresh('흡혈'); e.hp = e.hpMax - HIT_UNIT * 2; const hv = e.hp; o.leechHurt = hitMe(e); o.leech = Math.round((e.hp - hv) / HIT_UNIT * 100) / 100;
       return o; }).catch(e => ({ err: e.message }));
     t.ok(!r.err, '접두사 동작 확인 중 오류 없음', r.err);
-    t.eq(r.names, '강철,냉기,분노,신속,불굴,흡혈,원한,은신,가시', '접두사 9종 — 다른 적과 겹치던 재생 · 분열 · 다중 · 점멸은 없음');
+    t.eq(r.names, '강철,냉기,분노,신속,불굴,흡혈,원한,은신,가시,화염', '접두사 10종 — 다른 적과 겹치던 재생 · 분열 · 다중 · 점멸은 없음');
+    t.ok(r.ghost === 1 && r.ghostShots === 8, '원한이 죽으면 원혼이 남고 1.5초 뒤 탄 8발', JSON.stringify({ g: r.ghost, n: r.ghostShots }));
+    t.ok(r.frost === 0.6 && r.frostBack, '냉기가 죽으면 서리 장판 — 안에 있으면 이동 ×0.6, 사라지면 되돌아옴', JSON.stringify({ x: r.frost, back: r.frostBack }));
+    t.ok(r.fireZones > 0 && r.burn > 0 && r.burnCause, '화염: 지나간 자리에 불길 — 밟으면 피해, 원인은 화염 장판', JSON.stringify({ z: r.fireZones, dmg: r.burn }));
+    t.ok(r.zonesCleared, '웨이브가 끝나면 접두사 장판도 지워짐');
     t.ok(r.speed > 1.3, '신속: 같은 상황에서 더 멀리 움직임', '×' + (r.speed || 0).toFixed(2));
     t.ok(r.ub1 && r.ub2, '불굴: 첫 처치는 1칸 남기고 버팀, 다음엔 쓰러짐');
     t.ok(r.grudge, '원한: 죽으면 남은 적이 곧바로 쏨');

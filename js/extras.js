@@ -21,14 +21,40 @@ spawnBullet=function(q){ const n=bullets.length; _spawnBullet(q);
 
 /* ---- 적 등장: 엘리트 접두사 · 보스 시간 · 경고 띠 ---- */
 /* 다른 적의 특성과 겹치지 않게 고른다 (재생=힐러 · 분열=분열형 · 다중=분사병 · 점멸=환영형이라 v3.97에 뺌) */
-const AFFIX=[['강철','최대 체력 ×1.6','#9fb3c8'],['냉기','이 적의 탄에 맞으면 2초 동안 이동 −40%','#8fe3ff'],['분노','발사 간격 ×0.6','#ff4d6a'],
+const AFFIX=[['강철','최대 체력 ×1.6','#9fb3c8'],['냉기','이 적의 탄에 맞으면 2초 동안 이동 −40% · 죽으면 서리 장판','#8fe3ff'],['분노','발사 간격 ×0.6','#ff4d6a'],
   ['신속','이동 속도 ×1.5','#ffd34d'],['불굴','처음 쓰러질 때 한 번 1칸 남기고 버팀','#e8c27a'],['흡혈','이 적의 탄에 맞으면 그 적이 1칸 회복','#ff4d8d'],
-  ['원한','죽으면 남은 적이 모두 곧바로 한 번씩 쏨','#c77dff'],['은신','멀리 있으면 거의 안 보이고 체력바도 숨음','#b9c6d3'],['가시','내 탄에 맞을 때마다 탄 2발로 반격','#ff7a3d']];
+  ['원한','죽으면 남은 적이 곧바로 쏘고, 1.5초 뒤 그 자리에서 원혼탄 8발','#c77dff'],['은신','멀리 있으면 거의 안 보이고 체력바도 숨음','#b9c6d3'],['가시','내 탄에 맞을 때마다 탄 2발로 반격','#ff7a3d'],
+  ['화염','지나간 자리에 불길을 남김 (밟으면 초당 6 피해)','#ffb03b']];
 const CLOAK_R=260;
 const cloaked=e=>e.affix==='은신'&&dist(e.x,e.y,P.x,P.y)>CLOAK_R;
 window.exCloaked=cloaked;
 window.ELITE_AFFIX=AFFIX;   // 테스트 · 도감에서 읽음
 const affixCol=a=>(AFFIX.find(x=>x[0]===a)||[])[2]||C.red;
+/* 접두사 장판 — frost: 안에 있으면 이동 −40% · fire: 초당 6 피해 · ghost: 시간이 다 되면 탄 8발. 웨이브가 끝나면 지움 */
+const ZONE={frost:{r:110,t:3,col:'#8fe3ff'},fire:{r:30,t:2.5,col:'#ffb03b'},ghost:{r:40,t:1.5,col:'#c77dff'}};
+function addZone(kind,x,y){ const z=ZONE[kind]; (run.exZones||(run.exZones=[])).push({kind,x,y,r:z.r,t:z.t,max:z.t});
+  if(run.exZones.length>60) run.exZones.shift(); }
+window.addZone=addZone;
+function chillOn(t){ if(!(P.chillT>0)){ P.chillMv=CFG.moveSpd*0.4; CFG.moveSpd-=P.chillMv; } P.chillT=Math.max(P.chillT||0,t); }
+function zonesTick(dt){ const Z=run.exZones; if(!Z||!Z.length) return;
+  if(run.phase==='clear'){ Z.length=0; return; }
+  const live=run.phase==='fight', I=exRun();
+  for(let i=Z.length-1;i>=0;i--){ const z=Z[i]; z.t-=dt; const inside=dist(z.x,z.y,P.x,P.y)<z.r+R_PLAYER*0.5;
+    if(live&&inside&&P.hp>0&&P.phase<=0){
+      if(z.kind==='frost') chillOn(0.2);
+      if(z.kind==='fire'&&P.inv<=0&&!CFG.god){ P.fireAcc=(P.fireAcc||0)+6*dmgScale()*dt;
+        if(P.fireAcc>=1){ const d=Math.floor(P.fireAcc); P.fireAcc-=d; P.hp-=d; P.hurt=Math.max(P.hurt,.12); I.lastHp=P.hp; exBlame(I,d,'화염 장판'); } } }
+    if(z.t<=0){ if(z.kind==='ghost'&&live){ for(let k=0;k<8;k++){ const a=k*TAU/8; exShot(z.x+Math.cos(a)*20,z.y+Math.sin(a)*20,a,null,'엘리트 · 원한'); }
+        burst(z.x,z.y,'#c77dff',20,220); sfx('fire'); }
+      Z.splice(i,1); } } }
+const _drawMortarsX=drawMortars;
+drawMortars=function(){ _drawMortarsX(); if(!run||!run.exZones) return; const now=performance.now();
+  run.exZones.forEach(z=>{ const q=proj(z.x,z.y), k=z.t/z.max, c=ZONE[z.kind].col;
+    ctx.save(); ctx.globalAlpha=Math.min(1,k*3)*(z.kind==='fire'?0.35+0.15*Math.sin(now/70+z.x):0.28);
+    ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(q[0],q[1],z.r,z.r*SQUASH,0,0,TAU); ctx.fill();
+    if(z.kind==='ghost'){ ctx.globalAlpha=0.8; ctx.strokeStyle=c; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(q[0],q[1],z.r*k+6,(z.r*k+6)*SQUASH,0,0,TAU); ctx.stroke(); }
+    else { ctx.globalAlpha*=1.6; ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.beginPath(); ctx.ellipse(q[0],q[1],z.r,z.r*SQUASH,0,0,TAU); ctx.stroke(); }
+    ctx.restore(); }); };
 function exShot(x,y,dir,src,from){ const s=CFG.spd;   // 접두사 · 흡수체가 직접 내보내는 적 탄 (유도 없이 직선)
   bullets.push({x,y,dir,spd:s,base:s,owner:'enemy',returns:0,boss:0,age:0,trail:[],glow:0,hcd:0,tried:[],ready:false,
     feint:0,orbitDir:0,orbitAmt:0,straight:1,zig:0,fake:0,blink:0,from,srcE:src}); }
@@ -53,7 +79,7 @@ onHurt=function(){ const I=run&&exRun();
     else name='알 수 없음';
     exBlame(I,loss,name); I.lastHp=P.hp;
     const sE=hit&&hit.srcE; if(sE&&sE.affix==='흡혈'&&ens.includes(sE)&&loss>0){ sE.hp=Math.min(sE.hpMax,sE.hp+HIT_UNIT); burst(sE.x,sE.y,'#ff4d8d',10,140); }
-    if(sE&&sE.affix==='냉기'&&loss>0){ if(!(P.chillT>0)){ P.chillMv=CFG.moveSpd*0.4; CFG.moveSpd-=P.chillMv; say('냉기 · 느려짐','cyan'); } P.chillT=2; }
+    if(sE&&sE.affix==='냉기'&&loss>0){ if(!(P.chillT>0)) say('냉기 · 느려짐','cyan'); chillOn(2); }
     if(feat('streak')){ if(I.streak>=5) say('연속 패링 '+I.streak+' 끊김','red'); I.streak=0; } }
   return _onHurt.apply(this,arguments); };
 
@@ -94,6 +120,9 @@ update=function(dt){
     if(e.affix==='가시'&&e._ph!=null&&e.hp<e._ph&&e.hp>0){ const a=Math.atan2(P.y-e.y,P.x-e.x);
       [-0.18,0.18].forEach(o=>exShot(e.x+Math.cos(a+o)*(e.r+8),e.y+Math.sin(a+o)*(e.r+8),a+o,e,'엘리트 · 가시')); } });
   // 냉기: 느려진 시간이 끝나면 이동 속도를 되돌린다
+  ens.forEach(e=>{ if(e.affix!=='화염'||!(run.phase==='fight')) return; e._ft=(e._ft||0)-dt;
+    if(e._ft<=0&&(e._fx==null||dist(e.x,e.y,e._fx,e._fy)>18)){ e._ft=0.3; e._fx=e.x; e._fy=e.y; addZone('fire',e.x,e.y); } });
+  zonesTick(dt);
   if(P.chillT>0){ P.chillT-=dt; if(P.chillT<=0){ CFG.moveSpd+=P.chillMv||0; P.chillMv=0; } }
   if(I.warn>0) I.warn-=dt;
   if(feat('lowhp')&&P.hp>0&&P.hp<=CFG.hpMax*0.3&&!paused){ I.hb-=dt;
@@ -363,7 +392,8 @@ killEnemy=function(e){
   if(feat('finish')&&run&&!run.tut&&e) bullets.forEach(b=>{ if(b.owner==='player'&&b.returns>=5&&dist(b.x,b.y,e.x,e.y)<e.r+R_BULLET+30&&(!fin||b.returns>fin.returns)) fin=b; });
   const r=_killEnemy2.apply(this,arguments);
   if(!run||!e) return r;
-  if(e.affix==='원한'){ ens.forEach(o=>{ if(o.grade!=='boss') o.fireT=Math.min(o.fireT,0.12); }); say('원한 — 일제 사격','red'); }
+  if(e.affix==='냉기') addZone('frost',e.x,e.y);
+  if(e.affix==='원한'){ addZone('ghost',e.x,e.y); ens.forEach(o=>{ if(o.grade!=='boss') o.fireT=Math.min(o.fireT,0.12); }); say('원한 — 일제 사격','red'); }
   if(fin){ const bonus=Math.round((G(e).score||50)*0.5*(CFG.scoreMul||1)); run.score+=bonus;
     announce('랠리 피니시 ×'+fin.returns+'  +'+bonus,'warn'); burst(e.x,e.y,'warn',30,320); shake=Math.max(shake,12); missionAdd('rally'); }
   if(e.grade==='absorber'&&e.pAbs){ const bonus=Math.round(GRADES.absorber.eatScore*e.pAbs*(CFG.scoreMul||1)); run.score+=bonus; say('흡수 보너스 +'+bonus,'warn'); }
