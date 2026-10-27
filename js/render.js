@@ -33,9 +33,30 @@ function drawGrid(){
     ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
   }
 }
+function prismPts(o,n){
+  const cx=o.x+o.w/2, cy=o.y+o.h/2, R=o.w/2;
+  return Array.from({length:n},(_,k)=>{ const a=-Math.PI/2+k*TAU/n; return proj(cx+Math.cos(a)*R, cy+Math.sin(a)*R*1.0); });
+}
+function drawPrism(o,ghost,bad){
+  const HG=WALL_HG, n=o.prism, g=prismPts(o,n), t=g.map(p=>[p[0],p[1]-HG]);
+  ctx.save();
+  if(ghost){ ctx.setLineDash([5,6]); ctx.lineWidth=1.5; ctx.strokeStyle=bad?'rgba(255,59,82,.5)':'rgba(155,231,255,.6)';
+    ctx.beginPath(); t.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); g.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); ctx.restore(); return; }
+  ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); g.forEach((p,i)=>i?ctx.lineTo(p[0]+4,p[1]+4):ctx.moveTo(p[0]+4,p[1]+4)); ctx.closePath(); ctx.fill();
+  for(let k=0;k<n;k++){ const a=g[k], b=g[(k+1)%n]; if(b[0]-a[0]<=0) continue;
+    ctx.fillStyle='rgba(120,200,255,.20)'; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.lineTo(b[0],b[1]-HG); ctx.lineTo(a[0],a[1]-HG); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(160,230,255,.45)'; ctx.lineWidth=1; ctx.stroke(); }
+  ctx.fillStyle='rgba(190,240,255,.30)'; ctx.beginPath(); t.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill();
+  const xs=t.map(p=>p[0]), gr=ctx.createLinearGradient(Math.min(...xs),0,Math.max(...xs),0);
+  ['#ff6b81','#ffd34d','#57e389','#6fd3ff','#c27cff'].forEach((c,i)=>gr.addColorStop(i/4,c));
+  ctx.strokeStyle=gr; ctx.lineWidth=1.6; ctx.globalAlpha=.85+.15*Math.sin(performance.now()/300); ctx.stroke();
+  ctx.restore();
+}
 function drawObstacles(){
   const HG=WALL_HG;
   allWalls().forEach(o=>{
+    if(o.prism){ drawPrism(o); return; }
     const a=proj(o.x,o.y),b=proj(o.x+o.w,o.y+o.h),w=b[0]-a[0],d=b[1]-a[1];
     ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(a[0]+4,a[1]+4,w,d);
     ctx.fillStyle='#16202b';ctx.fillRect(a[0],a[1]-HG,w,d+HG);
@@ -309,6 +330,7 @@ function drawMortars(){
 function drawWallPreview(){
   if(!CFG.wallMax||P.wallCd>0)return;
   const o=wallCandidate(), bad=wallProblem(o);
+  if(o.prism){ drawPrism(o,true,bad); return; }
   const a=proj(o.x,o.y), b=proj(o.x+o.w,o.y+o.h);
   ctx.save(); ctx.setLineDash([5,6]); ctx.lineWidth=1.5;
   ctx.strokeStyle=bad?'rgba(255,59,82,.45)':'rgba(47,227,208,.45)';
@@ -452,7 +474,7 @@ function drawQ(){
   const qt=keyName(OPT.keyWall);
   ctx.fillStyle=ready?C.cyan:C.dim;ctx.font=(qt.length>1?'700 7px':'700 10px')+' ui-monospace,monospace';ctx.textAlign='center';
   ctx.fillText(qt.slice(0,3),x,y+3);
-  if(CFG.wallMax){ ctx.font='600 9px ui-monospace,monospace';ctx.fillText(run.walls.length+'/'+CFG.wallMax,x,y+22); }
+  if(CFG.wallMax){ ctx.font='600 9px ui-monospace,monospace';ctx.fillText(run.walls.length+'/'+CFG.wallMax+(run.wallType===3?' △':run.wallType===5?' ⬠':''),x,y+22); }
 }
 function drawR(){
   if(!CFG.skillR)return;
@@ -700,7 +722,7 @@ function drawHUD(){
     ctx.fillStyle=C.cyan;ctx.font='700 22px ui-monospace,monospace';
     ctx.fillText('벽 설치  '+Math.ceil(run.phaseT),W/2,70);
     ctx.fillStyle=C.dim;ctx.font='600 12px ui-monospace,monospace';
-    ctx.fillText(keyName(OPT.keyWall)+' 로 벽 설치 ('+run.walls.length+' / '+CFG.wallMax+')  ·  Enter 로 바로 시작',W/2,92);
+    ctx.fillText(keyName(OPT.keyWall)+' 로 벽 설치 ('+run.walls.length+' / '+CFG.wallMax+')  ·  '+(touchMode?'Q 길게: 벽 종류':'휠: 벽 종류')+'  ·  Enter 로 바로 시작',W/2,92);
   }
   // 보스 체력
   const boss=ens.find(e=>e.grade==='boss');

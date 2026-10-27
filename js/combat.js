@@ -399,12 +399,14 @@ function update(dt){
     const obstacles=allWalls();
     if(obstacles.length){
       let gone=false;
+      if(b.owner==='player'&&!b.prismed){ const pw=obstacles.find(w=>w.prism&&segHitsRect(prevX,prevY,b.x,b.y,w.col)); if(pw) prismSplit(b,pw); }
       /* v3.15 벽 관통 수정 — 예전엔 한 프레임에 벽을 건너뛰면 '벽 가운데 기준' 방향으로 면을 골라서,
          긴 벽의 끝 근처를 맞으면 벽 위/아래 끝으로 순간이동해 그대로 지나갔고, 벽 안에서 생긴 탄(벽에 붙은 적)은
          무조건 오른쪽 면으로 밀려나 반대편으로 빠져나갔다. → 이동 경로(이전→지금)가 처음 닿는 면을 정확히 계산하고,
          이미 벽 안이면 '온 쪽'으로 되돌려 내보낸다. 여러 벽 중 가장 먼저 닿는 벽을 쓴다 */
       let best=null, bestD=1e9, bestO=null;
-      for(const {col:o} of obstacles){
+      for(const w0 of obstacles){
+        if(w0.prism) continue; const o=w0.col;
         const hit=sweepRect(prevX,prevY,b.x,b.y,o,R_BULLET); if(!hit) continue;
         const d=Math.hypot(hit.x-prevX,hit.y-prevY); if(d<bestD){ bestD=d; best=hit; bestO=o; }
       }
@@ -466,7 +468,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1)*(b.pdm||1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68
@@ -566,6 +568,13 @@ function spawnBullet(q){
     fake:(q.spec.fake||(q.spec.fakeP&&Math.random()<q.spec.fakeP))?1:0, blink:q.spec.blink?1:0,
     sway:q.spec.sway||0, curl:q.spec.curl?q.spec.curl*(q.spec.curlRand&&Math.random()<.5?-1:1):0, trap:q.spec.trap?1:0});
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
+}
+function prismSplit(b,w){
+  const spreads=w.prism===3?[-0.24,0.24]:[-0.51,-0.17,0.17,0.51], base=b.dir;
+  b.prismed=1; b.pdm=0.6; b.dir=base+spreads[0]; b.htg=null; b.trail.length=0;
+  for(let k=1;k<spreads.length&&bullets.length<160;k++)
+    bullets.push(Object.assign({},b,{dir:base+spreads[k],trail:[],tried:(b.tried||[]).slice(),htg:null}));
+  burst(b.x,b.y,'#9be7ff',w.prism===3?8:14,150); sfx('ui'); bMark(b.x,b.y,'프리즘 ×'+spreads.length,'#9be7ff');
 }
 function bossVolley(e,specs){
   const room=CFG.maxB+8-(bullets.length+queue.length); if(room<=0) return;

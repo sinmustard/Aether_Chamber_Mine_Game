@@ -145,9 +145,25 @@ function padBind(id,fn){
 }
 padBind('padParry',doParry);
 padBind('padSkill',doSkill);
-padBind('padWall',doQ);
+function cycleWallType(dir){
+  if(CFG.qSkill!=='wall'||!run) return;
+  const T=[0,3,5], i=T.indexOf(run.wallType||0); run.wallType=T[(i+(dir||1)+3)%3];
+  say(run.wallType===3?'삼각 프리즘 벽 — 내 탄 2갈래':run.wallType===5?'오각 프리즘 벽 — 내 탄 4갈래':'일반 벽','cyan'); sfx('ui');
+}
+function bindQ(id){
+  const el=$('#'+id); if(!el) return; let timer=null, last=0;
+  const down=e=>{ e.preventDefault(); e.stopPropagation(); if(screen!=='game') return;
+    const now=performance.now(); if(now-last<120) return; last=now;
+    if(CFG.qSkill!=='wall'){ doQ(); return; }
+    clearTimeout(timer); timer=setTimeout(()=>{ timer=null; cycleWallType(1); },420); };
+  const up=e=>{ if(timer){ clearTimeout(timer); timer=null; doQ(); } };
+  el.addEventListener('touchstart',down,{passive:false}); el.addEventListener('touchend',up,{passive:false});
+  el.addEventListener('mousedown',down); el.addEventListener('mouseup',up);
+}
+bindQ('padWall');
+gcv.addEventListener('wheel',e=>{ if(screen!=='game'||paused||CFG.qSkill!=='wall') return; e.preventDefault(); cycleWallType(e.deltaY>0?1:-1); },{passive:false});
 padBind('padR',doR);
-padBind('rgF',doSkill); padBind('rgQ',doQ); padBind('rgR',doR);   // v2.79 패링 조이스틱 옆 스킬 버튼
+padBind('rgF',doSkill); bindQ('rgQ'); padBind('rgR',doR);   // v2.79 패링 조이스틱 옆 스킬 버튼
 /* v2.79 스킬 버튼을 패링 조이스틱 자리 둘레(왼쪽 · 왼쪽 위 · 위)에 놓는다 */
 let ringKey='';
 function placeRing(){
@@ -339,6 +355,9 @@ function doSkill(){
   }
 }
 function wallCandidate(){
+  const pt=run.wallType||0;
+  if(pt){ const s=PRISM_S, cx=P.x+Math.cos(P.face)*95, cy=P.y+Math.sin(P.face)*95;
+    const o={x:clamp(cx-s/2,10,WORLD.w-10-s), y:clamp(cy-s/2,10+WALL_HG/SQUASH,WORLD.h-10-s), w:s, h:s, prism:pt}; o.col=colOf(o); return o; }
   const hor=Math.abs(Math.cos(P.face))>=Math.abs(Math.sin(P.face));   // 좌우를 보면 세로벽, 위아래면 가로벽
   const w=hor?WALL_T:WALL_L, h=hor?WALL_L:WALL_T;
   const d=hor?80:(Math.sin(P.face)>0?130:80);

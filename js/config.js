@@ -128,7 +128,7 @@ function seizeChance(e,b){
    벽은 높이(WALL_HG)만큼 솟아 보이므로 충돌 영역(col)은 윗면까지 포함 */
 /* v3.55 재사용 대기가 있는 스킬 전부 — 냉각 회로 · 회로 과부하 · 무작위 보정이 같이 쓴다 (새 스킬을 넣으면 여기에 추가) */
 const SKILL_CD_KEYS=['healCd','guardCd','dashCd','phaseCd','hookCd','slowCd','shockCd','absorbCd','decoyCd','gravCd','frostCd','owCd','echoCd'];
-const WALL_HG=28, WALL_L=130, WALL_T=30, WALL_GAP=50, WALL_CD=1.0, BUILD_T=12;
+const WALL_HG=28, WALL_L=130, WALL_T=30, WALL_GAP=50, WALL_CD=1.0, BUILD_T=12, PRISM_S=64;
 /* v2.1 R 슬롯 · 신규 F/Q 옵션 상수 */
 const DASH_DUR=0.16, ECHO_DUR=4;
 /* v2.7 추적자 — 접근(chase) -> 예비 동작(wind) -> 돌진(dash) -> 재사용 대기(cd) 상태를 순환한다 */
@@ -152,7 +152,14 @@ function rerollMap(){
     while(tries<30 && (dist(o.x+o.w/2,o.y+o.h/2,200,380)<200 || placed.some(p=>rectGap(p,o)<WALL_GAP)));
     placed.push(o);
   }
-  run.mapWalls=placed.map(o=>({x:o.x,y:o.y,w:o.w,h:o.h,col:colOf(o),static:true}));
+  if(Math.random()<0.5){
+    for(let tries=0;tries<30;tries++){
+      const o={x:60+Math.random()*(WORLD.w-120-PRISM_S), y:60+Math.random()*(WORLD.h-120-PRISM_S), w:PRISM_S, h:PRISM_S};
+      if(dist(o.x+o.w/2,o.y+o.h/2,200,380)<200||placed.some(p=>rectGap(p,o)<WALL_GAP)) continue;
+      o.prism=Math.random()<0.5?3:5; placed.push(o); break;
+    }
+  }
+  run.mapWalls=placed.map(o=>({x:o.x,y:o.y,w:o.w,h:o.h,col:colOf(o),static:true,prism:o.prism||0}));
 }
 function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가 (Liang–Barsky)
   let t0=0,t1=1; const dx=x2-x1, dy=y2-y1;
@@ -165,7 +172,7 @@ function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가
   }
   return true;
 }
-const wallBetween=(x1,y1,x2,y2)=>allWalls().some(({col:o})=>segHitsRect(x1,y1,x2,y2,o));
+const wallBetween=(x1,y1,x2,y2)=>allWalls().some(w=>!w.prism&&segHitsRect(x1,y1,x2,y2,w.col));
 const rectGap=(a,b)=>Math.max(a.x-(b.x+b.w), b.x-(a.x+a.w), a.y-(b.y+b.h), b.y-(a.y+a.h));
 /* v3.15 탄환 이동 경로(x0,y0→x1,y1)가 벽(반지름만큼 넓힌 사각형)에 처음 닿는 면과 그 직전 자리.
    이미 안에서 시작했으면 진행 반대 방향(온 쪽)으로 빠져나가는 면을 돌려준다. 안 닿으면 null */
