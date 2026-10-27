@@ -24,6 +24,8 @@ const SPECS=[
 const TOGS=[{k:'bounce',on:'충돌: 반사',off:'충돌: 소멸'},
             {k:'god',on:'무적: 켬',off:'무적: 끔'},
             {k:'fastwave',on:'웨이브 가속: 켬',off:'웨이브 가속: 끔'}];
+/* v3.64 출격할 때 다시 계산되지 않는 튜닝 값 — 디버그를 끄면 기본값으로 되돌린다 (끈 뒤에도 남아서 랭킹 판에 쓰였다) */
+const DBG_DEF={}; ['dwell','maxB','bounce','god','fastwave'].forEach(k=>DBG_DEF[k]=CFG[k]);
 (function build(){
   const g=$('#grid');
   SPECS.forEach(sp=>{
@@ -112,7 +114,7 @@ const BOT={on:false,left:0,speed:3,skill:1,runs:[],cur:null,readyT:0,react:0.1,r
 const BOT_PICK={multi:10,flow:9,grit:9,s_homing:9,s_revive:9,pierce:8,s_boss:8,accel:7,stable:7,overload:7,leech:7,shard:6,aftershock:6,vital:6,range:6,s_revhp:6,fov:5,calm:5,iframe:5,move:4,greed:3,reroll:2};
 const skName=k=>{ const u=UPG.find(x=>x.k===k); return u?u.n.replace(/^[FQR] · /,''):'없음'; };
 function botSnapshot(){ BOT.snap={lv:UPG.map(u=>u.lv),skill:META.skill,q:META.skillQ,r:META.skillR,cur:META.cur}; }
-function botRestore(){ if(!BOT.snap) return; UPG.forEach((u,i)=>u.lv=BOT.snap.lv[i]); META.skill=BOT.snap.skill; META.skillQ=BOT.snap.q; META.skillR=BOT.snap.r; META.cur=BOT.snap.cur; BOT.snap=null; window.__botTemp=false; save(); }
+function botRestore(){ if(!BOT.snap) return; UPG.forEach((u,i)=>u.lv=BOT.snap.lv[i]); META.skill=BOT.snap.skill; META.skillQ=BOT.snap.q; META.skillR=BOT.snap.r; META.cur=BOT.snap.cur; BOT.snap=null; pendingRoul=null; window.__botTemp=false; save(); }   // v3.64 pendingRoul — 혼돈이야~ 봇 판의 룰렛 재화가 복구 뒤에 HUB에서 더해지던 문제
 function botPrep(){
   if(BOT.cfg.build!=='max') return;
   UPG.forEach(u=>u.lv=u.max);

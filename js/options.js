@@ -2,7 +2,7 @@
 /* ================= 옵션 · 저장 (v1.3) ================= */
 const OPT={vol:80, bgm:40, lowfx:0, shake:1, cb:0, lockMouse:1, tutSeen:0, inputBuf:0.12, holdParry:1, padPos:'bottom', swapSticks:0, mode:'normal', chaos:0, dmgNum:1, fixedSticks:0, fixMove:0, fixAim:0, posMove:null, posAim:null, posSkill:null, skillRing:0, keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r', pimgMode:'off', pimgRotate:1, pimgNoBg:1, pimgBgLv:1, pimgAnimMove:0};   // v2.89 커스텀 캐릭터 이미지
 /* v1.4.1 키 설정 — 이동(WASD·방향키)과 ESC는 고정 */
-const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock'];
+const KEY_RESERVED=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape','tab','meta','capslock','`','~','f1'];   // v3.64 ` · F1은 디버그 토글
 const KEY_DEFAULT={keyParry:'e', keySkill:'f', keyWall:'q', keyR:'r'};
 let binding=null, bindMsg='';
 const keyName=k=>k===' '?'SPACE':(k.length===1?k.toUpperCase():k.charAt(0).toUpperCase()+k.slice(1));

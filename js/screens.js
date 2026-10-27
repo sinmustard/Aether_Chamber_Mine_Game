@@ -279,9 +279,10 @@ function endRun(){
   syncMeta();                                                            // v2.46 다른 탭이 저장한 최신 재화에 더한다
   META.cur+=roul?0:gain;
   pendingRoul=roul?Object.assign({},roul,{gain}):null;
-  const isNew=run.score>META.best;
+  /* v3.64 디버그 · 테스트 봇 판은 최고 기록 · 누적 기록에 넣지 않는다 — 예전엔 업적은 막아도 기록은 쌓여서, 다음 일반 판에서 그 기록으로 업적 보상이 나갔다 */
+  const isNew=!run.cheat&&run.score>META.best;
   if(isNew)META.best=run.score;
-  if(run.mode!=='daily') META.bestCycle=Math.max(META.bestCycle,run.cycle);
+  if(run.mode!=='daily'&&!run.cheat) META.bestCycle=Math.max(META.bestCycle,run.cycle);
   /* v2.68 누적 기록 · 업적 */
   stat('runs'); stat('playTime',Math.max(0,Math.round(run.time))); statMax('bestRet',run.bestRet); statMax('bestScore',run.score);
   if(run.mode==='daily') stat('dailyRuns'); if(run.mode==='hard'||run.mode==='hotd') statMax('hardBestCycle',run.cycle);   // v3.53 핫드 포함

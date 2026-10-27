@@ -18,7 +18,8 @@ function loop(ts){
   const dt=Math.min(.033,(ts-t0)/1000||0);t0=ts;
   if(screen==='game'&&run){
     if((fitTick++%20)===0) fitCanvas();   // v2.84
-    try{ for(let i=0;i<(BOT.on?BOT.speed:1);i++) update(dt); }catch(e){ reportErr('update',e); }
+    /* v3.64 봇 배속으로 한 프레임에 여러 번 돌 때, 판이 끝나 결과 화면으로 넘어갔으면 멈춘다 (endRun이 두 번 불려 재화 · 기록이 두 번 들어갔다) */
+    try{ for(let i=0;i<(BOT.on?BOT.speed:1)&&screen==='game'&&run;i++) update(dt); }catch(e){ reportErr('update',e); }
     try{ render(); }catch(e){ reportErr('render',e); }
     if(OPT.skillRing&&touchMode) placeRing();   // v2.79
     { const cover=paused||$('#modal').classList.contains('on')||$('#confirm').classList.contains('on')||(run&&run.phase==='reward');

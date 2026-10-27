@@ -141,7 +141,8 @@ async function dbgRestore(){
 }
 function setDebug(on){
   if(on) dbgBackupMake();
-  else { const b=dbgBackupGet(); if(b&&!b.dirty){ try{ localStorage.removeItem(DBG_BAK); }catch(e){} } }
+  else { const b=dbgBackupGet(); if(b&&!b.dirty){ try{ localStorage.removeItem(DBG_BAK); }catch(e){} }
+    Object.assign(CFG,DBG_DEF); syncUI(); }   // v3.64
   debug=on;
   document.body.classList.toggle('debug',debug);
   const d=$('details.dev'); if(d) d.open=debug;

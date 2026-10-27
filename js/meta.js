@@ -138,6 +138,7 @@ const UPG=[
 ];
 const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:'', stats:{}, ach:{}, cloudAt:''};
 /* v2.68 누적 기록 */
-function stat(k,n){ if(!META.stats) META.stats={}; META.stats[k]=(META.stats[k]||0)+(n==null?1:n); }
-function statMax(k,v){ if(!META.stats) META.stats={}; META.stats[k]=Math.max(META.stats[k]||0,v||0); }
+const statOff=()=>typeof run!=='undefined'&&run&&run.cheat;   // v3.64 디버그 판은 누적 기록에 안 셈
+function stat(k,n){ if(statOff()) return; if(!META.stats) META.stats={}; META.stats[k]=(META.stats[k]||0)+(n==null?1:n); }
+function statMax(k,v){ if(statOff()) return; if(!META.stats) META.stats={}; META.stats[k]=Math.max(META.stats[k]||0,v||0); }
 let sel=0;

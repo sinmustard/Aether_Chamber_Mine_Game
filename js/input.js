@@ -1,9 +1,16 @@
 "use strict";
 /* ================= 입력 ================= */
 let lastEscKey=0;
+/* v3.64 한글 입력 상태에서는 브라우저에 따라 e.key가 'ㅈ' · 'Process'로 와서 WASD · E/F/Q/R이 안 먹었다 —
+   글자 키 · 숫자 키는 이때 자판 위치(e.code)로 영문 키 이름을 쓴다 */
+function keyOf(e){
+  const k=(e.key||'').toLowerCase();
+  if(/^(Key[A-Z]|Digit[0-9])$/.test(e.code||'')&&(k.length!==1||/[^\x00-\x7f]/.test(k))) return e.code.slice(-1).toLowerCase();
+  return k;
+}
 addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
-  const k=e.key.toLowerCase();
+  const k=keyOf(e);
   if(k==='escape'){ if(e.repeat) return; lastEscKey=performance.now(); }   // v2.56 길게 누를 때 반복 입력은 무시
   /* v2.51 ESC는 어느 화면에서든 확인 팝업 → 설정 창 순서로 닫는다 */
   if(k==='escape'&&$('#confirm').classList.contains('on')){ closeConfirm(); return; }
@@ -38,7 +45,7 @@ addEventListener('keydown',e=>{
   else if(k===OPT.keyWall){e.preventDefault();doQ();}
   else if(k===OPT.keyR){e.preventDefault();doR();}
 });
-addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+addEventListener('keyup',e=>{keys[keyOf(e)]=false;});
 /* v3.62 창이 포커스를 잃으면 keyup이 안 와서 키가 눌린 채로 남았다 (W 누른 채 알트탭 → 돌아오면 계속 걸어감) */
 const clearKeys=()=>{ for(const k in keys) keys[k]=false; };
 addEventListener('blur',clearKeys);
