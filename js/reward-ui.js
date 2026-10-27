@@ -24,6 +24,16 @@ function chaosTrap(){ return {k:'c_trap',n:'랜덤 스탯 증폭 +8',nh:'랜덤 
 function chaosPick(){ const s=chaosStat(); return {k:'c_pick',n:'지정 스탯 랜덤 증폭',d:'<b>'+s[0]+'</b>을(를) ×0.5 ~ ×4 사이 무작위로 증폭합니다',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>chaosPickHidden().fn()}; }
 function chaosPickHidden(){ return {k:'c_pickh',n:'지정 스탯 랜덤 증폭',d:'얻는 순간 증폭할 능력치가 정해져요 · ×0.5 ~ ×4 무작위',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,fn:()=>{
   const s=chaosStat(), m=Math.round((0.5+Math.random()*3.5)*10)/10; s[1](m); announce('지정 — '+s[0]+' ×'+m+' 증폭  '+s[2](m),'cyan'); }}; }
+function chaosPlayerPick(){ return {k:'c_pp',n:'플레이어 지정 스탯 랜덤 증폭',d:'고르면 증폭할 능력치를 <b>직접</b> 정해요 · 세기는 ×0.5 ~ ×4 무작위',tag:'혼돈 · 특수 특전',max:1,sp:1,chaos:1,stay:1,fn:openStatChoice}; }
+function openStatChoice(){
+  const bag=CHAOS_STATS.slice(); rwPicks=[]; run.rwStatPick=1;
+  while(rwPicks.length<3&&bag.length){ const s=bag.splice(Math.floor(Math.random()*bag.length),1)[0];
+    rwPicks.push({k:'c_ppst',n:s[0],d:'×0.5 ~ ×4 무작위로 증폭 · ×1 기준 '+s[2](1),tag:'혼돈 · 능력치 지정',chaos:1,fn:()=>{
+      const m=Math.round((0.5+Math.random()*3.5)*10)/10; s[1](m); announce('직접 지정 — '+s[0]+' ×'+m+' 증폭  '+s[2](m),'cyan'); }}); }
+  $('#rwHd').innerHTML='플레이어 지정 스탯 랜덤 증폭 &nbsp;—&nbsp; 증폭할 능력치를 고르세요';
+  const rr=$('#rwReroll'); rr.disabled=true;
+  renderRwRow(); sfx('ui');
+}
 function chaosDisguise(){
   const pool=BOONS.filter(b=>boonLv(b.k)<b.max); if(!pool.length) return chaosPick();
   const look=pool[Math.floor(Math.random()*pool.length)];
@@ -49,7 +59,7 @@ function openReward(afterBoss,fromReroll){
   /* v2.41 보스를 잡은 직후 보상은 특수 특전 확률 +30%p (최대 90%) */
   const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(run.mode==='chaosx'&&Math.random()<Math.max(spChance,0.25)){
-    const r=Math.random(), pick=r<0.3?chaosDisguise():r<0.5?chaosTrap():r<0.75?chaosPick():chaosPickHidden();
+    const r=Math.random(), pick=r<0.25?chaosDisguise():r<0.42?chaosTrap():r<0.6?chaosPick():r<0.78?chaosPickHidden():chaosPlayerPick();
     rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=pick;
   }
   else if(CFG.specialChance>0 && Math.random()<spChance){
@@ -64,6 +74,16 @@ function openReward(afterBoss,fromReroll){
   run.phase='reward';
   $('#rwHd').innerHTML=(afterBoss?'알레테이아 격파 · <b>사이클 '+run.cycle+'</b>'
                                  :(run.wave===0?'선행 보급':'웨이브 '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요';
+  run.rwStatPick=0;
+  renderRwRow();
+  const own=Object.keys(run.boons);
+  $('#rwOwn').innerHTML=own.length
+    ? '보유 — '+own.map(k=>{const b=boonDef(k);return '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join(' · ')
+    : '';
+  $('#reward').classList.add('on');
+  sfx('wave');
+}
+function renderRwRow(){
   $('#rwRow').innerHTML=rwPicks.map((b,i)=>
     '<div class="bc'+(b.sp?' sp':'')+'" data-i="'+i+'">'+
     '<div class="num">'+(i+1)+'</div>'+
@@ -72,16 +92,10 @@ function openReward(afterBoss,fromReroll){
     '<div class="d">'+b.d+'</div>'+
     '<div class="st">'+(boonLv(b.look||b.k)?'보유 '+boonLv(b.look||b.k)+' / '+b.max:'신규')+'</div>'+
     '</div>').join('');
-  const own=Object.keys(run.boons);
-  $('#rwOwn').innerHTML=own.length
-    ? '보유 — '+own.map(k=>{const b=boonDef(k);return '<b>'+b.n+'</b>'+(run.boons[k]>1?' ×'+run.boons[k]:'');}).join(' · ')
-    : '';
-  $('#reward').classList.add('on');
-  sfx('wave');
 }
 /* v2.52 보상 새로고침 — 생존/보급의 '새로고침' 강화와 보상 '새로고침 +1'로 횟수를 얻는다 */
 function rerollReward(){
-  if(!run||run.phase!=='reward'||!(run.rerolls>0)) return;
+  if(!run||run.phase!=='reward'||!(run.rerolls>0)||run.rwStatPick) return;
   run.rerolls--; sfx('ui'); openReward(run.rwBoss,true);
 }
 $('#rwReroll').onclick=rerollReward;
@@ -89,6 +103,8 @@ function takeReward(i){
   const b=rwPicks[i]; if(!b) return;
   if(!b.chaos) run.boons[b.k]=(run.boons[b.k]||0)+1;
   if(b.sp) stat('specials');   // v2.68
+  if(b.stay){ b.fn(); return; }
+  run.rwStatPick=0;
   b.fn();
   $('#reward').classList.remove('on');
   endReward();
