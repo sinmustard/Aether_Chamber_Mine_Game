@@ -231,6 +231,7 @@ function startRun(mode){
   newRun();
   if(keep){ UPG.forEach((u,i)=>u.lv=keep.lv[i]); META.skill=keep.sk[0]; META.skillQ=keep.sk[1]; META.skillR=keep.sk[2]; }
   run.mode=mode; run.day=mode==='daily'?todayKST():'';
+  requestRunToken();
   run.chaos=(!!OPT.chaos&&mode!=='daily')||mode==='chaosx';   // v3.24 카오스 — 노멀 · 하드에 켜는 옵션 (데일리는 모두 같은 맵이어야 해서 제외)
   /* ③ 하드 — 적 체력 ×1.5 · 탄속 ×1.15 · 발사 간격 ×0.85 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 */
   if(mode==='hard'||mode==='hotd'){ run.diff*=1.5; CFG.spd*=1.15; CFG.fire*=0.85; CFG.scoreMul*=1.3; CFG.gainMul=(CFG.gainMul||1)*1.5; }
@@ -310,7 +311,7 @@ function endRun(){
     if(!ss) $('#discStat').textContent=nm+' 랭킹은 로그인해야 기록돼요';
     else if(run.cheat) $('#discStat').textContent='디버그를 쓴 판은 '+nm+' 랭킹에 기록되지 않아요';
     else if(run.score>0){
-      const body={p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild()};
+      const body={p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild(),p_run:run.rtk||null};
       if(run.mode==='daily') body.p_day=run.day;
       rankCall(({hard:'aether_submit_hard',daily:'aether_submit_daily',hotd:'aether_submit_hotd',chaosx:'aether_submit_chaosx'})[run.mode],body)
         .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
@@ -322,7 +323,7 @@ function endRun(){
      v3.24 카오스를 켠 판도 기록하고 랭킹에 이름(카오스)로 표시 */
   if(getSession()&&!run.cheat&&!run.tut&&run.score>0){
     const ss=getSession();
-    rankCall('aether_submit_verified',{p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild()})
+    rankCall('aether_submit_verified',{p_name:ss.name,p_pin:pinOf(ss),p_score:Math.round(run.score),p_cycle:run.cycle,p_wave:run.wave,p_kills:run.kills,p_build:runBuild(),p_run:run.rtk||null})
       .then(d=>{ const r=Array.isArray(d)?d[0]:d; if(!r) return;
         $('#discStat').textContent= r.updated? '노멀 랭킹 기록 갱신 · '+r.rank+'위' : '노멀 랭킹 · 최고 기록 '+Number(r.best).toLocaleString()+'점 유지 · '+r.rank+'위'; })
       .catch(e=>{ $('#discStat').textContent='노멀 랭킹 기록 실패'+(badSession(e)?' (다시 로그인 필요)':' — 다음 판에 다시 시도해요'); });
