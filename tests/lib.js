@@ -5,7 +5,7 @@ const { chromium } = require('playwright-core');
 
 const ROOT = path.resolve(__dirname, '..');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json' };
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.json': 'application/json' };
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 function serve() {
@@ -32,6 +32,7 @@ async function launch() {
    opts.login  : 'legacy'(aether_login 없음, 기본) | 'token'(토큰 발급) | 'expired'(토큰 거절)
    opts.rows   : 랭킹 테이블 GET 응답
    opts.rejectChaosTag : build에 -chaos가 붙으면 400으로 거절
+   opts.load   : aether_cloud_load가 돌려줄 저장 데이터 | 'none'(처음 쓰는 닉네임 → 400 '없어요')
    calls 배열에 {fn, body}가 쌓인다 (GET은 fn='GET:<table>') */
 const TOKEN = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6';
 function fakeSupabase(page, opts = {}) {
@@ -62,7 +63,8 @@ function fakeSupabase(page, opts = {}) {
       if (opts.rejectChaosTag && /-chaos$/.test(body.p_build || '')) return j(400, { code: 'P0001', message: 'invalid build' });
       return j(200, [{ rank: 1, best: 0, updated: true }]);
     }
-    if (fn === 'aether_cloud_load') return j(200, [{ data: { opt: { tutSeen: 1 } }, updated_at: '2026-01-01T00:00:00Z' }]);
+    if (fn === 'aether_cloud_load') return opts.load === 'none' ? j(400, { code: 'P0001', message: '계정이 없어요' })
+      : j(200, [{ data: opts.load || { opt: { tutSeen: 1 } }, updated_at: '2026-01-01T00:00:00Z' }]);
     if (fn === 'aether_cloud_stamp') return j(200, '2000-01-01T00:00:00Z');
     if (fn === 'aether_cloud_save') return j(200, '2026-01-01T00:00:01Z');
     if (fn === 'aether_is_dev') return j(200, false);

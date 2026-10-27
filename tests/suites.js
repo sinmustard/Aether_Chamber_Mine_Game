@@ -143,4 +143,154 @@ module.exports = {
     }
     noErrors(t, g, '히든 모드'); await p.close();
   },
+
+  /* ---- v3.62 ~ v3.69 수정 확인 ---- */
+  async '스킬 장착 · 보상 화면 입력 (v3.62 · v3.67)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p);
+    t.eq(await p.evaluate(() => { META.skill = 'heal'; const b = document.createElement('button'); b.dataset.slot = 'q'; b.dataset.skill = 'wall';
+      $('#skillSel').appendChild(b); b.click(); return META.skill + '/' + META.skillQ; }), 'heal/wall', 'Q 스킬을 골라도 F 스킬 유지');
+    await launchRun(p);
+    /* 보상 창을 열고 같은 순간에 고르면 '잠금 풀림' 알림이 늦게 와서 일시정지가 걸린다 — 사람 손으론 못 하는 속도라 테스트에서만 잠금을 끈다 */
+    await p.evaluate(() => { OPT.lockMouse = 0; });
+    t.eq(await p.evaluate(() => { run.phase = 'build'; run.phaseT = 12; run.startRewards = 0; openReward(false); takeReward(0); return run.phase; }), 'build', '선행 보급 보상 뒤 벽 설치 단계 유지');
+    t.eq(await p.evaluate(() => { run.phase = 'break'; openReward(false); takeReward(0); return run.phase; }), 'break', '일반 보상 뒤 break');
+    await p.evaluate(() => { run.rerolls = 3; openReward(false); dispatchEvent(new KeyboardEvent('keydown', { key: 'r', repeat: true })); });
+    t.eq(await p.evaluate(() => run.rerolls), 3, '꾹 눌러 생긴 반복 R은 무시');
+    await p.keyboard.press('r'); t.eq(await p.evaluate(() => run.rerolls), 3, '보상 창이 열리자마자 누른 R은 무시 (v3.67)');
+    await wait(600); await p.keyboard.press('r'); t.eq(await p.evaluate(() => run.rerolls), 2, '0.5초 뒤 R은 새로고침');
+    await p.keyboard.press('r'); t.eq(await p.evaluate(() => run.rerolls), 1, '이어서 누른 R도 새로고침');
+    t.eq(await p.evaluate(() => { run.rerolls = 3; openReward(false); $('#rwReroll').click(); return run.rerolls; }), 2, '새로고침 버튼은 바로 됨');
+    t.eq(await p.evaluate(() => { P.lock = 0; P.pbuf = 0; doParry(true); return P.lock; }), 0, '보상 고르는 중엔 패링 안 됨');
+    t.eq(await p.evaluate(() => { takeReward(0); paused = false; keys.w = true; dispatchEvent(new Event('blur')); return keys.w; }), false, '창 포커스를 잃으면 눌린 키 해제');
+    noErrors(t, g, '보상 화면'); await p.close();
+  },
+
+  async '데일리 시드 고정 (v3.62)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p);
+    const [a, b] = await p.evaluate(() => {
+      const snap = n => { startRun('daily'); const res = [];
+        for (let k = 0; k < 6; k++) { for (let i = 0; i < n * (k + 1); i++) Math.random(); ens.length = 0; waveSpawn(); res.push(ens.map(e => e.grade).join('/')); }
+        res.push(JSON.stringify(run.mapWalls.map(o => [o.x | 0, o.y | 0])));
+        for (let i = 0; i < n; i++) Math.random(); openReward(false); res.push(rwPicks.map(x => x.k).join()); takeReward(0);
+        return res.join(' '); };
+      return [snap(3), snap(777)]; });
+    t.eq(a, b, '중간에 쓴 난수 양이 달라도 6웨이브까지 적 · 벽 · 보상이 같음');
+    noErrors(t, g, '데일리'); await p.close();
+  },
+
+  async '저장 · 로그인 동기화 (v3.62 · v3.67)'(t, { browser, url }) {
+    const progress = { meta: { cur: 7777, best: 4000 }, upg: { range: 2 }, opt: { tutSeen: 1, keyParry: 'k' } };
+    let g = await openGame(browser, url), p = g.page; await toHub(p);
+    t.ok(await p.evaluate(() => { UPG.find(u => u.k === 'range').lv = 3; META.cur = 10; save();
+      const d = JSON.parse(localStorage.getItem(SAVE_KEY)); d.upg.range = 0; d.meta.cur = 999; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); syncMeta();
+      return UPG.find(u => u.k === 'range').lv === 0 && META.cur === 999; }), '다른 탭 저장을 재화 · 강화 한 쌍으로 받음 (되돌리기 재화 복사 막기)');
+    t.ok(await p.evaluate(() => { META.hidden = { hotd: 1 }; applySave({ meta: { cur: 1 }, opt: { tutSeen: 1 } }); return !hiddenOn('hotd'); }), '계정 기록을 불러오면 히든 해금도 그 계정 것');
+    t.eq(await p.evaluate(() => { syncing = true; syncAt = performance.now(); $('#launch').click(); const s = screen; syncing = false; return s; }), 'hub', '다른 기기 기록 확인 중엔 출격 대기');
+    const sent = await p.evaluate(async () => { const n = [], oc = cloudCall; run = { chaos: 1 };
+      for (const st of [500, 400]) { cloudCall = async (fn, body) => { n.push(st + ':' + body.p_build); const e = new Error('x'); e.status = st; throw e; };
+        await rankCall('aether_submit_verified', { p_build: BUILD + '-chaos' }).catch(() => {}); }
+      cloudCall = oc; run = null; return n.map(s => s.replace(/\d+\.\d+/, 'V')); });
+    t.eq(sent.join(','), '500:V-chaos,400:V-chaos,400:V', '서버 오류(5xx)는 재전송 안 함, 거절(4xx)만 표시 없이 재전송');
+    await p.close();
+    const login = async (p, name) => { await click(p, '#title [data-go=hub]'); await wait(600);
+      await p.fill('#lgName', name); await p.fill('#lgPin', '1234'); await p.click('#lgGo'); await wait(1200); };
+    g = await openGame(browser, url, { session: null, save: progress, supabase: { load: { meta: { cur: 500, best: 100 }, upg: { range: 1 }, opt: { tutSeen: 1 } } } }); p = g.page;
+    await login(p, 'tester');
+    t.ok(await visible(p, '#confirm.on'), '오프라인 진행이 서버와 다르면 고르는 창', await p.textContent('#cfD'));
+    await p.click('#cfNo'); await wait(800);
+    const up = g.calls.filter(c => c.fn === 'aether_cloud_save').pop();
+    t.ok(up && up.body.p_data.meta.cur === 7777 && await p.evaluate(() => META.cur) === 7777, '"이 기기 기록 쓰기" → 이 기기 기록을 서버에 올림');
+    await p.close();
+    g = await openGame(browser, url, { session: null, save: progress, supabase: { load: { meta: { cur: 500, best: 100 }, upg: { range: 1 }, opt: { tutSeen: 1 } } } }); p = g.page;
+    await login(p, 'tester'); await p.click('#cfYes'); await wait(800);
+    t.eq(await p.evaluate(() => META.cur), 500, '"서버 기록 불러오기" → 서버 기록'); await p.close();
+    g = await openGame(browser, url, { session: null, save: progress, supabase: { load: 'none' } }); p = g.page;
+    await p.evaluate(() => localStorage.setItem('aether_rank_name', 'alice')); await login(p, 'bob');
+    let sv = g.calls.filter(c => c.fn === 'aether_cloud_save').pop();
+    t.ok(sv && !(sv.body.p_data.meta && sv.body.p_data.meta.cur), '로그아웃 뒤 새 계정 → 앞 계정 진행을 올리지 않음 (v3.67)');
+    t.ok(await p.evaluate(() => META.cur === 0 && UPG.find(u => u.k === 'range').lv === 0 && OPT.keyParry === 'k' && screen === 'hub'), '새 계정은 진행 0 · 설정 유지');
+    await p.close();
+    g = await openGame(browser, url, { session: null, save: progress, supabase: { load: 'none' } }); p = g.page;
+    await login(p, 'carol'); sv = g.calls.filter(c => c.fn === 'aether_cloud_save').pop();
+    t.ok(sv && sv.body.p_data.meta.cur === 7777, '로그인한 적 없는 오프라인 진행은 새 계정으로 옮김');
+    noErrors(t, g, '저장 · 로그인'); await p.close();
+  },
+
+  async '전투: 정지장 · 구속 (v3.63)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const r = await p.evaluate(() => {
+      run.phase = 'fight'; run.phaseT = 99; ens.length = 0; bullets.length = 0; P.x = 500; P.y = 300; CFG.god = 1; run.mapWalls = [];
+      const mk = (gr, x, y) => { spawnEnemyAt(gr, x, y); const e = ens[ens.length - 1]; e.ax = e.x = x; e.ay = e.y = y; return e; };
+      const step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
+      const stasis = () => { P.stasis = { x: 800, y: 300, r: 190, t: 999 }; }, o = {};
+      stasis(); const sn = mk('sniper', 800, 300); sn.snipeT = 1.5; step(120); o.sniper = sn.snipeT === 1.5;
+      P.stasis = null; step(10); o.sniperResume = sn.snipeT < 1.5;
+      ens.length = 0; stasis(); mk('healer', 800, 300); const v = mk('mob', 820, 320); v.hp = v.hpMax * 0.5; const h0 = v.hp; step(60); o.healer = v.hp === h0;
+      ens.length = 0; const su = mk('summoner', 800, 300); su.summonT = 0.5; step(120); o.summoner = ens.length === 1;
+      ens.length = 0; P.stasis = null; spawnEnemyAt('boss', 800, 300); const bo = ens[ens.length - 1]; bo.variant = 'phantom'; bo.blinkT = 0.3; bo.bindT = 5; step(60); o.phantom = bo.blinkT === 0.3;
+      ens.length = 0; P.stasis = { x: 520, y: 300, r: 190, t: 999 }; const tr = mk('tracker', 520, 300); tr.lungePhase = 'dash'; tr.lungeT = 1; tr.lungeHit = false; P.x = 525; step(5); o.tracker = tr.lungeHit === false;
+      ens.length = 0; P.stasis = null; hitstop = 0.18; const snd = [], os = sfx; sfx = k => snd.push(k); killEnemy(mk('mob', 900, 100)); sfx = os;
+      o.hitstop = hitstop === 0.18; o.killSound = snd.includes('kill');
+      o.overload = /F·Q 스킬/.test(BOONS.find(b => b.k === 'overload').d);
+      return o; });
+    t.ok(r.sniper && r.sniperResume, '정지장 안 저격수는 조준이 멈추고, 나오면 다시 진행');
+    t.ok(r.healer, '정지장 안 힐러는 회복 안 함'); t.ok(r.summoner, '정지장 안 소환사는 소환 안 함');
+    t.ok(r.phantom, '구속된 환영형은 순간이동 안 함'); t.ok(r.tracker, '멈춘 추적자는 돌진 피해 없음');
+    t.ok(r.hitstop, '일반 처치가 보스 처치 멈춤을 끊지 않음'); t.ok(r.killSound, '처치 효과음은 그대로'); t.ok(r.overload, '회로 과부하 설명 F·Q');
+    noErrors(t, g, '정지장 · 구속'); await p.close();
+  },
+
+  async '입력 · 디버그 (v3.64)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const r = await p.evaluate(() => {
+      const kd = (key, code, ty) => dispatchEvent(new KeyboardEvent(ty || 'keydown', { key, code })), o = {};
+      run.phase = 'fight'; kd('ㅈ', 'KeyW'); o.ime = keys.w === true; kd('w', 'KeyW', 'keyup'); o.imeUp = keys.w === false;
+      let n = 0; const od = doParry; doParry = () => { n++; }; kd('Process', 'KeyE'); doParry = od; o.process = n === 1;
+      binding = 'keySkill'; const ks = OPT.keySkill; kd('`', 'Backquote'); o.reserved = OPT.keySkill === ks; binding = null; $('#modal').classList.remove('on');
+      META.best = 100; META.stats = { runs: 5 }; const bc = META.bestCycle; run.score = 99999; run.cheat = 1; run.cycle = 9; P.hp = 0; endRun();
+      o.cheat = META.best === 100 && META.stats.runs === 5 && META.bestCycle === bc;
+      return o; });
+    t.ok(r.ime && r.imeUp, '한글 입력 상태(ㅈ)도 W로 인식, 한/영 바꿔 떼도 해제'); t.ok(r.process, "'Process' 키도 자판 위치로 패링");
+    t.ok(r.reserved, '` 키는 스킬 키로 지정 못 함'); t.ok(r.cheat, '디버그 판은 최고 기록 · 누적 기록에 안 들어감');
+    await p.evaluate(() => go('hub')); await wait(800); await launchRun(p);
+    t.eq(await p.evaluate(() => { let n = 0; const oe = endRun; endRun = function () { n++; return oe.apply(this, arguments); };
+      BOT.on = true; BOT.speed = 6; CFG.god = 0; P.inv = 0; P.hp = 0; loop(performance.now() + 16); BOT.on = false; endRun = oe; return n; }), 1, '봇 ×6 배속에서도 판 종료는 한 번');
+    t.ok(await p.evaluate(() => { debug = true; CFG.maxB = 1; CFG.god = 1; setDebug(false); return CFG.maxB === DBG_DEF.maxB && !CFG.god; }), '디버그를 끄면 튜닝 값 복구');
+    noErrors(t, g, '입력 · 디버그'); await p.close();
+  },
+
+  async '보스 변종 패턴 (v3.69)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p);
+    const r = await p.evaluate(() => {
+      const dist = (v, cycle, mode, p2) => { run.mode = mode; run.cycle = cycle; const e = { grade: 'boss', variant: v, p2 }, c = {};
+        for (let i = 0; i < 3000; i++) { const q = pickPattern(e); c[q.n] = (c[q.n] || 0) + 1; } return c; };
+      const names = a => a.map(q => q.n), o = { bad: [] }, P2C = names(BOSS_P2S);
+      for (const [v, first] of [['warden', 2], ['phantom', 3], ['collapse', 4]]) {
+        const vp = VARIANT_PATTERNS[v], own = names(vp.base), own2 = names(vp.p2), late = names(vp.base.filter(q => q.late));
+        let d = dist(v, first, 'normal', false), ks = Object.keys(d);
+        if (!ks.every(k => own.includes(k))) o.bad.push(v + ' 1페이즈에 다른 패턴');
+        if (ks.some(k => late.includes(k))) o.bad.push(v + ' 첫 등장에 어려운 패턴');
+        if (!Object.keys(dist(v, first + 4, 'normal', false)).some(k => late.includes(k))) o.bad.push(v + ' 다음 등장에 어려운 패턴 없음');
+        if (!Object.keys(dist(v, first, 'hard', false)).some(k => late.includes(k))) o.bad.push(v + ' 하드에 어려운 패턴 없음');
+        d = dist(v, first + 4, 'normal', true);
+        const a = own2.reduce((s, k) => s + (d[k] || 0), 0), b = P2C.reduce((s, k) => s + (d[k] || 0), 0);
+        if (!(a > 400 && b > 400 && Math.abs(a - b) < 250)) o.bad.push(v + ' 2페이즈 전용/공용 비율 ' + a + '/' + b);
+      }
+      const core = dist(undefined, 2, 'normal', false); o.coreMix = ['TWIN', 'ORBIT', 'OVERLOAD'].some(k => core[k]);
+      o.fit = Object.values(VARIANT_PATTERNS).every(v => v.base.concat(v.p2).every(q => q.specs.length <= CFG.maxB));
+      run.mode = 'normal'; o.fired = {};
+      for (const v of ['warden', 'phantom', 'collapse']) {
+        ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; run.phaseT = 99; run.cycle = 5; P.x = 150; P.y = 300; CFG.god = 1; P.stasis = null;
+        spawnEnemyAt('boss', 700, 300); const bb = ens[ens.length - 1]; bb.variant = v; bb.fireT = 0;
+        Object.assign(bb, { callT: 999, wardT: 999, blinkT: 999, spiralT: 999, mortT: 999, gunT: 999, ringT: 999 });
+        const seen = new Set(), op = pickPattern; pickPattern = function (e) { const q = op(e); if (e === bb) seen.add(q.n); return q; };
+        for (let i = 0; i < 60 * 20; i++) { hitstop = 0; update(1 / 60); }
+        pickPattern = op; o.fired[v] = [...seen].every(n => names(VARIANT_PATTERNS[v].base.concat(VARIANT_PATTERNS[v].p2)).includes(n)) ? seen.size : -1;
+      }
+      return o; });
+    t.eq(r.bad.join(' · '), '', '변종은 자기 패턴만 · 첫 등장엔 어려운 패턴 빼기 · 2페이즈 전용/공용 반반');
+    t.ok(r.coreMix, '기본형만 일반 패턴(TWIN · ORBIT · OVERLOAD) 섞음'); t.ok(r.fit, '모든 변종 패턴이 8발 이하');
+    t.ok(Object.values(r.fired).every(n => n >= 3), '실제 전투에서 변종마다 자기 패턴을 쏨', JSON.stringify(r.fired));
+    noErrors(t, g, '보스 패턴'); await p.close();
+  },
 };
