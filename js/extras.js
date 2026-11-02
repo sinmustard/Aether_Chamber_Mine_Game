@@ -71,9 +71,15 @@ function exBlame(I,loss,name){ if(loss<=0) return; I.src[name]=(I.src[name]||0)+
 const _onHurt=onHurt;
 onHurt=function(){ const I=run&&exRun();
   if(I){ const loss=Math.max(0,I.lastHp-P.hp), S=I.snap||{near:[],mort:[]};
-    let name='';
-    const hit=S.near.filter(b=>dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+16).sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
-    if(hit) name=(hit.from||'적')+(hit.returns>0?' (되뺏긴 탄)':hit.armor!=null?' 장갑탄':' 탄');
+    /* 피해 지점(combat.js)이 P.hurtBy에 맞힌 것을 남긴다 — 탄 · 'mortar' · 추적자. 없으면 예전처럼 주변에서 찾는다 */
+    const by=P.hurtBy; P.hurtBy=null; let name='';
+    const nameOf=e=>e?(e.grade==='boss'?'알레테이아 · '+(VKO[e.variant]||'기본형'):KO[e.grade]||e.grade):'적';
+    const bulletName=b=>{ if(!b.from){ let best=null,bd=1e9; ens.forEach(e=>{ const d=dist(e.x,e.y,b.x,b.y); if(d<bd){bd=d;best=e;} }); b.from=nameOf(best); }
+      return b.from+(b.returns>0?' (되뺏긴 탄)':b.armor!=null?' 장갑탄':' 탄'); };
+    const hit=by&&by.owner?by:S.near.filter(b=>dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+16).sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
+    if(by==='mortar') name='박격포';
+    else if(by&&by.grade) name=nameOf(by)+' 돌진';
+    else if(hit) name=bulletName(hit);
     else if(S.mort.some(z=>!(run.mortars||[]).includes(z))) name='박격포';
     else if(ens.some(e=>e.grade==='tracker'&&dist(e.x,e.y,P.x,P.y)<e.r+R_PLAYER+40)) name='추적자 돌진';
     else name='알 수 없음';

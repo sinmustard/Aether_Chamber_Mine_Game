@@ -464,12 +464,18 @@ module.exports = {
       spawnEnemy('boss'); const b = ens[ens.length - 1]; b.variant = 'warden'; o.warn = run.ex.warn > 0;
       b.exT0 = run.time - 61.2; killEnemy(b); o.boss = run.ex.boss.map(x => x.v + ':' + x.t.toFixed(1)).join(); o.warnOff = run.ex.warn === 0;
       try { o.stored = JSON.parse(localStorage.getItem('aether_x_bossT')).hasOwnProperty('normal:warden'); } catch (e) { o.stored = false; }
+      // 한 프레임에 멀리서 날아와 맞은 빠른 탄도 원인을 안다 (예전엔 '알 수 없음')
+      ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 0; P.inv = 0; P.barrier = 0; P.guard = 0; P.absorbT = 0; P.phase = 0; run.mapWalls = []; run.walls = [];
+      spawnEnemyAt('sniper', P.x + 300, P.y); ens[ens.length - 1].fireT = 99; const hp1 = P.hp;
+      bullets.push({ x: P.x + 110, y: P.y, dir: Math.PI, spd: 6000, base: 6000, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1, from: '저격수' });
+      hitstop = 0; update(1 / 60); o.fastHurt = P.hp < hp1; o.fastCause = run.ex.cause; CFG.god = 1; P.hp = hp1; ens.length = 0;
       P.hp = Math.round(CFG.hpMax * 0.2); await sleep(200);
       return o; });
     t.eq(a.affix1, '', '1사이클 엘리트는 접두사 없음');
     t.ok(a.affix2 === '강철' && a.plain === '' && Math.abs(a.hpMul - 1.6) < 0.01, '2사이클 엘리트 절반에 접두사 — 강철은 체력 ×1.6', a.affix2 + ' ×' + a.hpMul);
     t.ok(a.streak === 6 && a.streakAfter === 0 && a.best === 6, '무피격 연속 패링: 패링마다 +1, 맞으면 0 (최고 기록은 남음)', JSON.stringify(a));
     t.ok(a.warn && a.warnOff, '보스 등장 경고 띠 → 보스가 죽으면 바로 꺼짐');
+    t.ok(a.fastHurt && a.fastCause === '저격수 탄', '멀리서 한 프레임에 날아온 빠른 탄도 쓰러진 원인을 앎 (알 수 없음 아님)', a.fastCause);
     t.ok(a.boss === 'warden:61.2' && a.stored, '보스 처치 시간 기록 (변형별, 이 기기에 최고 기록 저장)', a.boss);
     // 연사병 탄에 쓰러지기 → 결과 화면
     await p.evaluate(() => { ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 0; P.inv = 0; run.revives = 0; P.barrier = 0; run.phase = 'fight';
