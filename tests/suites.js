@@ -661,4 +661,11 @@ module.exports = {
     t.ok(r.leechHurt && r.leech === 1, '흡혈: 이 적의 탄에 맞으면 그 적이 1칸 회복', JSON.stringify({ hurt: r.leechHurt, heal: r.leech }));
     noErrors(t, g, '접두사'); await p.close();
   },
+
+  async '초반 적 탄 피해 단계 (v3.101)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(800);
+    const d = await p.evaluate(() => [[1, 1], [1, 4], [1, 5], [1, 6], [1, 11], [2, 1], [2, 5]].map(([c, w]) => { run.cycle = c; run.wave = w; return c + '-' + w + ':' + enemyShotDmg(); }).join(' '));
+    t.eq(d, '1-1:8 1-4:8 1-5:10 1-6:12 1-11:12 2-1:12 2-5:12', '1사이클 1~4웨이브 8 → 5웨이브 10 → 6웨이브부터 12 (2사이클부터는 늘 12)');
+    noErrors(t, g, '초반 피해'); await p.close();
+  },
 };
