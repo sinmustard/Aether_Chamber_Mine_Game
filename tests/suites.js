@@ -662,10 +662,19 @@ module.exports = {
     noErrors(t, g, '접두사'); await p.close();
   },
 
-  async '초반 적 탄 피해 단계 (v3.101)'(t, { browser, url }) {
+  async '초반 난이도: 적 탄 피해 단계 · 탄 폭풍 · 맵 교체 (v3.101 · v3.102)'(t, { browser, url }) {
     const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(800);
     const d = await p.evaluate(() => [[1, 1], [1, 4], [1, 5], [1, 6], [1, 11], [2, 1], [2, 5]].map(([c, w]) => { run.cycle = c; run.wave = w; return c + '-' + w + ':' + enemyShotDmg(); }).join(' '));
     t.eq(d, '1-1:8 1-4:8 1-5:10 1-6:12 1-11:12 2-1:12 2-5:12', '1사이클 1~4웨이브 8 → 5웨이브 10 → 6웨이브부터 12 (2사이클부터는 늘 12)');
+    const st = await p.evaluate(() => { const rnd = Math.random, o = {}; Math.random = () => 0;
+      const tryStorm = c => { ens.length = 0; bullets.length = 0; queue.length = 0; run.cycle = c; run.wave = 3; run.stormCycle = 0; run.storm = 0; waveSpawn(); const s = !!run.storm; ens.length = 0; queue.length = 0; run.storm = 0; return s; };
+      o.c1 = tryStorm(1); o.c2 = tryStorm(2); Math.random = rnd; return o; });
+    t.ok(!st.c1 && st.c2, '탄 폭풍은 1사이클엔 안 나오고 2사이클부터 (v3.102)', JSON.stringify(st));
+    const near = await p.evaluate(() => { let bad = 0, total = 0; run.wave = 6;
+      for (let i = 0; i < 80; i++) { P.x = 150 + Math.random() * (WORLD.w - 300); P.y = 120 + Math.random() * (WORLD.h - 240); rerollMap();
+        run.mapWalls.forEach(o => { total++; if (Math.hypot(P.x - clamp(P.x, o.x, o.x + o.w), P.y - clamp(P.y, o.y, o.y + o.h)) < 100) bad++; }); }
+      return { bad, total }; });
+    t.ok(near.bad === 0, '판 중간 맵 교체 — 새 벽이 지금 플레이어 자리 가까이(100 안)에 생기지 않음 (v3.102)', near.bad + ' / ' + near.total);
     noErrors(t, g, '초반 피해'); await p.close();
   },
 };

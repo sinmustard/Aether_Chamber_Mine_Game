@@ -308,7 +308,7 @@ waveSpawn=function(){
     if(R.t0==null) R.t0=run.time;
     exBoss(['core','warden','phantom','collapse'][R.i]); announce('보스 러시  '+(R.i+1)+' / 4','warn'); run.phase='fight'; return; }
   const nw=run.wave+1;
-  if(feat('storm')&&normalRun()&&exMode()&&(run.forceStorm||(nw>=3&&nw<=BOSS_WAVE&&run.stormCycle!==run.cycle&&Math.random()<0.3))){
+  if(feat('storm')&&normalRun()&&exMode()&&(run.forceStorm||(run.cycle>=2&&nw>=3&&nw<=BOSS_WAVE&&run.stormCycle!==run.cycle&&Math.random()<0.3))){   // v3.102 1사이클엔 안 나옴 — 봇 120판에서 1사이클 4~6웨이브 피해의 24%가 탄 폭풍
     run.forceStorm=0; run.stormCycle=run.cycle; run.wave++; P.barrier=CFG.barrier||0;
     if(run.wave>1&&(run.chaos||run.wave%5===1)){ rerollMap(); say('지형 변화','warn'); }   // 원래 waveSpawn과 같은 맵 교체
     for(let i=0;i<44;i++){ const side=Math.floor(Math.random()*4), u=Math.random();

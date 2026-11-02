@@ -149,16 +149,20 @@ function randWallRect(){
 function rerollMap(){
   const n=2+Math.floor(Math.random()*2);   // 2~3개
   const placed=[];
+  /* v3.102 판 중간에 맵이 바뀔 땐 출발점이 아니라 지금 플레이어 자리를 피한다 — 예전엔 새 벽이 플레이어 바로 옆 · 위에 떨어져
+     벽 너머 탄을 패링 못 하고 맞았다 (봇 120판에서 1사이클 쓰러짐의 절반이 맵이 바뀌는 6웨이브) */
+  const sx=run&&run.wave>0&&P?P.x:200, sy=run&&run.wave>0&&P?P.y:380;
+  const nearMe=o=>Math.hypot(sx-clamp(sx,o.x,o.x+o.w),sy-clamp(sy,o.y,o.y+o.h))<140;   // 벽의 가장 가까운 면까지 140 안
   for(let i=0;i<n;i++){
     let o, tries=0;
     do{ o=randWallRect(); tries++; }
-    while(tries<30 && (dist(o.x+o.w/2,o.y+o.h/2,200,380)<200 || placed.some(p=>rectGap(p,o)<WALL_GAP)));
+    while(tries<30 && (nearMe(o) || placed.some(p=>rectGap(p,o)<WALL_GAP)));
     placed.push(o);
   }
   if(Math.random()<0.5){
     for(let tries=0;tries<30;tries++){
       const o={x:60+Math.random()*(WORLD.w-120-PRISM_S), y:60+Math.random()*(WORLD.h-120-PRISM_S), w:PRISM_S, h:PRISM_S};
-      if(dist(o.x+o.w/2,o.y+o.h/2,200,380)<200||placed.some(p=>rectGap(p,o)<WALL_GAP)) continue;
+      if(nearMe(o)||placed.some(p=>rectGap(p,o)<WALL_GAP)) continue;
       o.prism=Math.random()<0.5?3:5; placed.push(o); break;
     }
   }
