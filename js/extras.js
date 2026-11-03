@@ -272,9 +272,11 @@ function openDex(){
     :tab==='risk'?RK.map(e=>row(e.n,'위험한 선택','대가 — '+e.cost+'<br>보상 — '+e.gain)).join('')
     :DEX.map(card).join('');
   $('#modalBox').style.width='min(640px,100%)';
-  $('#modalBox').innerHTML='<div class="logHd"><h4>도감</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px">'+tabs.map(([k,l,n])=>'<button class="exBtn" data-dextab="'+k+'"'+(k===tab?' style="border-color:var(--cyan);color:var(--cyan)"':'')+'>'+l+' '+n+'</button>').join('')+'</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:64vh;overflow:auto">'+body+'</div>';
+  $('#modalBox').innerHTML='<div style="position:sticky;top:0;z-index:2;background:var(--panel);box-shadow:0 -16px 0 var(--panel)">'+
+    '<div class="logHd" style="position:static;margin:0 0 8px"><h4>도감</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 0 10px">'+tabs.map(([k,l,n])=>'<button class="exBtn" data-dextab="'+k+'"'+(k===tab?' style="border-color:var(--cyan);color:var(--cyan)"':'')+'>'+l+' '+n+'</button>').join('')+'</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px">'+body+'</div>';
+  $('#modalBox').scrollTop=0;
   $('#modalBox').querySelectorAll('[data-dextab]').forEach(b=>b.onclick=()=>{ window.__dexTab=b.dataset.dextab; sfx('ui'); openDex(); });
   $('#modal').classList.add('on');
 }
