@@ -594,7 +594,7 @@ module.exports = {
     // 보스 러시: 네 변형 → 결과
     await p.evaluate(() => go('title')); await wait(200); await click(p, '#exRush'); await wait(2500);
     const order = [];
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < 5; k++) {
       for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
         if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
       order.push(await p.evaluate(() => { CFG.god = 1; const b = ens.find(e => e.grade === 'boss'); const v = b && b.variant; if (b) killEnemy(b); for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; return v; }));
@@ -602,7 +602,7 @@ module.exports = {
     }
     for (let i = 0; i < 60 && await p.evaluate(() => screen) === 'game'; i++) { if (await p.evaluate(() => $('#reward').classList.contains('on'))) { await wait(500); await p.keyboard.press('1'); } await wait(250); }
     const rush = await p.evaluate(() => ({ screen, txt: ($('#exMore') || {}).innerText || '', cheat: run && run.cheat }));
-    t.eq(order.join(), 'core,warden,phantom,collapse', '보스 러시 순서: 기본형 → 수호형 → 환영형 → 붕괴형');
+    t.eq(order.join(), 'core,warden,phantom,collapse,prime', '보스 러시 순서: 기본형 → 수호형 → 환영형 → 붕괴형 → 정예형');
     t.ok(rush.screen === 'result' && /보스 러시 — 완주/.test(rush.txt), '네 변형을 다 잡으면 완주 시간과 함께 결과 화면', rush.txt.replace(/\n/g, ' / '));
     noErrors(t, g, '추가 기능 새 적 · 모드'); await p.close();
   },
@@ -863,5 +863,31 @@ module.exports = {
     t.ok(d.pauseStop, '일시정지 중엔 드론도 멈춤');
     t.ok(d.noDroneNormal, '드론은 보스 러시에만 (일반 판엔 없음)');
     noErrors(t, g, '보스 러시'); await p.close();
+  },
+
+  async '정예형 보스 (v3.116)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
+    const r = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
+      const V = VARIANT_PATTERNS.prime; o.pat = V ? V.base.length + '+' + V.p2.length : 'none';
+      o.specOK = V && V.base.concat(V.p2).every(x => x.n && x.specs.length && x.specs.every(s => typeof s.t === 'number' && !Object.keys(s).some(k => !['t','ang','fast','feint','heavy','lead','orbit','odir','straight','zig','curl'].includes(k))));
+      o.maxSpecs = V ? Math.max(...V.base.concat(V.p2).map(x => x.specs.length)) : 0;
+      const bossAt = c => { ens.length = 0; bullets.length = 0; queue.length = 0; run.cycle = c; run.wave = BOSS_WAVE; run.phase = 'break'; run.stormCycle = c; waveSpawn(); const b = ens.find(e => e.grade === 'boss'); const v = b ? (b.variant || 'core') + (b.prime ? '*' : '') : '-'; const hp = b ? b.hpMax : 0; ens.length = 0; queue.length = 0; return [v, hp]; };
+      const [v1] = bossAt(1), [v5, hp5] = bossAt(5), [v6] = bossAt(6), [v9] = bossAt(9);
+      o.order = [v1, v5, v6, v9].join();
+      // 정예형 패턴만 씀 (1페이즈) · 2페이즈면 접두사 엘리트 2기
+      ens.length = 0; run.cycle = 5; run.wave = BOSS_WAVE; run.phase = 'fight'; CFG.god = 1; spawnEnemyAt('boss', 700, 300); const b = ens[ens.length - 1]; b.variant = 'core'; exMakePrime(b); b.bindT = 99;
+      const names = new Set(); for (let i = 0; i < 40; i++) names.add(pickPattern(b).n); o.onlyPrime = [...names].every(n => V.base.some(x => x.n === n));
+      b.p2 = true; step(2); o.adds = ens.filter(e => e.grade === 'elite').length; o.addAffix = ens.filter(e => e.grade === 'elite').every(e => e.affix);
+      step(2); o.addsOnce = ens.filter(e => e.grade === 'elite').length === o.adds;
+      o.dex = (window.ENEMY_DEX || []).some(x => x[0] === 'boss_prime');
+      return o; }).catch(e => ({ err: e.message }));
+    t.ok(!r.err, '확인 중 오류 없음', r.err);
+    t.eq(r.pat, '5+2', '정예형 전용 패턴: 1페이즈 5종 · 2페이즈 2종');
+    t.ok(r.specOK && r.maxSpecs <= 8, '패턴 형식이 맞고 한 번에 8발 이하 (발사 한도 maxB)', 'max ' + r.maxSpecs);
+    t.eq(r.order, 'core,prime*,warden,prime*', '5사이클부터 기본형 차례(5 · 9)는 정예형, 1사이클은 기본형');
+    t.ok(r.onlyPrime, '정예형은 1페이즈에 전용 패턴만 씀');
+    t.ok(r.adds === 2 && r.addAffix && r.addsOnce, '2페이즈에 들어서면 접두사 엘리트 2기를 한 번 부름', JSON.stringify({ n: r.adds, aff: r.addAffix, once: r.addsOnce }));
+    t.ok(r.dex, '도감 · 연습장에 정예형');
+    noErrors(t, g, '정예형'); await p.close();
   },
 };

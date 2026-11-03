@@ -253,7 +253,7 @@ const DEX=window.ENEMY_DEX=[
   ['mortar','바닥에 포격 원 — 1.3초 뒤 폭발.'],['sprayer','느린 탄을 부채꼴로 흩뿌린다.'],
   ['trapper','멈췄다가 다시 움직이는 덫 탄.'],['illusion','환영형 보스의 분신. 7초 뒤 사라진다.'],
   ['boss','알레테이아 · 기본형 — 공용 탄막 패턴.',''],['boss_warden','알레테이아 · 수호형 — 방패를 들고 버틴다.','boss'],
-  ['boss_phantom','알레테이아 · 환영형 — 순간이동하며 분신을 남긴다.','boss'],['boss_collapse','알레테이아 · 붕괴형 — 나선 탄막과 포격.','boss'],
+  ['boss_phantom','알레테이아 · 환영형 — 순간이동하며 분신을 남긴다.','boss'],['boss_collapse','알레테이아 · 붕괴형 — 나선 탄막과 포격.','boss'],['boss_prime','알레테이아 · 정예형 — 기본형의 정예판. 5사이클부터 기본형 대신 나오고, 2페이즈에 접두사 엘리트를 부른다.','boss'],
 ];
 function openDex(){
   const card=([k,d,g])=>{ const gr=g||k, G0=GRADES[gr]||{}, img=SPRITES[k], nm=k.startsWith('boss_')?VKO[k.slice(5)]:KO[k];
@@ -289,6 +289,8 @@ const statsBtn=document.querySelector('#title [data-modal=stats]'); if(statsBtn)
 /* ================= 새 적 · 새 웨이브 · 모드 · 미션 · 프리셋 ================= */
 {
 const DEX2=window.ENEMY_DEX;
+const RUSH_ORDER=['core','warden','phantom','collapse','prime'];   // v3.116 마지막에 정예형
+window.RUSH_ORDER=RUSH_ORDER;
 document.head.insertAdjacentHTML("beforeend","<style>.exBtn{background:transparent;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:5px 10px;font:600 12px ui-monospace,monospace;cursor:pointer}.exBtn:hover{border-color:var(--cyan);color:var(--cyan)}</style>");
 const lsGet=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k)||'null')||d; }catch(e){ return d; } };
 const lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
@@ -308,6 +310,7 @@ function exBoss(v){ spawnEnemy('boss'); const bb=ens[ens.length-1]; bb.variant=v
   if(v==='warden'){ bb.shieldArc=120; bb.sa=Math.atan2(P.y-bb.y,P.x-bb.x); bb.hp*=1.15; bb.hpMax=bb.hp; bb.wardT=6; }
   if(v==='phantom'){ bb.hp*=0.85; bb.hpMax=bb.hp; bb.blinkT=4.5; }
   if(v==='collapse'){ bb.hp*=1.35; bb.hpMax=bb.hp; }
+  if(v==='prime'&&window.exMakePrime) window.exMakePrime(bb);
   sfx('boss'); return bb; }
 
 /* ---- 연습장 · 보스 러시: 새 판에 표시를 붙여 시작 ---- */
@@ -325,9 +328,9 @@ waveSpawn=function(){
     else { const n=['elite','cannon','summoner','bulwark','mortar'].includes(g)?2:3; for(let i=0;i<n;i++) spawnEnemy(g); }
     announce('연습장  ·  '+(g.indexOf('boss')===0?'알레테이아 · '+VKO[g.split(':')[1]||'core']:KO[g]),'cyan'); sfx('wave'); run.phase='fight'; return; }
   if(run&&run.rush){ const R=run.rush; run.wave=2; P.barrier=CFG.barrier||0;
-    if(R.i>=4){ endRun(); return; }
+    if(R.i>=RUSH_ORDER.length){ endRun(); return; }
     if(R.t0==null) R.t0=run.time;
-    exBoss(['core','warden','phantom','collapse'][R.i]); announce('보스 러시  '+(R.i+1)+' / 4','warn'); run.phase='fight'; return; }
+    exBoss(RUSH_ORDER[R.i]); announce('보스 러시  '+(R.i+1)+' / '+RUSH_ORDER.length,'warn'); run.phase='fight'; return; }
   const nw=run.wave+1;
   if(feat('storm')&&normalRun()&&exMode()&&(run.forceStorm||(run.cycle>=2&&nw>=3&&nw<=BOSS_WAVE&&run.stormCycle!==run.cycle&&Math.random()<0.3))){   // v3.102 1사이클엔 안 나옴 — 봇 120판에서 1사이클 4~6웨이브 피해의 24%가 탄 폭풍
     run.forceStorm=0; run.stormCycle=run.cycle; run.wave++; P.barrier=CFG.barrier||0;
@@ -429,7 +432,7 @@ killEnemy=function(e){
     announce('흡수체 폭발 · '+n+'발','red'); shake=Math.max(shake,12); }
   if(e.grade==='boss'){ vib([80,50,160]);
     if(run.rush){ const R=run.rush; R.i++; P.hp=Math.min(CFG.hpMax,P.hp+CFG.hpMax*0.3);
-      if(R.i>=4){ const t=run.time-R.t0, B=lsGet('aether_x_rush',{}), rec=B[run.mode]==null||t<B[run.mode]; if(rec){ B[run.mode]=t; lsSet('aether_x_rush',B); }
+      if(R.i>=RUSH_ORDER.length){ const t=run.time-R.t0, B=lsGet('aether_x_rush',{}), rec=B[run.mode]==null||t<B[run.mode]; if(rec){ B[run.mode]=t; lsSet('aether_x_rush',B); }
         R.time=t; R.rec=rec; setTimeout(()=>{ if(run&&run.rush) announce('보스 러시 완료  '+fmtT(t)+(rec?'  ·  최고 기록!':''),'warn'); },1400); } } }
   return r; };
 
@@ -522,7 +525,7 @@ endRun=function(){
     if(feat('pstat')){ const par=I.par||0, wh=I.whiff||0, rt=I.rt||[], avg=rt.length?rt.reduce((a,b)=>a+b,0)/rt.length:0;
       h+='<div style="color:var(--dim)">패링 <b style="color:var(--fg)">'+par+'</b>회 · 빗나감 <b style="color:var(--fg)">'+wh+'</b>회 · 성공률 <b style="color:var(--cyan)">'+(par+wh?Math.round(par/(par+wh)*100):0)+'%</b>'+
         (rt.length?' · 평균 반응 <b style="color:var(--fg)">'+avg.toFixed(2)+'초</b>':'')+'</div>'; }
-    if(r.rush) h+='<div style="color:var(--dim)">보스 러시 — '+(r.rush.time!=null?'<b style="color:var(--warn)">완주 '+fmtT(r.rush.time)+'</b>'+(r.rush.rec?' · 최고 기록':''):'<b style="color:var(--fg)">'+r.rush.i+' / 4</b>에서 쓰러짐')+'</div>';
+    if(r.rush) h+='<div style="color:var(--dim)">보스 러시 — '+(r.rush.time!=null?'<b style="color:var(--warn)">완주 '+fmtT(r.rush.time)+'</b>'+(r.rush.rec?' · 최고 기록':''):'<b style="color:var(--fg)">'+r.rush.i+' / '+RUSH_ORDER.length+'</b>에서 쓰러짐')+'</div>';
     if(I.mirror) h+='<div style="color:var(--dim)">거울로 꺾은 탄 — <b style="color:var(--cyan)">'+I.mirror+'</b></div>';
     if(feat('replay')&&RP.frames.some(c=>c&&c._run===r)) h+='<button id="exRpBtn" style="margin-top:8px;margin-right:6px;background:transparent;border:1px solid var(--cyan);color:var(--cyan);border-radius:6px;padding:6px 14px;font:700 12px ui-monospace,monospace;cursor:pointer">마지막 5초 보기</button>';
     more.innerHTML=h; const b=$('#exRpBtn'); if(b) b.onclick=()=>openReplay(r); }
@@ -553,7 +556,7 @@ drawEnemyBody=function(e){ _drawEnemyBody2(e); if(e.grade!=='absorber') return; 
 const _drawHUD2=drawHUD;
 drawHUD=function(){ _drawHUD2(); if(!run) return; const W=VW, I=run.ex;
   if(run.practice||run.rush){ ctx.textAlign='left'; ctx.font='700 12px ui-monospace,monospace'; ctx.fillStyle=C.warn;
-    ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시 '+Math.min(4,run.rush.i+1)+' / 4 · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
+    ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시 '+Math.min(RUSH_ORDER.length,run.rush.i+1)+' / '+RUSH_ORDER.length+' · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
   if(I&&I.firstQ&&I.firstQ.length){ const f=I.firstQ[0], a=Math.min(1,f.t*2,(4.5-f.t)*4), img=SPRITES[f.g], x=18, y=H-96;
     ctx.font='600 11.5px ui-monospace,monospace'; const w=Math.min(W-36,Math.max(300,ctx.measureText(f.d).width+64));
     ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='rgba(8,12,17,.9)'; ctx.fillRect(x,y,w,46); ctx.strokeStyle=C.cyan; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,45);
@@ -780,6 +783,52 @@ const _endRunS=endRun;
 endRun=function(){ const r=run, out=_endRunS.apply(this,arguments), more=$('#exMore');
   if(more&&r&&r.syn){ const on=SYN.filter(s=>r.syn[s.k]); if(on.length) more.insertAdjacentHTML('afterbegin','<div style="color:var(--dim)">공명 — '+on.map(s=>'<b style="color:var(--warn)">'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }
   return out; };
+}
+
+/* ================= 정예형 보스 (v3.116) — 기본형의 정예판. 5사이클부터 기본형 차례(5 · 9 · 13 …)에 대신 나온다 ================= */
+{
+VKO.prime='정예형';
+Object.defineProperty(SPRITES,'boss_prime',{get:()=>SPRITES.boss,configurable:true});   // 전용 그림이 없어 기본형 그림 (게임 안에선 금빛으로 물들임)
+/* 전용 패턴 — 기본형 공용 패턴(부채꼴 · 연쇄 · 협공 · 페인트)을 세고 빽빽하게. 다른 변종처럼 한 번에 8발(maxB) 이하 */
+VARIANT_PATTERNS.prime={base:[
+  {n:'CROWN',       d:'넓은 7발 부채꼴 뒤 가운데 고속탄', specs:[-0.9,-0.6,-0.3,0,0.3,0.6,0.9].map(a=>({t:0,ang:a})).concat([{t:0.35,fast:0.8,straight:1}])},
+  {n:'SOVEREIGN',   d:'예측 고속탄 3연발', specs:[0,1,2].map(k=>({t:k*0.16,lead:1,straight:1,fast:0.65}))},
+  {n:'ROYAL GUARD', d:'양옆 우회 4발 뒤 정면 장갑탄', specs:[{t:0,orbit:1,odir:1,ang:0.2},{t:0,orbit:1,odir:-1,ang:-0.2},{t:0.2,orbit:1,odir:1,ang:0.5},{t:0.2,orbit:1,odir:-1,ang:-0.5},{t:0.5,heavy:1}]},
+  {n:'DECREE',      d:'십자 4발 뒤 엇갈린 대각선 4발', specs:[0,1,2,3].map(k=>({t:0,ang:k*Math.PI/2,straight:1})).concat([0,1,2,3].map(k=>({t:0.4,ang:(k+0.5)*Math.PI/2,straight:1})))},
+  {late:1, n:'TYRANT', d:'양쪽으로 휘어 모이는 4발 뒤 페인트 2발', specs:[{t:0,curl:1,ang:-0.5},{t:0,curl:-1,ang:0.5},{t:0.15,curl:1,ang:-0.25},{t:0.15,curl:-1,ang:0.25},{t:0.45,feint:1,ang:-0.15},{t:0.45,feint:1,ang:0.15}]}
+], p2:[
+  {n:'ABSOLUTE',    d:'반 바퀴 도는 6발 나선 뒤 예측 고속탄 2발', specs:[0,1,2,3,4,5].map(k=>({t:k*0.08,ang:-1.25+k*0.5,straight:1})).concat([0,1].map(k=>({t:0.65+k*0.14,lead:1,straight:1,fast:0.7})))},
+  {n:'CORONATION',  d:'장갑탄 3발 부채꼴 뒤 대각선 4발 + 예측 고속탄', specs:[{t:0,heavy:1,ang:-0.3},{t:0,heavy:1},{t:0,heavy:1,ang:0.3}].concat([0,1,2,3].map(k=>({t:0.5,ang:(k+0.5)*Math.PI/2,straight:1})),[{t:0.75,lead:1,straight:1,fast:0.75}])}
+]};
+VARIANT_FIRST.prime=5;   // 처음 나오는 사이클엔 어려운(late) 패턴을 뺀다
+const PRIME={from:5,hp:1.5,fire:0.85,adds:2};
+window.PRIME=PRIME;
+function makePrime(b){ b.variant='prime'; b.prime=1; b.hp*=PRIME.hp; b.hpMax=b.hp; }
+window.exMakePrime=makePrime;
+/* 5사이클부터 기본형 차례는 정예형 (연습장 · 보스 러시 · 혼돈이야~는 따로) */
+const _waveSpawnP=waveSpawn;
+waveSpawn=function(){ _waveSpawnP.apply(this,arguments);
+  if(!run||run.practice||run.rush||run.mode==='chaosx'||run.cycle<PRIME.from) return;
+  const b=ens.find(e=>e.grade==='boss'&&(e.variant||'core')==='core'&&!e.prime); if(!b) return;
+  makePrime(b); const m=msgs.find(x=>x.big&&x.text==='알레테이아'); if(m) m.text='알레테이아 · 정예형'; else announce('알레테이아 · 정예형','red'); };
+/* 발사 간격 ×0.85 · 2페이즈에 들어서면 접두사 엘리트 2기 (한 번) */
+const _updateP=update;
+update=function(dt){ if(run&&screen==='game') ens.forEach(e=>{ if(e.prime) e._pfP=e.fireT; });
+  _updateP(dt); if(!run||screen!=='game') return;
+  ens.slice().forEach(e=>{ if(!e.prime) return;
+    if(e._pfP!=null&&e.fireT>e._pfP+0.05) e.fireT*=PRIME.fire;
+    if(e.p2&&!e._primeAdds){ e._primeAdds=1; const A=window.ELITE_AFFIX||[];
+      for(let i=0;i<PRIME.adds;i++){ const a=TAU*i/PRIME.adds+0.6, el=spawnEnemyAt('elite',e.x+Math.cos(a)*130,e.y+Math.sin(a)*130);
+        if(el&&A.length&&!el.affix){ el.affix=A[Math.floor(Math.random()*A.length)][0]; if(el.affix==='강철'){ el.hp*=1.6; el.hpMax=el.hp; } } }
+      announce('정예 호위','red'); } }); };
+/* 그리기: 기본형 그림을 금빛으로 물들이고 금빛 고리 */
+const _drawEnemyBodyP=drawEnemyBody;
+drawEnemyBody=function(e){ if(!e.prime) return _drawEnemyBodyP(e); const p=proj(e.x,e.y), t=performance.now()/600;
+  ctx.save(); const g=ctx.createRadialGradient(p[0],p[1],e.r*0.4,p[0],p[1],e.r*1.7); g.addColorStop(0,'rgba(255,205,90,.45)'); g.addColorStop(1,'rgba(255,205,90,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p[0],p[1],e.r*1.7,0,TAU); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.filter='sepia(1) saturate(2.6) hue-rotate(-12deg) brightness(1.15)'; _drawEnemyBodyP(e); ctx.restore();
+  ctx.save(); ctx.strokeStyle='#ffd34d'; ctx.lineWidth=2.5;
+  for(let k=0;k<4;k++){ const a=t+k*TAU/4; ctx.beginPath(); ctx.ellipse(p[0],p[1],e.r+14,(e.r+14)*SQUASH,0,a,a+0.9); ctx.stroke(); } ctx.restore(); };
 }
 
 /* ================= 보스 러시 전용 (v3.114) — 시작 특전 · 시작 보상 · 공격 드론. 보상 없이 바로 보스라 강화를 다 찍은 봇도 2번째 보스에서 쓰러졌다 ================= */
