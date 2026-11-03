@@ -26,8 +26,8 @@ const BOONS=[
  {k:'counter',   n:'역습',        d:'맞으면 2초 동안 이동 속도 +40 · 패링 사거리 +0.4m (레벨당)',  max:2, tag:'생존',   fn:()=>{}},   // v3.50
  {k:'fury',      n:'분노',        d:'맞을 때마다 R 충전 +5 (레벨당)',                          max:2, tag:'스킬',   fn:()=>{}},   // v3.50
  {k:'reroll',    n:'새로고침 +1', d:'보상 새로고침 횟수 +1',                     max:3, tag:'보급',   fn:()=>{run.rerolls=(run.rerolls||0)+1;}},   // v2.52
- {k:'prismdur',  n:'프리즘 공명', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +1',  max:3, tag:'프리즘', ok:()=>prismUseful(), fn:()=>{}},
- {k:'decoyabs',  n:'미끼 흡수',   d:'미끼가 주변 적 탄을 빨아들임 — 대신 시간이 아니라 체력으로 버팀 (체력 6, 탄 1발에 −1)', max:1, tag:'미끼', ok:()=>CFG.qSkill==='decoy', fn:()=>{}}
+ {k:'prismdur',  n:'프리즘 공명', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +1',  max:3, tag:'프리즘', req:'Q 스킬이 벽이거나 맵에 프리즘이 있을 때', ok:()=>prismUseful(), fn:()=>{}},
+ {k:'decoyabs',  n:'미끼 흡수',   d:'미끼가 주변 적 탄을 빨아들임 — 대신 시간이 아니라 체력으로 버팀 (체력 6, 탄 1발에 −1)', max:1, tag:'미끼', req:'Q 스킬이 미끼일 때', ok:()=>CFG.qSkill==='decoy', fn:()=>{}}
 ];
 /* v2.37 특수 특전 — 생존 트리의 '특수 특전'을 찍으면 웨이브 보상에 확률로 하나 섞여 나온다 */
 const SPECIALS=[
@@ -41,10 +41,10 @@ const SPECIALS=[
  /* v2.45 패링 범위 — 각각 한 번만 */
  {k:'s_range',  n:'장거리 감응', d:'패링 사거리 +20%',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.rangeM*=1.2;}},
  {k:'s_fov',    n:'광역 감응',   d:'패링 시야각 +25°',                                     max:1, tag:'특수 특전', sp:1, fn:()=>{CFG.fov=Math.min(180,CFG.fov+25);}},
- {k:'s_prismsplit', n:'분광',   d:'프리즘 벽에서 갈라지는 탄환 +2 (피해를 합치면 그대로)',   max:1, tag:'특수 특전', sp:1, ok:()=>prismUseful(), fn:()=>{}},
- {k:'s_prismdur',   n:'강화 프리즘', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +3',      max:1, tag:'특수 특전', sp:1, ok:()=>prismUseful(), fn:()=>{}},
- {k:'s_decoyhp',    n:'미끼 강화',   d:'미끼 체력 +6 (자폭 미끼면 탄 6발 분량)',   max:1, tag:'특수 특전', sp:1, ok:()=>CFG.qSkill==='decoy'&&boonLv('decoyabs')>0, fn:()=>{ if(P.decoyHp!=null){ const v=P.decoyBomb?6*decoyHitDmg({}):6; P.decoyHp+=v; P.decoyHpMax+=v; } }},
- {k:'s_decoybomb',  n:'자폭 미끼',   d:'미끼 체력이 내 체력과 같아짐 (흡수한 탄 피해만큼 깎임) · 미끼가 서 있을 때 Q를 다시 누르면 폭발해 흡수한 탄을 사방으로 뱉음 (내 탄) · 대신 미끼 재사용 대기 ×1.5', max:1, tag:'특수 특전', sp:1, ok:()=>CFG.qSkill==='decoy'&&boonLv('decoyabs')>0, fn:()=>{}}
+ {k:'s_prismsplit', n:'분광',   d:'프리즘 벽에서 갈라지는 탄환 +2 (피해를 합치면 그대로)',   max:1, tag:'특수 특전', sp:1, req:'Q 스킬이 벽이거나 맵에 프리즘이 있을 때', ok:()=>prismUseful(), fn:()=>{}},
+ {k:'s_prismdur',   n:'강화 프리즘', d:'프리즘 벽이 내 탄을 가를 수 있는 횟수 +3',      max:1, tag:'특수 특전', sp:1, req:'Q 스킬이 벽이거나 맵에 프리즘이 있을 때', ok:()=>prismUseful(), fn:()=>{}},
+ {k:'s_decoyhp',    n:'미끼 강화',   d:'미끼 체력 +6 (자폭 미끼면 탄 6발 분량)',   max:1, tag:'특수 특전', sp:1, req:'Q 스킬이 미끼이고 「미끼 흡수」를 가졌을 때', ok:()=>CFG.qSkill==='decoy'&&boonLv('decoyabs')>0, fn:()=>{ if(P.decoyHp!=null){ const v=P.decoyBomb?6*decoyHitDmg({}):6; P.decoyHp+=v; P.decoyHpMax+=v; } }},
+ {k:'s_decoybomb',  n:'자폭 미끼',   d:'미끼 체력이 내 체력과 같아짐 (흡수한 탄 피해만큼 깎임) · 미끼가 서 있을 때 Q를 다시 누르면 폭발해 흡수한 탄을 사방으로 뱉음 (내 탄) · 대신 미끼 재사용 대기 ×1.5', max:1, tag:'특수 특전', sp:1, req:'Q 스킬이 미끼이고 「미끼 흡수」를 가졌을 때', ok:()=>CFG.qSkill==='decoy'&&boonLv('decoyabs')>0, fn:()=>{}}
 ];
 const boonDef=k=>BOONS.find(x=>x.k===k)||SPECIALS.find(x=>x.k===k);
 const boonLv=k=>(run&&run.boons&&run.boons[k])||0;

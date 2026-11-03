@@ -261,9 +261,21 @@ function openDex(){
       '<div style="width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center">'+(img?'<img src="'+img.src+'" style="max-width:52px;max-height:52px">':'')+'</div>'+
       '<div style="min-width:0"><div><b>'+nm+'</b> <span style="color:var(--dim);font-size:10.5px">'+(G0.hits||'?')+'칸 · '+(G0.score||0)+'점</span></div>'+
       '<div style="color:var(--dim);font-size:11.5px;line-height:1.4">'+d+'</div></div></div>'; };
+  const tab=window.__dexTab||'enemy', bn=k=>{ const b=boonDef(k); return b?b.n:k; };
+  const row=(t,sub,d,req)=>'<div style="border:1px solid var(--line);border-radius:8px;padding:8px"><div><b>'+t+'</b> <span style="color:var(--dim);font-size:10.5px">'+sub+'</span></div>'+
+    '<div style="color:var(--dim);font-size:11.5px;line-height:1.4;margin-top:2px">'+d+'</div>'+(req?'<div style="color:var(--warn);font-size:10.5px;margin-top:4px">조건 — '+req+'</div>':'')+'</div>';
+  const SY=window.SYNERGY||[], RK=window.RISK_EVENTS||[];
+  const tabs=[['enemy','적',DEX.length],['boon','특전',BOONS.length],['special','특수 특전',SPECIALS.length],['syn','공명',SY.length],['risk','위험한 선택',RK.length]];
+  const body=tab==='boon'?BOONS.map(b=>row(b.n,(b.tag||'특전')+' · 최대 '+b.max+'번',b.d,b.req)).join('')
+    :tab==='special'?SPECIALS.map(b=>row(b.n,'특수 특전',b.d,b.req)).join('')
+    :tab==='syn'?SY.map(s=>row(s.n,'('+bn(s.a)+' + '+bn(s.b)+')',s.d,'「'+bn(s.a)+'」 · 「'+bn(s.b)+'」 둘 다 가지면 켜짐')).join('')
+    :tab==='risk'?RK.map(e=>row(e.n,'위험한 선택','대가 — '+e.cost+'<br>보상 — '+e.gain)).join('')
+    :DEX.map(card).join('');
   $('#modalBox').style.width='min(640px,100%)';
-  $('#modalBox').innerHTML='<div class="logHd"><h4>적 도감</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:70vh;overflow:auto">'+DEX.map(card).join('')+'</div>';
+  $('#modalBox').innerHTML='<div class="logHd"><h4>도감</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px">'+tabs.map(([k,l,n])=>'<button class="exBtn" data-dextab="'+k+'"'+(k===tab?' style="border-color:var(--cyan);color:var(--cyan)"':'')+'>'+l+' '+n+'</button>').join('')+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:64vh;overflow:auto">'+body+'</div>';
+  $('#modalBox').querySelectorAll('[data-dextab]').forEach(b=>b.onclick=()=>{ window.__dexTab=b.dataset.dextab; sfx('ui'); openDex(); });
   $('#modal').classList.add('on');
 }
 const _openModal=openModal;
