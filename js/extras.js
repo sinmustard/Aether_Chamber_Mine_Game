@@ -457,7 +457,7 @@ killEnemy=function(e){
     announce('흡수체 폭발 · '+n+'발','red'); shake=Math.max(shake,12); }
   if(e.grade==='boss'){ vib([80,50,160]);
     if(run.rush){ const R=run.rush; R.i++; P.hp=Math.min(CFG.hpMax,P.hp+CFG.hpMax*0.3);
-      if(R.i>=RUSH_ORDER.length){ const t=run.time-R.t0, B=lsGet('aether_x_rush',{}), rec=B[run.mode]==null||t<B[run.mode]; if(rec){ B[run.mode]=t; lsSet('aether_x_rush',B); }
+      if(R.i>=RUSH_ORDER.length){ const t=run.time-R.t0, B=lsGet('aether_x_rush',{}), rk=run.mode+(run.rushEasy?':easy':''), rec=B[rk]==null||t<B[rk]; if(rec){ B[rk]=t; lsSet('aether_x_rush',B); }
         R.time=t; R.rec=rec; setTimeout(()=>{ if(run&&run.rush) announce('보스 러시 완료  '+fmtT(t)+(rec?'  ·  최고 기록!':''),'warn'); },1400); } } }
   return r; };
 
@@ -550,7 +550,7 @@ endRun=function(){
     if(feat('pstat')){ const par=I.par||0, wh=I.whiff||0, rt=I.rt||[], avg=rt.length?rt.reduce((a,b)=>a+b,0)/rt.length:0;
       h+='<div style="color:var(--dim)">패링 <b style="color:var(--fg)">'+par+'</b>회 · 빗나감 <b style="color:var(--fg)">'+wh+'</b>회 · 성공률 <b style="color:var(--cyan)">'+(par+wh?Math.round(par/(par+wh)*100):0)+'%</b>'+
         (rt.length?' · 평균 반응 <b style="color:var(--fg)">'+avg.toFixed(2)+'초</b>':'')+'</div>'; }
-    if(r.rush) h+='<div style="color:var(--dim)">보스 러시 — '+(r.rush.time!=null?'<b style="color:var(--warn)">완주 '+fmtT(r.rush.time)+'</b>'+(r.rush.rec?' · 최고 기록':''):'<b style="color:var(--fg)">'+r.rush.i+' / '+RUSH_ORDER.length+'</b>에서 쓰러짐')+'</div>';
+    if(r.rush) h+='<div style="color:var(--dim)">보스 러시'+(r.rushEasy?' (이지)':'')+' — '+(r.rush.time!=null?'<b style="color:var(--warn)">완주 '+fmtT(r.rush.time)+'</b>'+(r.rush.rec?' · 최고 기록':''):'<b style="color:var(--fg)">'+r.rush.i+' / '+RUSH_ORDER.length+'</b>에서 쓰러짐')+'</div>';
     if(I.mirror) h+='<div style="color:var(--dim)">거울로 꺾은 탄 — <b style="color:var(--cyan)">'+I.mirror+'</b></div>';
     if(feat('replay')&&RP.frames.some(c=>c&&c._run===r)) h+='<button id="exRpBtn" style="margin-top:8px;margin-right:6px;background:transparent;border:1px solid var(--cyan);color:var(--cyan);border-radius:6px;padding:6px 14px;font:700 12px ui-monospace,monospace;cursor:pointer">마지막 5초 보기</button>';
     more.innerHTML=h; const b=$('#exRpBtn'); if(b) b.onclick=()=>openReplay(r); }
@@ -581,7 +581,7 @@ drawEnemyBody=function(e){ _drawEnemyBody2(e); if(e.grade!=='absorber') return; 
 const _drawHUD2=drawHUD;
 drawHUD=function(){ _drawHUD2(); if(!run) return; const W=VW, I=run.ex;
   if(run.practice||run.rush){ ctx.textAlign='left'; ctx.font='700 12px ui-monospace,monospace'; ctx.fillStyle=C.warn;
-    ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시 '+Math.min(RUSH_ORDER.length,run.rush.i+1)+' / '+RUSH_ORDER.length+' · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
+    ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시'+(run.rushEasy?' · 이지 ':' ')+Math.min(RUSH_ORDER.length,run.rush.i+1)+' / '+RUSH_ORDER.length+' · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
   if(I&&I.firstQ&&I.firstQ.length){ const f=I.firstQ[0], a=Math.min(1,f.t*2,(4.5-f.t)*4), img=SPRITES[f.g], x=18, y=H-96;
     ctx.font='600 11.5px ui-monospace,monospace'; const w=Math.min(W-36,Math.max(300,ctx.measureText(f.d).width+64));
     ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='rgba(8,12,17,.9)'; ctx.fillRect(x,y,w,46); ctx.strokeStyle=C.cyan; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,45);
@@ -858,7 +858,7 @@ drawEnemyBody=function(e){ if(!e.prime) return _drawEnemyBodyP(e); const p=proj(
 
 /* ================= 보스 러시 전용 (v3.114) — 시작 특전 · 시작 보상 · 공격 드론. 보상 없이 바로 보스라 강화를 다 찍은 봇도 2번째 보스에서 쓰러졌다 ================= */
 {
-/* v3.121 사람형 봇이 첫 보스에서 거의 다 쓰러져서: 시작 보상 2개 · 앞쪽 두 보스(기본형 · 수호형) 동안만 받는 탄 피해 ×0.8 */
+/* v3.125 기본은 도전(시작 보상 1개 · 피해 그대로). 설정 「보스 러시 이지 모드」를 켜면: 시작 보상 2개 · 앞쪽 두 보스(기본형 · 수호형) 동안만 받는 탄 피해 ×0.8 */
 const RUSH_SOFT={start:2,dmg:0.8,until:2};
 window.RUSH_SOFT=RUSH_SOFT;
 /* 탄 피해식이 (1−장갑)을 곱하므로, 그동안만 장갑을 올려 ×0.8을 만든다. 켤 때 올린 만큼 끌 때 되돌림 */
@@ -870,8 +870,9 @@ window.exRushStart=function(){ if(!run||!run.rush) return;
   const pool=SPECIALS.filter(s=>boonLv(s.k)<(s.max||1)&&(!s.ok||s.ok())&&!s.stay&&!s.chaos), picks=[];
   while(picks.length<3&&pool.length) picks.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   if(!picks.length) return;
-  run.startRewards=RUSH_SOFT.start; rwPicks=picks; window.exCardPanel('보스 러시 &nbsp;—&nbsp; 특수 특전 하나를 고르세요 (다음엔 보상 '+RUSH_SOFT.start+'개)');
-  rushSoftOn(); };
+  run.rushEasy=!!OPT.rushEasy; run.startRewards=run.rushEasy?RUSH_SOFT.start:1; rwPicks=picks;
+  window.exCardPanel('보스 러시'+(run.rushEasy?' · 이지':'')+' &nbsp;—&nbsp; 특수 특전 하나를 고르세요 (다음엔 보상 '+run.startRewards+'개)');
+  if(run.rushEasy) rushSoftOn(); };
 /* 공격 드론: 플레이어 둘레를 돌며 1.2초마다 가장 가까운 적(보스 우선)에게 0.5칸짜리 내 탄. 적은 이 탄을 되뺏지 못함
    플레이어 공격 수단은 패링뿐이라는 원칙(폐기한 설계)이 있어서 보스 러시에만 */
 const DRONE={r:54,cd:1.2,dmg:0.5,spd:560,life:2.5};

@@ -475,7 +475,8 @@ function openModal(kind){
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
               ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통'],
               ['피해 숫자','dmgNum',OPT.dmgNum?'켬':'끔'],   // v2.68
-              ['패링 목표 미리보기','aimPrev',OPT.aimPrev?'켬 · 날아갈 적에게 점선':'끔']]   // v3.88
+              ['패링 목표 미리보기','aimPrev',OPT.aimPrev?'켬 · 날아갈 적에게 점선':'끔'],   // v3.88
+              ['보스 러시 이지 모드','rushEasy',OPT.rushEasy?'켬 · 시작 보상 2개 · 초반 피해 ×0.8':'끔 · 도전']]   // v3.125
               .concat(isTouchDev()?[['패링 방식 (폰)','holdParry',OPT.holdParry?'누르고 있으면 자동':'손 떼면 패링'],
                 ['버튼 위치 (폰)','padPos',({bottom:'아래',top:'위',right:'오른쪽',left:'왼쪽'})[OPT.padPos]||'아래'],
                 ['조작 좌우 바꾸기 (폰)','swapSticks',OPT.swapSticks?'켬 · 왼쪽 조준 / 오른쪽 이동':'끔'],
@@ -500,7 +501,7 @@ function openModal(kind){
   const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixMove','fixAim'])+stickEditRow+R2(['skillRing','padPos','swapSticks','vibe'])+phoneDesc+keyRows
            : optTab==='sound'? R2(['vol','bgm'])
            : optTab==='acct'? acct
-           : R2(['shake','lowfx','cb','inputBuf','dmgNum','aimPrev'])+pimgRow+fsRow;
+           : R2(['shake','lowfx','cb','inputBuf','dmgNum','aimPrev','rushEasy'])+pimgRow+fsRow;
   $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+tabH+body;
   $('#modal').classList.add('on');
 }
