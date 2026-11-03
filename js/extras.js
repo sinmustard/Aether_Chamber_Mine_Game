@@ -609,3 +609,82 @@ update=function(dt){
     const t=[run.cycle>=LATE.patFrom?'센 패턴':'',run.cycle>=LATE.addFrom?'적 +'+(run.cycle>=LATE.add2From?2:1):'',lateSpd()?'탄속 +'+Math.round(lateSpd()*100)+'%':'',run.cycle>=LATE.dblFrom?'연속 사격':''].filter(Boolean).join(' · ');
     setTimeout(()=>{ if(run) announce('후반 압박 — '+t,'red'); },2600); } };
 }
+
+/* ================= 보상 공명 (v3.105) — 두 보상을 같이 가지면 추가 효과. 고르는 순간마다 다음 조합을 노리는 전략이 생기게 ================= */
+{
+/* 새 보상: 벼랑 끝 — 체력이 낮을수록 세게 (공명 재료로도 씀) */
+BOONS.push({k:'edge',n:'벼랑 끝',d:'체력 30% 이하일 때 패링한 탄 피해 ×1.5',max:1,tag:'공격',fn:()=>{}});
+const SYN=[
+  {k:'pg',  n:'꿰뚫는 집념', a:'pierce', b:'grit',     d:'왕복 3회 이상 된 탄은 관통 +1'},
+  {k:'chain',n:'연쇄 폭발',  a:'shard',  b:'aftershock',d:'처치한 자리에서 주변 적에게 0.3칸 폭발 — 그걸로 죽으면 또 터짐 (최대 3번)'},
+  {k:'life',n:'생명 순환',   a:'leech',  b:'vital',    d:'체력이 가득할 때 넘친 처치 회복 20마다 보호막 +1 (최대 3)'},
+  {k:'rev', n:'반격 본능',   a:'counter',b:'fury',     d:'맞은 뒤 2초 동안 패링한 탄 피해 ×1.5'},
+  {k:'mp',  n:'다중 반사',   a:'multi',  b:'flow',     d:'한 번에 2발 이상 빼앗으면 0.4초 무적'},
+  {k:'zen', n:'명경지수',    a:'calm',   b:'s_focus',  d:'빗나감 경직 −50% 더'},
+  {k:'gh',  n:'잔상 질주',   a:'iframe', b:'move',     d:'피격 무적 동안 이동 속도 +60'},
+  {k:'gold',n:'황금 회로',   a:'greed',  b:'s_score',  d:'맞지 않고 넘긴 웨이브마다 보너스 점수 (300 × 사이클)'},
+  {k:'eye', n:'전방위 감지', a:'range',  b:'fov',      d:'패링 사거리 +10% · 시야 +10° 더'},
+  {k:'last',n:'최후의 반격', a:'edge',   b:'counter',  d:'체력 30% 이하에서 맞으면 1초 무적 (판마다 3번)'},
+];
+window.SYNERGY=SYN;
+const synOn=k=>!!(run&&run.syn&&run.syn[k]);
+window.synCheck=()=>synCheck();   // 테스트용
+const bname=k=>{ const b=boonDef(k); return b?b.n:k; };
+/* 새로 완성된 공명을 켠다 — 한 번만 바뀌는 수치는 여기서 */
+function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{};
+  SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return; run.syn[s.k]=1;
+    if(s.k==='zen') CFG.whiff*=0.5;
+    if(s.k==='eye'){ CFG.rangeM*=1.1; CFG.fov=Math.min(180,CFG.fov+10); }
+    setTimeout(()=>{ if(run) announce('공명 — '+s.n,'warn'); },400); }); }
+const _takeReward=takeReward;
+takeReward=function(){ const r=_takeReward.apply(this,arguments); synCheck(); return r; };
+/* 보상 카드: 이걸 고르면 완성되는 공명을 표시 */
+const _renderRwRow=renderRwRow;
+renderRwRow=function(){ _renderRwRow.apply(this,arguments); if(!run) return;
+  document.querySelectorAll('#rwRow .bc').forEach(el=>{ const b=rwPicks[+el.dataset.i]; if(!b||b.chaos) return; const k=b.look||b.k;
+    const done=SYN.filter(s=>!synOn(s.k)&&((s.a===k&&boonLv(s.b))||(s.b===k&&boonLv(s.a))));
+    if(done.length) el.insertAdjacentHTML('beforeend','<div style="margin-top:6px;font-size:11px;color:var(--warn)">공명 완성 — '+done.map(s=>'<b>'+s.n+'</b>').join(' · ')+'</div>'); }); };
+/* 이번 판 보상 목록 아래에 공명 표 */
+const _boonListHTML=boonListHTML;
+boonListHTML=function(){ const h=_boonListHTML.apply(this,arguments); if(!run) return h;
+  return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">공명</div>'+SYN.map(s=>{ const on=synOn(s.k), ha=boonLv(s.a)>0, hb=boonLv(s.b)>0;
+    return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> '+
+      '<span style="color:'+(ha?'var(--cyan)':'var(--dim)')+'">'+bname(s.a)+'</span> + <span style="color:'+(hb?'var(--cyan)':'var(--dim)')+'">'+bname(s.b)+'</span> — '+s.d+'</div>'; }).join(''); };
+/* 다중 반사: 한 번에 2발 이상 빼앗음 */
+const _doParryS=doParry;
+doParry=function(){ const n0=run?bullets.filter(b=>b.owner==='player').length:0; const r=_doParryS.apply(this,arguments);
+  if(run&&synOn('mp')&&bullets.filter(b=>b.owner==='player').length-n0>=2){ P.inv=Math.max(P.inv,0.4); say('다중 반사','warn'); } return r; };
+/* 피격: 황금 회로용 기록 · 최후의 반격 */
+const _onHurtS=onHurt;
+onHurt=function(){ if(run){ run._syHit=1;
+    if(synOn('last')&&P.hp>0&&P.hp<=CFG.hpMax*0.3&&(run._lastN||0)<3){ run._lastN=(run._lastN||0)+1; P.inv=Math.max(P.inv,1); say('최후의 반격','warn'); } }
+  return _onHurtS.apply(this,arguments); };
+/* 처치: 연쇄 폭발 · 생명 순환 */
+let chainDepth=0;
+const _killEnemyS=killEnemy;
+killEnemy=function(e){ const had=run&&ens.includes(e), hp0=P.hp; const r=_killEnemyS.apply(this,arguments);
+  if(!run||!had||ens.includes(e)) return r;
+  if(synOn('life')&&boonLv('leech')&&e.grade!=='illusion'){ const L=(e.grade==='boss'?10:2)*boonLv('leech'), over=hp0+L-CFG.hpMax;
+    if(over>0){ run._ovh=(run._ovh||0)+over; while(run._ovh>=20){ run._ovh-=20; if((P.barrier||0)<3){ P.barrier=(P.barrier||0)+1; say('생명 순환 · 보호막 +1','cyan'); } } } }
+  if(synOn('chain')&&chainDepth<3){ chainDepth++; burst(e.x,e.y,'warn',16,200);
+    ens.filter(o=>o!==e&&dist(o.x,o.y,e.x,e.y)<100).forEach(o=>{ o.hp-=HIT_UNIT*0.3; o.hurt=.2; if(o.hp<=HIT_UNIT*0.25&&ens.includes(o)) killEnemy(o); });
+    chainDepth--; }
+  return r; };
+/* 매 프레임: 꿰뚫는 집념 · 반격 본능 · 벼랑 끝 · 잔상 질주 · 황금 회로 */
+const _updateS=update;
+update=function(dt){ const ph0=run&&run.phase; _updateS(dt);
+  if(!run||screen!=='game') return;
+  const low=P.hp>0&&P.hp<=CFG.hpMax*0.3;
+  bullets.forEach(b=>{ if(b.owner!=='player') return;
+    if(synOn('pg')&&b.returns>=3&&b._syP!==b.returns){ b.pierceLeft=(b.pierceLeft||0)+1; b._syP=b.returns; }
+    if(synOn('rev')&&P.counterT>0&&!b._syC){ b.pdm=(b.pdm||1)*1.5; b._syC=1; }
+    if(boonLv('edge')&&low&&!b._syE){ b.pdm=(b.pdm||1)*1.5; b._syE=1; } });
+  if(synOn('gh')){ if(P.inv>0&&!P._syMv){ CFG.moveSpd+=60; P._syMv=1; } else if(P.inv<=0&&P._syMv){ CFG.moveSpd-=60; P._syMv=0; } }
+  if(ph0==='fight'&&run.phase==='clear'){ if(synOn('gold')&&!run._syHit){ const pts=Math.round(300*run.cycle*(CFG.scoreMul||1)); run.score+=pts; say('황금 회로 +'+pts,'warn'); } run._syHit=0; }
+};
+/* 결과 화면: 이번 판 공명 */
+const _endRunS=endRun;
+endRun=function(){ const r=run, out=_endRunS.apply(this,arguments), more=$('#exMore');
+  if(more&&r&&r.syn){ const on=SYN.filter(s=>r.syn[s.k]); if(on.length) more.insertAdjacentHTML('afterbegin','<div style="color:var(--dim)">공명 — '+on.map(s=>'<b style="color:var(--warn)">'+s.n+'</b>').join(' · ')+'</div>'); }
+  return out; };
+}

@@ -704,4 +704,57 @@ module.exports = {
     t.ok(bot.min >= 0.18 && bot.btn, '테스트 봇 실력 "사람형" — 반응 0.18초 이상, 선택 버튼 있음', JSON.stringify(bot));
     noErrors(t, g, '후반 압박'); await p.close();
   },
+
+  async '보상 공명 (v3.105)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
+    const r = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
+      const reset = () => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; run.mapWalls = []; run.walls = []; P.x = 300; P.y = 380; };
+      const give = (...ks) => { ks.forEach(k => run.boons[k] = 1); synCheck(); };
+      const pb = (x, y, ret) => { const b = { x, y, dir: 0, spd: 1, base: 1, owner: 'player', returns: ret, age: 0, trail: [], glow: 1, hcd: 9, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, pierceLeft: 0 }; bullets.push(b); return b; };
+      o.pairs = SYNERGY.length + ':' + SYNERGY.filter(s => boonDef(s.a) && boonDef(s.b)).length; o.edge = !!BOONS.find(b => b.k === 'edge');
+      run.boons = {}; run.syn = {};
+      // 보상 카드: 이걸 고르면 완성되는 공명이 보임
+      run.boons.pierce = 1; rwPicks = [boonDef('grit'), boonDef('range'), boonDef('move')]; renderRwRow(); o.hint = /공명 완성 — 꿰뚫는 집념/.test($('#rwRow').innerText);
+      run.boons = {}; run.syn = {};
+      // 명경지수 · 전방위 감지: 한 번만 바뀌는 수치
+      const wh = CFG.whiff, rg = CFG.rangeM; give('calm', 's_focus', 'range', 'fov'); o.zen = Math.abs(CFG.whiff - wh * 0.5) < 1e-6; o.eye = Math.abs(CFG.rangeM - rg * 1.1) < 1e-6;
+      synCheck(); o.once = Math.abs(CFG.whiff - wh * 0.5) < 1e-6;
+      // 꿰뚫는 집념
+      reset(); give('pierce', 'grit'); const b1 = pb(500, 200, 3); step(1); o.pg = b1.pierceLeft === 1;
+      // 반격 본능 · 벼랑 끝
+      reset(); give('counter', 'fury'); P.counterT = 1; const b2 = pb(500, 200, 1); step(1); o.rev = b2.pdm === 1.5; P.counterT = 0;
+      reset(); run.boons.edge = 1; P.hp = CFG.hpMax * 0.2; const b3 = pb(500, 200, 1); step(1); o.edgeDmg = b3.pdm === 1.5; P.hp = CFG.hpMax;
+      // 잔상 질주
+      reset(); give('iframe', 'move'); const ms = CFG.moveSpd; P.inv = 1; step(1); o.gh1 = CFG.moveSpd === ms + 60; P.inv = 0; step(1); o.gh2 = CFG.moveSpd === ms;
+      // 연쇄 폭발
+      reset(); give('shard', 'aftershock'); spawnEnemyAt('mob', 600, 300); spawnEnemyAt('mob', 660, 300); const [k1, k2] = ens; k2.hp = HIT_UNIT * 0.4; killEnemy(k1); o.chain = !ens.includes(k2);
+      // 생명 순환: 가득 찬 상태에서 넘친 회복 20마다 보호막
+      reset(); give('leech', 'vital'); run.boons.leech = 1; P.hp = CFG.hpMax; P.barrier = 0; for (let i = 0; i < 10; i++) { spawnEnemyAt('mob', 700, 200 + i * 10); killEnemy(ens[ens.length - 1]); P.hp = CFG.hpMax; } o.life = P.barrier;
+      // 황금 회로: 맞지 않고 넘긴 웨이브
+      reset(); give('greed', 's_score'); run._syHit = 0; spawnEnemyAt('mob', 700, 300); const s0 = run.score; killEnemy(ens[0]); const s1 = run.score; queue.length = 0; step(2); o.gold = run.score - s1 >= 300 * run.cycle;
+      // 최후의 반격
+      reset(); give('edge', 'counter'); run._lastN = 0; P.inv = 0; P.hp = CFG.hpMax * 0.2; onHurt(); o.last = P.inv >= 1; P.hp = CFG.hpMax; P.inv = 0;
+      // 다중 반사: 조준 방향의 탄 2발을 한 번에 패링
+      reset(); give('multi', 'flow'); boonDef('multi').fn(); P.lock = 0; P.pbuf = 0; P.inv = 0; step(1); const fa = P.face;   // 분배 효과(한 번에 +1발)는 보상을 고를 때 붙으니 직접 적용
+      const eb = (o) => bullets.push({ x: P.x + Math.cos(fa + o) * 70, y: P.y + Math.sin(fa + o) * 70, dir: fa + o + Math.PI, spd: 30, base: 30, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1 });
+      eb(-0.1); eb(0.1); step(1); P.face = fa; P.lock = 0; doParry(true); o.mp = bullets.filter(b => b.owner === 'player').length + ':' + (P.inv >= 0.39);
+      // 목록
+      o.list = /공명/.test(boonListHTML()) && /✓ <b[^>]*>황금 회로/.test(boonListHTML());
+      return o; }).catch(e => ({ err: e.message }));
+    t.ok(!r.err, '공명 확인 중 오류 없음', r.err);
+    t.eq(r.pairs, '10:10', '공명 10종 — 재료 보상이 모두 실제로 있음');
+    t.ok(r.edge, '새 보상 「벼랑 끝」');
+    t.ok(r.hint, '보상 카드에 "공명 완성" 표시');
+    t.ok(r.zen && r.eye && r.once, '명경지수 · 전방위 감지 — 수치는 한 번만 바뀜');
+    t.ok(r.pg, '꿰뚫는 집념: 왕복 3회 탄 관통 +1');
+    t.ok(r.rev && r.edgeDmg, '반격 본능 · 벼랑 끝: 패링한 탄 피해 ×1.5');
+    t.ok(r.gh1 && r.gh2, '잔상 질주: 무적 동안만 이동 +60');
+    t.ok(r.chain, '연쇄 폭발: 처치 폭발로 옆 적이 죽음');
+    t.eq(r.life, 1, '생명 순환: 넘친 회복 20 → 보호막 1');
+    t.ok(r.gold, '황금 회로: 맞지 않고 넘긴 웨이브 보너스');
+    t.ok(r.last, '최후의 반격: 체력 30% 이하에서 맞으면 1초 무적');
+    t.eq(r.mp, '2:true', '다중 반사: 한 번에 2발 빼앗으면 0.4초 무적');
+    t.ok(r.list, '이번 판 보상 목록에 공명 표 (켜진 것 ✓)');
+    noErrors(t, g, '공명'); await p.close();
+  },
 };
