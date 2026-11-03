@@ -37,6 +37,12 @@ function prismPts(o,n){
   const R=o.w*(n===3?0.577:0.526), cx=o.x+o.w/2, cy=o.y+o.h*(n===3?0.067:0.0245)+R;
   return Array.from({length:n},(_,k)=>{ const a=-Math.PI/2+k*TAU/n; return proj(cx+Math.cos(a)*R, cy+Math.sin(a)*R); });
 }
+function msgLines(text,maxW){
+  if(ctx.measureText(text).width<=maxW) return [text];
+  const parts=text.split(' · '), out=[]; let cur='';
+  parts.forEach(p=>{ const t=cur?cur+' · '+p:p; if(cur&&ctx.measureText(t).width>maxW){ out.push(cur); cur=p; } else cur=t; });
+  if(cur) out.push(cur); return out;
+}
 function drawPrism(o,ghost,bad){
   const HG=WALL_HG, n=o.prism, g=prismPts(o,n), t=g.map(p=>[p[0],p[1]-HG]);
   ctx.save();
@@ -745,11 +751,15 @@ function drawHUD(){
     ctx.fillStyle=C.red;ctx.fillRect(W/2-180,30,360*Math.max(0,boss.hp/boss.hpMax),7);
     hpTicks(W/2-180,30,360,7,boss.hpMax,24);
   }
+  let msgOff=0;
   msgs.forEach((m,i)=>{
     ctx.globalAlpha=Math.min(1,m.t*2.2);
-    ctx.font=(m.big?'700 30px':'700 18px')+' ui-monospace,monospace';
-    ctx.fillStyle=C[m.color]||C.fg;
-    ctx.fillText(m.text,W/2,(m.big?150:112)+i*24);
+    const fs=m.big?30:18, lh=m.big?34:22, maxW=W*0.9, fnt=s=>'700 '+s+'px ui-monospace,monospace';
+    ctx.font=fnt(fs); ctx.fillStyle=C[m.color]||C.fg;
+    const lines=msgLines(String(m.text),maxW);
+    lines.forEach((ln,k)=>{ let s=fs; while(s>11&&ctx.measureText(ln).width>maxW){ s--; ctx.font=fnt(s); }
+      ctx.fillText(ln,W/2,(m.big?150:112)+i*24+msgOff+k*lh); ctx.font=fnt(fs); });
+    msgOff+=(lines.length-1)*lh;
     ctx.globalAlpha=1;
   });
   if(paused){
