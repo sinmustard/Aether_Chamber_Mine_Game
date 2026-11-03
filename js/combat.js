@@ -10,6 +10,7 @@ function update(dt){
   if(paused)return;
   if(BOT.on) botTick(dt);
   if(run&&run.phase==='reward') return;     // v2.0 보상 선택 중에는 전투 정지
+  if(run){ run._dexT=(run._dexT||0)-dt; if(run._dexT<=0){ run._dexT=0.5; dexScan(); } }
   /* v2.61 히트스톱 중에도 패링 경직과 미리 누른 패링은 계속 흘러가게 — 멈춘 사이 입력이 씹히지 않도록 */
   if(hitstop>0){ hitstop-=dt; if(P.lock>0) P.lock-=dt; if(P.pbuf>0) P.pbuf=Math.max(P.pbuf,0.05); return; }
   if(run&&run.phase!=='build') run.time+=dt;   // v1.7 B-4

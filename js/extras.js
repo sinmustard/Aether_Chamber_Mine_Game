@@ -261,27 +261,32 @@ function openDex(){
       '<div style="width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center">'+(img?'<img src="'+img.src+'" style="max-width:52px;max-height:52px">':'')+'</div>'+
       '<div style="min-width:0"><div><b>'+nm+'</b> <span style="color:var(--dim);font-size:10.5px">'+(G0.hits||'?')+'칸 · '+(G0.score||0)+'점</span></div>'+
       '<div style="color:var(--dim);font-size:11.5px;line-height:1.4">'+d+'</div></div></div>'; };
+  dexSeed();
   const tab=window.__dexTab||'enemy', F=window.__dexF||(window.__dexF={}), fl=F[tab]||'all', bn=k=>{ const b=boonDef(k); return b?b.n:k; };
   const tagBtn=t=>'<button data-dextag="'+t+'" style="background:transparent;border:1px solid var(--line);color:var(--cyan);border-radius:4px;padding:0 5px;font:600 10px ui-monospace,monospace;cursor:pointer">'+t+'</button> ';
   const row=(t,sub,d,req,tag)=>'<div style="border:1px solid var(--line);border-radius:8px;padding:8px"><div><b>'+t+'</b> '+(tag?tagBtn(tag):'')+'<span style="color:var(--dim);font-size:10.5px">'+sub+'</span></div>'+
     '<div style="color:var(--dim);font-size:11.5px;line-height:1.4;margin-top:2px">'+d+'</div>'+(req?'<div style="color:var(--warn);font-size:10.5px;margin-top:4px">조건 — '+req+'</div>':'')+'</div>';
+  const lock=t=>'<div style="border:1px dashed var(--line);border-radius:8px;padding:8px;opacity:.6"><div><b>???</b></div><div style="color:var(--dim);font-size:11.5px;margin-top:2px">'+t+'</div></div>';
+  const lockE='<div style="display:flex;gap:10px;align-items:center;border:1px dashed var(--line);border-radius:8px;padding:8px;opacity:.6"><div style="width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--dim)">?</div><div><b>???</b><div style="color:var(--dim);font-size:11.5px">아직 만나지 않은 적</div></div></div>';
+  const got=(t,l,f)=>l.filter(x=>dexHas(t,f(x))).length, eK=d=>d[0], bK=b=>b.k;
   const head=t=>'<div style="grid-column:1/-1;margin:8px 0 0;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">'+t+'</div>';
   const SY=window.SYNERGY||[], RK=window.RISK_EVENTS||[];
   const EG={shot:'사격형',melee:'근접 · 분열',sup:'지원 · 소환',elite:'엘리트 · 방패',boss:'보스'};
   const egOf=k=>k.startsWith('boss')?'boss':['elite','bulwark'].includes(k)?'elite':['tracker','splitter','splinter'].includes(k)?'melee':['relay','healer','summoner','minion','absorber','illusion'].includes(k)?'sup':'shot';
   const tagOf=b=>b.tag||'기타';
-  const boonRows=l=>l.map(b=>row(b.n,'최대 '+b.max+'번',b.d,b.req,tagOf(b))).join('');
-  const spRows=()=>SPECIALS.map(b=>row(b.n,'특수 특전',b.d,b.req)).join('');
-  const synRows=()=>SY.map(s=>row(s.n,'('+bn(s.a)+' + '+bn(s.b)+')',s.d,'「'+bn(s.a)+'」 · 「'+bn(s.b)+'」 둘 다 가지면 켜짐')).join('');
+  const boonRows=l=>l.map(b=>dexHas('b',b.k)?row(b.n,'최대 '+b.max+'번',b.d,b.req,tagOf(b)):lock('아직 얻지 않은 특전')).join('');
+  const spRows=()=>SPECIALS.map(b=>dexHas('b',b.k)?row(b.n,'특수 특전',b.d,b.req):lock('아직 얻지 않은 특수 특전')).join('');
+  const synRows=()=>SY.map(s=>dexHas('s',s.k)?row(s.n,'('+bn(s.a)+' + '+bn(s.b)+')',s.d,'「'+bn(s.a)+'」 · 「'+bn(s.b)+'」 둘 다 가지면 켜짐'):lock('아직 켜 본 적 없는 공명')).join('');
   const rkRows=()=>RK.map(e=>row(e.n,'위험한 선택','대가 — '+e.cost+'<br>보상 — '+e.gain)).join('');
   let chips=[], body='';
-  if(tab==='boon'){ const tg=[...new Set(BOONS.map(tagOf))]; chips=[['all','전체',BOONS.length]].concat(tg.map(t=>[t,t,BOONS.filter(b=>tagOf(b)===t).length])); body=boonRows(BOONS.filter(b=>fl==='all'||tagOf(b)===fl)); }
-  else if(tab==='all') body=head('특전 '+BOONS.length)+boonRows(BOONS)+head('특수 특전 '+SPECIALS.length)+spRows()+head('공명 '+SY.length)+synRows()+head('위험한 선택 '+RK.length)+rkRows();
+  if(tab==='boon'){ const tg=[...new Set(BOONS.map(tagOf))]; chips=[['all','전체',got('b',BOONS,bK)+'/'+BOONS.length]].concat(tg.map(t=>{ const l=BOONS.filter(b=>tagOf(b)===t); return [t,t,got('b',l,bK)+'/'+l.length]; })); body=boonRows(BOONS.filter(b=>fl==='all'||tagOf(b)===fl)); }
+  else if(tab==='all') body=head('특전 '+got('b',BOONS,bK)+' / '+BOONS.length)+boonRows(BOONS)+head('특수 특전 '+got('b',SPECIALS,bK)+' / '+SPECIALS.length)+spRows()+head('공명 '+got('s',SY,s=>s.k)+' / '+SY.length)+synRows()+head('위험한 선택 '+RK.length)+rkRows();
   else if(tab==='special') body=spRows();
   else if(tab==='syn') body=synRows();
   else if(tab==='risk') body=rkRows();
-  else { chips=[['all','전체',DEX.length]].concat(Object.keys(EG).map(k=>[k,EG[k],DEX.filter(d=>egOf(d[0])===k).length])); body=DEX.filter(d=>fl==='all'||egOf(d[0])===fl).map(card).join(''); }
-  const tabs=[['enemy','적 전체',DEX.length],['all','특성 전체',BOONS.length+SPECIALS.length+SY.length+RK.length],['boon','특전',BOONS.length],['special','특수 특전',SPECIALS.length],['syn','공명',SY.length],['risk','위험한 선택',RK.length]];
+  else { chips=[['all','전체',got('e',DEX,eK)+'/'+DEX.length]].concat(Object.keys(EG).map(k=>{ const l=DEX.filter(d=>egOf(d[0])===k); return [k,EG[k],got('e',l,eK)+'/'+l.length]; })); body=DEX.filter(d=>fl==='all'||egOf(d[0])===fl).map(d=>dexHas('e',d[0])?card(d):lockE).join(''); }
+  const gB=got('b',BOONS,bK), gS=got('b',SPECIALS,bK), gY=got('s',SY,s=>s.k);
+  const tabs=[['enemy','적 전체',got('e',DEX,eK)+'/'+DEX.length],['all','특성 전체',(gB+gS+gY+RK.length)+'/'+(BOONS.length+SPECIALS.length+SY.length+RK.length)],['boon','특전',gB+'/'+BOONS.length],['special','특수 특전',gS+'/'+SPECIALS.length],['syn','공명',gY+'/'+SY.length],['risk','위험한 선택',RK.length]];
   const on=' style="border-color:var(--cyan);color:var(--cyan)"';
   $('#modalBox').style.width='min(640px,100%)';
   $('#modalBox').innerHTML='<div style="position:sticky;top:0;z-index:2;background:var(--panel);box-shadow:0 -16px 0 var(--panel)">'+

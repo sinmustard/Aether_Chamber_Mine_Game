@@ -140,5 +140,15 @@ const META={cur:0, best:0, bestCycle:1, skill:'', skillQ:'', skillR:'', stats:{}
 /* v2.68 누적 기록 */
 const statOff=()=>typeof run!=='undefined'&&run&&run.cheat;   // v3.64 디버그 판은 누적 기록에 안 셈
 function stat(k,n){ if(statOff()) return; if(!META.stats) META.stats={}; META.stats[k]=(META.stats[k]||0)+(n==null?1:n); }
+function dexMark(t,k){ if(!k) return; META.dex=META.dex||{}; const m=META.dex[t]||(META.dex[t]={}); if(m[k]) return; m[k]=1; save(); }
+const dexHas=(t,k)=>!!(META.dex&&META.dex[t]&&META.dex[t][k]);
+function dexScan(){ if(!run||run.tut) return;
+  ens.forEach(e=>dexMark('e',e.grade==='boss'?(e.variant&&e.variant!=='core'?'boss_'+e.variant:'boss'):e.grade));
+  Object.keys(run.boons||{}).forEach(k=>{ if(run.boons[k]>0) dexMark('b',k); });
+  Object.keys(run.syn||{}).forEach(k=>{ if(run.syn[k]) dexMark('s',k); }); }
+function dexSeed(){ META.dex=META.dex||{}; if(META.dex.seeded) return;
+  try{ const old=JSON.parse(localStorage.getItem('aether_x_seen')||'{}'); Object.keys(old).forEach(k=>dexMark('e',k)); }catch(e){}
+  if((META.stats||{}).bossKills>0) dexMark('e','boss');
+  META.dex.seeded=1; save(); }
 function statMax(k,v){ if(statOff()) return; if(!META.stats) META.stats={}; META.stats[k]=Math.max(META.stats[k]||0,v||0); }
 let sel=0;
