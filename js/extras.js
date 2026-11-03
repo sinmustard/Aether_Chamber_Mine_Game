@@ -373,9 +373,7 @@ update=function(dt){
   if(ph0==='fight'&&run.phase==='clear'){
     if(run.storm){ run.storm=0; run.startRewards=(run.startRewards||0)+1; announce('탄 폭풍 돌파 — 다음 보상 1개 더','warn'); }
     if(run.riskOn){ run.riskOn=0; run.startRewards=(run.startRewards||0)+1; announce('계약 완료 — 다음 보상 1개 더','warn'); }
-    run.riskOffer=feat('risk')&&normalRun()&&exMode()&&run.wave<BOSS_WAVE?1:0;
   }
-  if(run.phase!=='clear') run.riskOffer=0;
   // 흡수체: 주변 적 탄을 끌어당겨 삼킨다
   ens.forEach(e=>{ if(e.grade!=='absorber'||e.frozenT>0) return; e.charge=e.charge||0; e.spin=(e.spin||0)+dt*(2+e.charge*0.3);
     for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.owner!=='enemy'||b.fromAbs||(b.srcE&&b.srcE.grade==='absorber')) continue; const d=dist(b.x,b.y,e.x,e.y);   // 혼자 남아 쏜 자기 탄까지 먹으면 못 잡는다
@@ -526,9 +524,6 @@ drawZone=function(){ _drawZone();
   else { ctx.globalAlpha=.3; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(p[0]+Math.cos(P.face)*150,p[1]+Math.sin(P.face)*150*SQUASH); ctx.stroke(); }
   ctx.restore(); };
 
-/* ---- 위험 계약: 클리어 직후 T ---- */
-document.addEventListener('keydown',e=>{ if(e.code!=='KeyT'||e.repeat||!run||!run.riskOffer||screen!=='game'||paused) return;
-  run.riskOffer=0; run.riskNext=1; say('위험 계약 수락','warn'); sfx('ui'); });
 
 /* ---- 그리기: 흡수체 · 첫 등장 · 위험 계약 · 연습장 / 보스 러시 줄 ---- */
 const _drawEnemyBody2=drawEnemyBody;
@@ -542,10 +537,6 @@ const _drawHUD2=drawHUD;
 drawHUD=function(){ _drawHUD2(); if(!run) return; const W=VW, I=run.ex;
   if(run.practice||run.rush){ ctx.textAlign='left'; ctx.font='700 12px ui-monospace,monospace'; ctx.fillStyle=C.warn;
     ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시 '+Math.min(4,run.rush.i+1)+' / 4 · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
-  if(run.riskOffer){ const t='T  위험 계약 — 다음 웨이브 적 ×1.5 · 버티면 보상 1개 더  ('+Math.max(0,run.phaseT).toFixed(1)+')';
-    ctx.font='700 14px ui-monospace,monospace'; ctx.textAlign='center'; const w=ctx.measureText(t).width+28, y=H*0.72;
-    ctx.fillStyle='rgba(40,8,14,.88)'; ctx.fillRect(W/2-w/2,y-20,w,32); ctx.strokeStyle=C.red; ctx.lineWidth=1.5; ctx.strokeRect(W/2-w/2,y-20,w,32);
-    ctx.fillStyle='#ffd0d8'; ctx.fillText(t,W/2,y+1); }
   if(I&&I.firstQ&&I.firstQ.length){ const f=I.firstQ[0], a=Math.min(1,f.t*2,(4.5-f.t)*4), img=SPRITES[f.g], x=18, y=H-96;
     ctx.font='600 11.5px ui-monospace,monospace'; const w=Math.min(W-36,Math.max(300,ctx.measureText(f.d).width+64));
     ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='rgba(8,12,17,.9)'; ctx.fillRect(x,y,w,46); ctx.strokeStyle=C.cyan; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,45);
@@ -632,13 +623,28 @@ const synOn=k=>!!(run&&run.syn&&run.syn[k]);
 window.synCheck=()=>synCheck();   // 테스트용
 const bname=k=>{ const b=boonDef(k); return b?b.n:k; };
 /* 새로 완성된 공명을 켠다 — 한 번만 바뀌는 수치는 여기서 */
-function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{};
-  SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return; run.syn[s.k]=1;
-    if(s.k==='zen') CFG.whiff*=0.5;
-    if(s.k==='eye'){ CFG.rangeM*=1.1; CFG.fov=Math.min(180,CFG.fov+10); }
-    setTimeout(()=>{ if(run) announce('공명 — '+s.n,'warn'); },400); }); }
+/* v3.106 공명은 판마다 3개까지 (저주받은 보물로 +1) — 다 차면 새 공명을 켤지 카드로 고른다. 오래 가는 판은 보상을 거의 다 모아서 공명이 전부 켜졌다 */
+const synCap=()=>3+(run.synSlots||0);
+const synCount=()=>SYN.filter(s=>run.syn&&run.syn[s.k]).length;
+function synApply(s,on){   // 켜고 끌 때 한 번만 바뀌는 수치
+  if(s.k==='zen') CFG.whiff*=on?0.5:2;
+  if(s.k==='eye'){ if(on){ CFG.rangeM*=1.1; CFG.fov=Math.min(180,CFG.fov+10); } else { CFG.rangeM/=1.1; CFG.fov-=10; } }
+  if(s.k==='gh'&&!on&&P._syMv){ CFG.moveSpd-=60; P._syMv=0; } }
+function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{}; run.synNo=run.synNo||{};
+  SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return;
+    if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); setTimeout(()=>{ if(run) announce('공명 — '+s.n,'warn'); },400); }
+    else if(!run.synNo[s.k]&&!run.synPend) run.synPend=s.k; }); }
+/* 보상 화면을 빌려 카드를 띄운다 (공명 고르기 · 위험한 선택) */
+function openCardPanel(title){ rwOpenAt=performance.now(); if(run.phase!=='reward') run.rwPrev=run.phase; run.phase='reward'; unlockMouse();
+  $('#rwHd').innerHTML=title; $('#rwReroll').disabled=true; renderRwRow(); $('#rwOwn').innerHTML=''; $('#reward').classList.add('on'); sfx('ui'); }
+function openSynChoice(){ const ns=SYN.find(s=>s.k===run.synPend); run.synPend=null; if(!ns) return;
+  rwPicks=SYN.filter(s=>run.syn[s.k]).map(s=>({k:'syn_sw',n:s.n+' 끄고 → '+ns.n,d:'끔 — '+s.d+'<br>켬 — '+ns.d,tag:'공명 바꾸기',chaos:1,
+    fn:()=>{ run.syn[s.k]=0; synApply(s,false); run.synNo[s.k]=1; run.syn[ns.k]=1; synApply(ns,true); announce('공명 — '+ns.n,'warn'); }}));
+  rwPicks.push({k:'syn_no',n:ns.n+' 켜지 않기',d:'지금 공명을 그대로 둠 — 자리가 나면 그때 켜짐',tag:'공명',chaos:1,fn:()=>{ run.synNo[ns.k]=1; }});
+  openCardPanel('공명 자리 '+synCap()+'개가 다 찼어요 &nbsp;—&nbsp; 새 공명 「'+ns.n+'」을 켤까요?'); }
+window.synCap=()=>synCap();
 const _takeReward=takeReward;
-takeReward=function(){ const r=_takeReward.apply(this,arguments); synCheck(); return r; };
+takeReward=function(){ const r=_takeReward.apply(this,arguments); synCheck(); if(run&&run.synPend&&run.phase!=='reward') openSynChoice(); return r; };
 /* 보상 카드: 이걸 고르면 완성되는 공명을 표시 */
 const _renderRwRow=renderRwRow;
 renderRwRow=function(){ _renderRwRow.apply(this,arguments); if(!run) return;
@@ -648,7 +654,7 @@ renderRwRow=function(){ _renderRwRow.apply(this,arguments); if(!run) return;
 /* 이번 판 보상 목록 아래에 공명 표 */
 const _boonListHTML=boonListHTML;
 boonListHTML=function(){ const h=_boonListHTML.apply(this,arguments); if(!run) return h;
-  return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">공명</div>'+SYN.map(s=>{ const on=synOn(s.k), ha=boonLv(s.a)>0, hb=boonLv(s.b)>0;
+  return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">공명 '+synCount()+' / '+synCap()+'</div>'+SYN.map(s=>{ const on=synOn(s.k), ha=boonLv(s.a)>0, hb=boonLv(s.b)>0;
     return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> '+
       '<span style="color:'+(ha?'var(--cyan)':'var(--dim)')+'">'+bname(s.a)+'</span> + <span style="color:'+(hb?'var(--cyan)':'var(--dim)')+'">'+bname(s.b)+'</span> — '+s.d+'</div>'; }).join(''); };
 /* 다중 반사: 한 번에 2발 이상 빼앗음 */
@@ -683,6 +689,49 @@ update=function(dt){ const ph0=run&&run.phase; _updateS(dt);
   if(synOn('gh')){ if(P.inv>0&&!P._syMv){ CFG.moveSpd+=60; P._syMv=1; } else if(P.inv<=0&&P._syMv){ CFG.moveSpd-=60; P._syMv=0; } }
   if(ph0==='fight'&&run.phase==='clear'){ if(synOn('gold')&&!run._syHit){ const pts=Math.round(300*run.cycle*(CFG.scoreMul||1)); run.score+=pts; say('황금 회로 +'+pts,'warn'); } run._syHit=0; }
 };
+/* v3.106 위험한 선택 — 웨이브를 비운 직후 가끔(30%, 3웨이브부터 · 보스 앞 웨이브 제외 · 두 번 연달아는 안 나옴) 수락 / 거절 카드 */
+const EVENTS=[
+  {k:'blood',n:'피의 계약',cost:'체력 −25%',gain:'지금 바로 보상 1개 더',ok:()=>P.hp>CFG.hpMax*0.35,
+    go:()=>{ P.hp=Math.max(1,P.hp-Math.round(CFG.hpMax*0.25)); P.hurt=.3; run.startRewards=(run.startRewards||0)+1; }},
+  {k:'horde',n:'증원',cost:'다음 웨이브 적 ×1.5',gain:'버티면 다음 보상 1개 더',go:()=>{ run.riskNext=1; }},
+  {k:'elite',n:'정예 습격',cost:'다음 웨이브에 접두사 엘리트 2기',gain:'둘 다 잡으면 특수 특전 1개',go:()=>{ run.evElite=2; }},
+  {k:'barrage',n:'탄막 서약',cost:'이번 사이클 끝까지 적 탄속 +20%',gain:'이번 판 점수 배율 +0.25',go:()=>{ run.evSpdC=run.cycle; CFG.scoreMul+=0.25; }},
+  {k:'curse',n:'저주받은 보물',cost:'이번 판 받는 피해 +15%',gain:'공명 자리 +1',ok:()=>!run.synSlots,go:()=>{ CFG.armor=(CFG.armor||0)-0.15; run.synSlots=(run.synSlots||0)+1; synCheck(); }},
+];
+window.RISK_EVENTS=EVENTS;
+window.RISK_EVENT_P=0.3;   // 웨이브를 비울 때 나올 확률 (테스트에서 0으로)
+const evOn=()=>run&&!run.tut&&!run.practice&&!run.rush&&run.mode!=='daily'&&run.mode!=='chaosx';
+function openEvent(ev){ run._evW=run.wave;
+  rwPicks=[{k:'ev_yes',n:'수락 — '+ev.n,d:'대가 · '+ev.cost+'<br>얻음 · <b>'+ev.gain+'</b>',tag:'위험한 선택',chaos:1,fn:()=>{ ev.go(); announce(ev.n+' — 수락','red'); }},
+    {k:'ev_no',n:'거절',d:'아무 일도 없음',tag:'위험한 선택',chaos:1,fn:()=>{}}];
+  openCardPanel('위험한 선택 &nbsp;—&nbsp; <b>'+ev.n+'</b>'); }
+window.openRiskEvent=k=>openEvent(EVENTS.find(e=>e.k===k));
+const _updateE=update;
+update=function(dt){ const ph0=run&&run.phase; _updateE(dt);
+  if(!run||screen!=='game'||!evOn()) return;
+  if(ph0==='fight'&&run.phase==='clear'&&run.wave>=3&&run.wave<BOSS_WAVE&&run._evW!==run.wave-1&&(run.forceEvent||Math.random()<window.RISK_EVENT_P)){
+    const L=EVENTS.filter(e=>!e.ok||e.ok()), ev=run.forceEvent?EVENTS.find(e=>e.k===run.forceEvent):L[Math.floor(Math.random()*L.length)]; run.forceEvent=0;
+    if(ev) openEvent(ev); } };
+/* 정예 습격: 다음 웨이브에 접두사 엘리트 2기, 둘 다 잡으면 특수 특전 */
+const _waveSpawnE=waveSpawn;
+waveSpawn=function(){ _waveSpawnE.apply(this,arguments);
+  if(!run||!(run.evElite>0)||run.phase!=='fight'||ens.some(e=>e.grade==='boss')) return;
+  const A=window.ELITE_AFFIX||[]; run.evLeft=0;
+  for(let i=0;i<run.evElite;i++){ spawnEnemy('elite'); const e=ens[ens.length-1]; if(!e||e.grade!=='elite') continue;
+    if(!e.affix&&A.length){ e.affix=A[Math.floor(Math.random()*A.length)][0]; if(e.affix==='강철'){ e.hp*=1.6; e.hpMax=e.hp; } }
+    e.evE=1; run.evLeft++; }
+  run.evElite=0; announce('정예 습격','red'); };
+const _killEnemyE=killEnemy;
+killEnemy=function(e){ const had=run&&ens.includes(e), r=_killEnemyE.apply(this,arguments);
+  if(run&&had&&!ens.includes(e)&&e.evE&&run.evLeft>0&&--run.evLeft===0){
+    const pool=SPECIALS.filter(s=>boonLv(s.k)<(s.max||1)&&(!s.ok||s.ok())&&!s.stay&&!s.chaos), s=pool[Math.floor(Math.random()*pool.length)];
+    if(s){ run.boons[s.k]=(run.boons[s.k]||0)+1; if(s.fn) s.fn(); stat('specials'); setTimeout(()=>{ if(run) announce('정예 격파 — '+s.n,'warn'); },300); synCheck(); } }
+  return r; };
+/* 탄막 서약: 이번 사이클 동안 적 탄속 +20% */
+const _spawnBulletE=spawnBullet;
+spawnBullet=function(q){ const n=bullets.length; _spawnBulletE(q);
+  if(run&&run.evSpdC===run.cycle) for(let i=n;i<bullets.length;i++){ const b=bullets[i]; if(b.owner==='enemy'){ b.spd*=1.2; b.base*=1.2; } } };
+
 /* 결과 화면: 이번 판 공명 */
 const _endRunS=endRun;
 endRun=function(){ const r=run, out=_endRunS.apply(this,arguments), more=$('#exMore');

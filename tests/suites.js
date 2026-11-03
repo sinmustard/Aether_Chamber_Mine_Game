@@ -556,16 +556,18 @@ module.exports = {
     t.ok(pab.ate.charge === 2 && pab.ate.pAbs === 1 && pab.ate.hp, '내 탄도 확률로 먹음 — 먹으면 피해 없이 충전 +2', JSON.stringify(pab.ate));
     t.ok(pab.hit, '확률에 안 걸린 내 탄은 그대로 맞음');
     t.ok(pab.bonus, '먹은 내 탄 1발 → 흡수체를 잡을 때 점수 +40', '+' + pab.gain);
-    // 위험 계약: 웨이브 비우기 → 3초 안에 T → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
-    await p.evaluate(() => { ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
-    for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);
-    const offer = await p.evaluate(() => run.riskOffer); await p.keyboard.press('t'); await wait(100);
+    // 위험한 선택 「증원」(예전 위험 계약): 웨이브 비우기 → 카드 → 수락 → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
+    for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));   // 다음 전투가 시작될 때까지 (이미 비운 웨이브면 '비운 순간'이 없다)
+      if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+    await p.evaluate(() => { run.wave = Math.max(run.wave, 3); run._evW = 0; run.forceEvent = 'horde'; for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
+    for (let i = 0; i < 30 && !(await p.evaluate(() => $('#reward').classList.contains('on'))); i++) await wait(100);
+    const offer = await p.evaluate(() => $('#rwHd').innerText); await wait(600); await p.keyboard.press('1'); await wait(150);
     const next = await p.evaluate(() => run.riskNext);
-    t.ok(offer === 1 && next === 1, '웨이브 클리어 직후 T → 위험 계약 수락');
+    t.ok(/증원/.test(offer) && next === 1, '웨이브 클리어 직후 위험한 선택 「증원」 카드 → 수락 (폰에서도 카드로)', offer);
     for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
       if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
     const risk = await p.evaluate(() => ({ on: run.riskOn, sr0: run.startRewards || 0 }));
-    await p.evaluate(() => { ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
+    await p.evaluate(() => { for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
     for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);
     t.ok(risk.on === 1 && await p.evaluate(() => run.startRewards || 0) === risk.sr0 + 1, '계약한 웨이브를 비우면 다음 보상 1개 더');
     // 탄 폭풍 (강제)
@@ -594,7 +596,7 @@ module.exports = {
     for (let k = 0; k < 4; k++) {
       for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
         if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
-      order.push(await p.evaluate(() => { CFG.god = 1; const b = ens.find(e => e.grade === 'boss'); const v = b && b.variant; if (b) killEnemy(b); ens.slice().forEach(e => killEnemy(e)); queue.length = 0; return v; }));
+      order.push(await p.evaluate(() => { CFG.god = 1; const b = ens.find(e => e.grade === 'boss'); const v = b && b.variant; if (b) killEnemy(b); for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; return v; }));
       for (let i = 0; i < 30 && await p.evaluate(() => screen === 'game' && run.phase === 'fight'); i++) await wait(100);   // 처치 직후엔 아직 fight — 단계가 넘어갈 때까지
     }
     for (let i = 0; i < 60 && await p.evaluate(() => screen) === 'game'; i++) { if (await p.evaluate(() => $('#reward').classList.contains('on'))) { await wait(500); await p.keyboard.press('1'); } await wait(250); }
@@ -708,7 +710,7 @@ module.exports = {
   async '보상 공명 (v3.105)'(t, { browser, url }) {
     const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
     const r = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
-      const reset = () => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; run.mapWalls = []; run.walls = []; P.x = 300; P.y = 380; };
+      const reset = () => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; run.mapWalls = []; run.walls = []; P.x = 300; P.y = 380; run.syn = {}; run.synNo = {}; run.synPend = null; run.boons = {}; };   // 공명은 3개까지라 시험마다 보상 · 공명을 비움
       const give = (...ks) => { ks.forEach(k => run.boons[k] = 1); synCheck(); };
       const pb = (x, y, ret) => { const b = { x, y, dir: 0, spd: 1, base: 1, owner: 'player', returns: ret, age: 0, trail: [], glow: 1, hcd: 9, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, pierceLeft: 0 }; bullets.push(b); return b; };
       o.pairs = SYNERGY.length + ':' + SYNERGY.filter(s => boonDef(s.a) && boonDef(s.b)).length; o.edge = !!BOONS.find(b => b.k === 'edge');
@@ -739,7 +741,7 @@ module.exports = {
       const eb = (o) => bullets.push({ x: P.x + Math.cos(fa + o) * 70, y: P.y + Math.sin(fa + o) * 70, dir: fa + o + Math.PI, spd: 30, base: 30, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1 });
       eb(-0.1); eb(0.1); step(1); P.face = fa; P.lock = 0; doParry(true); o.mp = bullets.filter(b => b.owner === 'player').length + ':' + (P.inv >= 0.39);
       // 목록
-      o.list = /공명/.test(boonListHTML()) && /✓ <b[^>]*>황금 회로/.test(boonListHTML());
+      reset(); give('greed', 's_score'); o.list = boonListHTML().includes('공명 1 / 3') && /✓ <b[^>]*>황금 회로/.test(boonListHTML());
       return o; }).catch(e => ({ err: e.message }));
     t.ok(!r.err, '공명 확인 중 오류 없음', r.err);
     t.eq(r.pairs, '10:10', '공명 10종 — 재료 보상이 모두 실제로 있음');
@@ -756,5 +758,41 @@ module.exports = {
     t.eq(r.mp, '2:true', '다중 반사: 한 번에 2발 빼앗으면 0.4초 무적');
     t.ok(r.list, '이번 판 보상 목록에 공명 표 (켜진 것 ✓)');
     noErrors(t, g, '공명'); await p.close();
+  },
+
+  async '공명 자리 · 위험한 선택 (v3.106)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
+    // 공명 3개가 찬 뒤 4번째 → 카드 4장 (3장 바꾸기 + 켜지 않기), 4번 키로 고를 수 있음
+    const a = await p.evaluate(() => { const o = {}; run.boons = {}; run.syn = {}; run.synNo = {}; run.synPend = null; ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight';
+      const wh = CFG.whiff; ['calm', 's_focus', 'pierce', 'grit', 'iframe', 'move', 'greed', 's_score'].forEach(k => run.boons[k] = 1);
+      rwPicks = [boonDef('range')]; run.phase = 'reward'; takeReward(0);
+      o.on = SYNERGY.filter(s => run.syn[s.k]).map(s => s.k).join(); o.cards = rwPicks.length; o.hd = $('#rwHd').innerText; o.panel = $('#reward').classList.contains('on');
+      o.zenHalf = Math.abs(CFG.whiff - wh) > 1e-9; o.wh = wh; return o; });
+    t.eq(a.on, 'pg,zen,gh', '공명은 3개까지 — 4번째(황금 회로)는 바로 안 켜짐');
+    t.ok(a.panel && a.cards === 4 && /황금 회로/.test(a.hd), '4번째가 완성되면 카드 4장: 3개 중 하나와 바꾸기 / 켜지 않기', a.hd);
+    await wait(600); await p.keyboard.press('2'); await wait(200);   // 2번째 카드 = 명경지수 끄고 황금 회로
+    const b = await p.evaluate(wh => ({ on: SYNERGY.filter(s => run.syn[s.k]).map(s => s.k).join(), whBack: Math.abs(CFG.whiff - wh) < 1e-9, phase: run.phase }), a.wh);
+    t.ok(b.on === 'pg,gh,gold' && b.whBack, '바꾸면 끈 공명 효과가 되돌아감 (명경지수 경직 −50% 해제)', JSON.stringify(b));
+    // 위험한 선택 5종
+    const e = await p.evaluate(() => { const o = {}, acc = k => { openRiskEvent(k); const ok = $('#reward').classList.contains('on') && /위험한 선택/.test($('#rwHd').innerText); takeReward(0); return ok; };
+      run.phase = 'fight'; ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 1;
+      P.hp = CFG.hpMax; const sr = run.startRewards || 0; o.bloodPanel = acc('blood'); o.blood = P.hp === CFG.hpMax - Math.round(CFG.hpMax * 0.25) && run.phase === 'reward';
+      $('#reward').classList.remove('on'); run.phase = 'fight';
+      acc('horde'); o.horde = run.riskNext === 1; run.riskNext = 0;
+      const spSum = () => SPECIALS.reduce((a, s) => a + boonLv(s.k), 0), sp0 = spSum(); acc('elite'); run.phase = 'break'; run.cycle = 1; run.wave = 3; waveSpawn();
+      const els = ens.filter(x => x.evE); o.eliteN = els.length + ':' + els.every(x => x.affix); for (let k = 0; k < 3; k++) els.forEach(x => { if (ens.includes(x)) killEnemy(x); }); o.special = spSum() === sp0 + 1; o.spDbg = sp0 + '→' + spSum() + ' left ' + run.evLeft;   // 불굴이면 한 번은 버팀
+      ens.length = 0; queue.length = 0; run.phase = 'fight';
+      const sm = CFG.scoreMul; acc('barrage'); o.score = Math.abs(CFG.scoreMul - sm - 0.25) < 1e-9; spawnBullet({ spec: {}, ex: P.x + 300, ey: P.y }); o.spd = Math.round(bullets[bullets.length - 1].spd / CFG.spd * 100);
+      const ar = CFG.armor || 0; acc('curse'); o.curse = Math.abs((CFG.armor || 0) - ar + 0.15) < 1e-9 && synCap() === 4;
+      openRiskEvent('blood'); const hp = P.hp; takeReward(1); o.decline = P.hp === hp;
+      return o; }).catch(x => ({ err: x.message }));
+    t.ok(!e.err, '위험한 선택 확인 중 오류 없음', e.err);
+    t.ok(e.bloodPanel && e.blood, '피의 계약: 체력 −25% → 바로 보상 1개 더');
+    t.ok(e.horde, '증원: 다음 웨이브 적 ×1.5 예약');
+    t.ok(e.eliteN === '2:true' && e.special, '정예 습격: 접두사 엘리트 2기 → 둘 다 잡으면 특수 특전', e.eliteN + ' ' + e.spDbg);
+    t.ok(e.score && e.spd === 120, '탄막 서약: 점수 배율 +0.25 · 이번 사이클 적 탄속 ×1.2', 'spd ' + e.spd);
+    t.ok(e.curse, '저주받은 보물: 받는 피해 +15% · 공명 자리 4개');
+    t.ok(e.decline, '거절하면 아무 일도 없음');
+    noErrors(t, g, '공명 자리 · 위험한 선택'); await p.close();
   },
 };

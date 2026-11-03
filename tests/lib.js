@@ -87,6 +87,7 @@ async function openGame(browser, url, { session = { name: 'tester', pin: '1234' 
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
   await page.goto(url); await wait(800);
+  await page.evaluate(() => { if ('RISK_EVENT_P' in window) window.RISK_EVENT_P = 0; }).catch(() => {});   // 무작위 '위험한 선택' 카드가 시험 흐름을 끊지 않게 (필요한 시험은 forceEvent로 띄움)
   return { page, calls, errors };
 }
 
