@@ -692,7 +692,7 @@ update=function(dt){ const ph0=run&&run.phase; _updateS(dt);
 /* v3.106 위험한 선택 — 웨이브를 비운 직후 가끔(30%, 3웨이브부터 · 보스 앞 웨이브 제외 · 두 번 연달아는 안 나옴) 수락 / 거절 카드 */
 const EVENTS=[
   {k:'blood',n:'피의 계약',cost:'체력 −25%',gain:'지금 바로 보상 1개 더',ok:()=>P.hp>CFG.hpMax*0.35,
-    go:()=>{ P.hp=Math.max(1,P.hp-Math.round(CFG.hpMax*0.25)); P.hurt=.3; run.startRewards=(run.startRewards||0)+1; }},
+    go:()=>{ P.hp=Math.max(1,P.hp-Math.round(CFG.hpMax*0.25)); P.hurt=.3; const I=exRun(); if(I) I.lastHp=P.hp; run.startRewards=(run.startRewards||0)+1; }},
   {k:'horde',n:'증원',cost:'다음 웨이브 적 ×1.5',gain:'버티면 다음 보상 1개 더',go:()=>{ run.riskNext=1; }},
   {k:'elite',n:'정예 습격',cost:'다음 웨이브에 접두사 엘리트 2기',gain:'둘 다 잡으면 특수 특전 1개',go:()=>{ run.evElite=2; }},
   {k:'barrage',n:'탄막 서약',cost:'이번 사이클 끝까지 적 탄속 +20%',gain:'이번 판 점수 배율 +0.25',go:()=>{ run.evSpdC=run.cycle; CFG.scoreMul+=0.25; }},

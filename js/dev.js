@@ -173,7 +173,7 @@ function botTick(dt){
   BOT.mv=sl>0.2?[sx/sl,sy/sl]:[0,0];
   const wk=run.cycle+'-'+run.wave; if(c.wk!==wk){ c.wk=wk; c.wt=0; c.stallNoted=false; } else if(run.phase==='fight') c.wt+=dt;
   if(c.wt>90&&!c.stallNoted){ c.stallNoted=true; c.stalls.push('사이클 '+run.cycle+' 웨이브 '+run.wave+' — 남은 적 '+(ens.map(e=>e.grade).join(', ')||'없음')); }
-  if(c.wt>180&&P.hp>0){ c.wt=0; run.revives=0; P.inv=0; P.hp=0; }
+  if(c.wt>180&&P.hp>0){ c.wt=0; run.revives=0; P.inv=0; if(run.ex){ run.ex.src['봇 정체 종료']=(run.ex.src['봇 정체 종료']||0)+P.hp; run.ex.cause='봇 정체 종료'; run.ex.lastHp=0; } P.hp=0; }
   if(run.phase==='fight'){
     if(CFG.skill&&P.skillCd<=0){ const near=threats.filter(b=>dist(b.x,b.y,P.x,P.y)<160).length;
       if(CFG.skill==='heal'?P.hp<CFG.hpMax*0.55:(near>=3||P.hp<CFG.hpMax*0.4)){ doSkill(); c.fUse++; } }

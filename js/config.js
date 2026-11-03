@@ -154,18 +154,12 @@ function rerollMap(){
   const sx=run&&run.wave>0&&P?P.x:200, sy=run&&run.wave>0&&P?P.y:380;
   const nearMe=o=>Math.hypot(sx-clamp(sx,o.x,o.x+o.w),sy-clamp(sy,o.y,o.y+o.h))<140;   // 벽의 가장 가까운 면까지 140 안
   for(let i=0;i<n;i++){
-    let o, tries=0;
-    do{ o=randWallRect(); tries++; }
-    while(tries<30 && (nearMe(o) || placed.some(p=>rectGap(p,o)<WALL_GAP)));
-    placed.push(o);
+    const cs=Array.from({length:30},()=>randWallRect());
+    placed.push(cs.find(o=>!nearMe(o)&&!placed.some(p=>rectGap(p,o)<WALL_GAP))||cs[cs.length-1]);
   }
-  if(Math.random()<0.5){
-    for(let tries=0;tries<30;tries++){
-      const o={x:60+Math.random()*(WORLD.w-120-PRISM_S), y:60+Math.random()*(WORLD.h-120-PRISM_S), w:PRISM_S, h:PRISM_S};
-      if(nearMe(o)||placed.some(p=>rectGap(p,o)<WALL_GAP)) continue;
-      o.prism=Math.random()<0.5?3:5; placed.push(o); break;
-    }
-  }
+  const wantPrism=Math.random()<0.5, pk=Math.random()<0.5?3:5;
+  const pc=Array.from({length:30},()=>({x:60+Math.random()*(WORLD.w-120-PRISM_S), y:60+Math.random()*(WORLD.h-120-PRISM_S), w:PRISM_S, h:PRISM_S}));
+  if(wantPrism){ const o=pc.find(o=>!nearMe(o)&&!placed.some(p=>rectGap(p,o)<WALL_GAP)); if(o){ o.prism=pk; placed.push(o); } }
   run.mapWalls=placed.map(o=>({x:o.x,y:o.y,w:o.w,h:o.h,col:colOf(o),static:true,prism:o.prism||0}));
 }
 function segHitsRect(x1,y1,x2,y2,o){   // 선분이 사각형을 지나가는가 (Liang–Barsky)

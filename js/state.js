@@ -194,19 +194,17 @@ function spawnEnemy(grade){
   let x,y,tries=0,placed=false;
   /* v2.16 송신기는 다른 적 곁에 붙여 놓는다. 혼자 떨어져 있으면 지원 효과가 의미가 없다 */
   if(grade==='relay'){
-    const hosts=ens.filter(e=>e.grade!=='relay');
+    const hosts=ens.filter(e=>e.grade!=='relay'), hr=Math.random(), rc=Array.from({length:14},()=>[Math.random()*TAU,90+Math.random()*80]);
     if(hosts.length){
-      const h=hosts[Math.floor(Math.random()*hosts.length)];
-      for(let k=0;k<14&&!placed;k++){
-        const a=Math.random()*TAU, d=90+Math.random()*80;
+      const h=hosts[Math.floor(hr*hosts.length)];
+      for(const [a,d] of rc){
         const nx=clamp(h.x+Math.cos(a)*d,60,WORLD.w-60), ny=clamp(h.y+Math.sin(a)*d,70,WORLD.h-70);
-        if(dist(nx,ny,P.x,P.y)>=260){ x=nx; y=ny; placed=true; }
+        if(dist(nx,ny,P.x,P.y)>=260){ x=nx; y=ny; placed=true; break; }
       }
     }
   }
-  if(!placed) do{
-    x=60+Math.random()*(WORLD.w-120); y=80+Math.random()*(WORLD.h-160); tries++;
-  }while(tries<40 && dist(x,y,P.x,P.y)<340);
+  const sc=Array.from({length:40},()=>[60+Math.random()*(WORLD.w-120),80+Math.random()*(WORLD.h-160)]);
+  if(!placed){ const c=sc.find(([cx,cy])=>dist(cx,cy,P.x,P.y)>=340)||sc[sc.length-1]; x=c[0]; y=c[1]; }
   [x,y]=pushOutOfWalls(x,y,r);
   /* v2.18 같은 사이클 안에서도 웨이브가 갈수록 단단해진다 (웨이브당 +6%) */
   const hp=BASE_DMG*DMG_MULT*hits*run.diff*cycleHpMul(run.cycle)*(1+0.06*Math.max(0,run.wave-1));

@@ -67,7 +67,7 @@ function openReward(afterBoss,fromReroll){
   /* v2.41 보스를 잡은 직후 보상은 특수 특전 확률 +30%p (최대 90%) */
   const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(run.mode==='chaosx'&&Math.random()<Math.max(spChance,0.25)){
-    const r=Math.random(), pick=r<0.24?chaosDisguise():r<0.4?chaosTrap():r<0.415?chaosPrismTrap():r<0.6?chaosPick():r<0.8?chaosPickHidden():chaosPlayerPick();
+    const r=Math.random(), pick=r<0.24?chaosDisguise():r<0.4?chaosTrap():r<0.415?(prismUseful()?chaosPrismTrap():chaosTrap()):r<0.6?chaosPick():r<0.8?chaosPickHidden():chaosPlayerPick();
     rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=pick;
   }
   else if(CFG.specialChance>0 && Math.random()<spChance){
