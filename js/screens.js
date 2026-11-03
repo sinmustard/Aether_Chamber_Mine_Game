@@ -89,7 +89,7 @@ function go(id){
   if(id!=='game') unlockMouse();   // v2.12
   if(id!=='game') $('#tutBar').classList.remove('on');   // v2.60
   document.body.classList.remove('ui-cover');   // v2.80
-  if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs();
+  if(id==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); renderHubLinks();
     if(!OPT.tutSeen) openModal('tutorial'); }   // v3.4 처음 HUB에 들어오면 튜토리얼
   if(id==='title'){ $('#tBest').textContent=META.best.toLocaleString(); }
   if(isPhone()) goLandscape();   // v2.5 어느 화면이든 전체화면 유지
@@ -395,6 +395,13 @@ document.addEventListener('click',e=>{
 });
 $('#launch').onclick=()=>{ if(hubBusy()) return; cloudAutoSave(); startRun(OPT.mode||'normal'); };   // v2.58 · v2.68 고른 모드로 출격
 /* v2.68 모드 고르기 */
+function renderHubLinks(){
+  const box=$('#hubLinks'); if(!box) return; box.innerHTML='';
+  [...document.querySelectorAll('#title .menu button')].filter(b=>b.dataset.go!=='hub'&&b.style.display!=='none').forEach(b=>{
+    const c=document.createElement('button'); c.textContent=((b.childNodes[0]&&b.childNodes[0].textContent)||b.textContent).trim();
+    const nb=b.querySelector('span'); if(nb&&nb.textContent.trim()) c.textContent+=' •';
+    c.onclick=()=>{ sfx('ui'); b.click(); setTimeout(renderHubLinks,0); }; box.appendChild(c); });
+}
 function syncModeUI(){ if((OPT.mode==='hotd'||OPT.mode==='chaosx')&&!hiddenOn(OPT.mode)) OPT.mode='normal';
   const mode=OPT.mode||'normal', tg=$('#chaosTg'), chaos=!!OPT.chaos&&mode!=='daily'&&mode!=='chaosx';
   document.querySelectorAll('[data-mode]').forEach(b=>{ b.classList.toggle('on',b.dataset.mode===mode);
