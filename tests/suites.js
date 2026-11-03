@@ -916,4 +916,25 @@ module.exports = {
     t.ok(r.dex, '도감 · 연습장에 정예형');
     noErrors(t, g, '정예형'); await p.close();
   },
+
+  async '추적자 돌진 패링 (v3.129)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(800);
+    const r = await p.evaluate(() => { const o = {};
+      const put = (phase, T, angDeg, d) => { ens.length = 0; bullets.length = 0; queue.length = 0; run.mapWalls = []; run.walls = []; run.phase = 'fight'; P.lock = 0; P.pbuf = 0; P.face = 0;
+        spawnEnemyAt('tracker', 600, 400); const e = ens[ens.length - 1]; const a = angDeg * Math.PI / 180; P.x = 400; P.y = 400; e.x = e.ax = P.x + Math.cos(a) * d; e.y = e.ay = P.y + Math.sin(a) * d;
+        e.lungePhase = phase; e.lungeT = T; e.lungeDir = Math.atan2(P.y - e.y, P.x - e.x); return e; };
+      const tryParry = e => { const hp0 = e.hp, ready = parryReady(); P.lock = 0; doParry(true); return { ready, hit: e.hp < hp0 || !ens.includes(e), phase: e.lungePhase }; };
+      let e = put('wind', 0.15, 0, 110); o.windLate = tryParry(e);
+      e = put('wind', 0.4, 0, 110); o.windEarly = tryParry(e);
+      e = put('dash', 0.1, CFG.fov / 2 + 15, 110); o.wideAng = tryParry(e);
+      e = put('dash', 0.1, CFG.fov / 2 + 45, 110); o.tooWide = tryParry(e);
+      e = put('dash', 0.1, 0, range() + e.r + 20); o.reach = tryParry(e);
+      return o; });
+    t.ok(r.windLate.ready && r.windLate.hit && r.windLate.phase === 'cd', '예비 동작 마지막 0.2초에도 패링됨 → 돌진 취소', JSON.stringify(r.windLate));
+    t.ok(!r.windEarly.ready && !r.windEarly.hit, '예비 동작 초반(0.4초 남음)엔 아직 안 됨');
+    t.ok(r.wideAng.ready && r.wideAng.hit, '시야각보다 조금 옆(+15°)에서 오는 돌진도 패링됨');
+    t.ok(!r.tooWide.ready && !r.tooWide.hit, '너무 옆(+45°)이면 안 됨');
+    t.ok(r.reach.ready && r.reach.hit, '사거리보다 조금 먼(+20) 돌진도 패링됨');
+    noErrors(t, g, '추적자 패링'); await p.close();
+  },
 };

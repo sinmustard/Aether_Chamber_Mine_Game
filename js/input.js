@@ -179,10 +179,14 @@ $('#topPause').onclick=()=>{ if(screen==='game')togglePause(); };
    · 미리 누름: 아직 패링할 탄환이 없으면 OPT.inputBuf초 동안 기다렸다가, 그 사이 탄환이 들어오면 바로 패링
    · 늦게 누름: 방금(OPT.inputBuf×0.75초 안에) 패링 가능했던 탄환은 범위를 살짝 벗어나도 패링 인정 */
 const COYOTE=()=>OPT.inputBuf*0.75;
+/* v3.129 추적자 돌진 패링이 너무 어려웠다 — 돌진은 0.22초인데 시작 거리 130 · 속도 900이라 실제로 받을 수 있는 건 0.14초쯤, 시야각 안이어야 했다.
+   → 예비 동작(빨간 원) 마지막 0.2초부터 받아 주고, 각도는 시야각보다 25° 넓게, 거리는 사거리 +30 */
+const LUNGE_EARLY=0.2, LUNGE_ANG=25, LUNGE_REACH=30;
+function lungeCanParry(e){ return e.grade==='tracker'&&(e.lungePhase==='dash'||(e.lungePhase==='wind'&&e.lungeT<=LUNGE_EARLY))
+  &&dist(e.x,e.y,P.x,P.y)<=range()+e.r+LUNGE_REACH
+  &&angDiff(P.face,Math.atan2(e.y-P.y,e.x-P.x))<=(CFG.fov/2+LUNGE_ANG)*Math.PI/180; }
 function parryReady(){
-  if(ens.some(e=>e.grade==='tracker'&&e.lungePhase==='dash'
-      &&dist(e.x,e.y,P.x,P.y)<=range()+e.r
-      &&angDiff(P.face,Math.atan2(e.y-P.y,e.x-P.x))<=(CFG.fov/2)*Math.PI/180)) return true;
+  if(ens.some(lungeCanParry)) return true;
   return bullets.some(b=>b.owner==='enemy'&&(b.ready||b.coy>0));
 }
 function doParry(force){
@@ -194,10 +198,7 @@ function doParry(force){
   P.pbuf=0;
   /* v2.9 추적자 돌진 — 몸 자체를 탄환처럼 취급한다. 돌진 중에 맞춰 패링하면
      피해를 주고 돌진을 그 자리에서 끊는다 (탄환이 없어 원래 패링이 안 통하던 문제의 해결책) */
-  const lunger=ens.find(e=>e.grade==='tracker'&&e.lungePhase==='dash'
-    &&dist(e.x,e.y,P.x,P.y)<=range()+e.r
-    &&angDiff(P.face,Math.atan2(e.y-P.y,e.x-P.x))<=(CFG.fov/2)*Math.PI/180
-    &&!wallBetween(P.x,P.y,e.x,e.y));
+  const lunger=ens.find(e=>lungeCanParry(e)&&!wallBetween(P.x,P.y,e.x,e.y));   // v3.129 예비 동작 끝 · 넓은 각도도
   if(lunger){
     lunger.hp-=HIT_UNIT; lunger.hurt=.22; lunger.lungeHit=true;
     lunger.lungePhase='cd'; lunger.lungeT=LUNGE_CD*0.6;

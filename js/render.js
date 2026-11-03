@@ -565,6 +565,10 @@ function drawSniperLines(){
   });
 }
 function drawLungeWarning(){
+  /* v3.129 지금 패링하면 받아지는 추적자엔 청록 원 (일반 탄의 '패링 가능' 표시와 같은 색) */
+  ens.forEach(e=>{ if(!lungeCanParry(e)||wallBetween(P.x,P.y,e.x,e.y)) return; const p=proj(e.x,e.y);
+    ctx.save(); ctx.translate(p[0],p[1]); ctx.scale(1,SQUASH); ctx.strokeStyle=C.cyan; ctx.lineWidth=3; ctx.globalAlpha=.9;
+    ctx.beginPath(); ctx.arc(0,0,e.r+8,0,TAU); ctx.stroke(); ctx.restore(); });
   ens.forEach(e=>{
     if(e.grade!=='tracker'||e.lungePhase!=='wind') return;
     const p=proj(e.x,e.y), k=1-clamp(e.lungeT/LUNGE_WIND,0,1), R=e.r+14+k*26;
