@@ -406,14 +406,16 @@ function update(dt){
          긴 벽의 끝 근처를 맞으면 벽 위/아래 끝으로 순간이동해 그대로 지나갔고, 벽 안에서 생긴 탄(벽에 붙은 적)은
          무조건 오른쪽 면으로 밀려나 반대편으로 빠져나갔다. → 이동 경로(이전→지금)가 처음 닿는 면을 정확히 계산하고,
          이미 벽 안이면 '온 쪽'으로 되돌려 내보낸다. 여러 벽 중 가장 먼저 닿는 벽을 쓴다 */
-      let best=null, bestD=1e9, bestO=null;
+      let best=null, bestD=1e9, bestO=null, bestW=null;
       for(const w0 of obstacles){
         if(w0.prism) continue; const o=w0.col;
         const hit=sweepRect(prevX,prevY,b.x,b.y,o,R_BULLET); if(!hit) continue;
-        const d=Math.hypot(hit.x-prevX,hit.y-prevY); if(d<bestD){ bestD=d; best=hit; bestO=o; }
+        const d=Math.hypot(hit.x-prevX,hit.y-prevY); if(d<bestD){ bestD=d; best=hit; bestO=o; bestW=w0; }
       }
       if(best){
-        if(!CFG.bounce){ bullets.splice(i,1); gone=true; }
+        const mir=b.owner==='player'&&bestW&&bestW.mirror&&boonLv('s_mirror')>0;
+        if(mir){ b.mirMul=Math.min(3,(b.mirMul||1)+0.5); b.glow=1; bMark(best.x,best.y,'거울 ×'+b.mirMul,'#e9f7ff'); }
+        if(!CFG.bounce&&!mir){ bullets.splice(i,1); gone=true; }
         else {
           let vx=Math.cos(b.dir), vy=Math.sin(b.dir);
           if(best.axis==='x') vx=-vx; else vy=-vy;
@@ -470,7 +472,7 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1)*(b.pdm||1);
+        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1)*(b.pdm||1)*(b.mirMul||1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68
