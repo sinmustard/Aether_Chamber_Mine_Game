@@ -461,6 +461,7 @@ module.exports = {
       Math.random = rnd; run.cycle = 1; ens.length = 0;
       for (let i = 0; i < 6; i++) { sfx('parry', 2); await sleep(60); }
       o.streak = run.ex.streak; P.inv = 0; onHurt(); o.streakAfter = run.ex.streak; o.best = run.ex.best;
+      CFG.god = 0; run.cheat = 0;   // 무적(디버그) 판은 보스 기록을 안 남기므로 이 부분만 끔
       spawnEnemy('boss'); const b = ens[ens.length - 1]; b.variant = 'warden'; o.warn = run.ex.warn > 0;
       b.exT0 = run.time - 61.2; killEnemy(b); o.boss = run.ex.boss.map(x => x.v + ':' + x.t.toFixed(1)).join(); o.warnOff = run.ex.warn === 0;
       try { o.stored = JSON.parse(localStorage.getItem('aether_x_bossT')).hasOwnProperty('normal:warden'); } catch (e) { o.stored = false; }
@@ -798,5 +799,42 @@ module.exports = {
     t.ok(e.curse, '저주받은 보물: 받는 피해 +15% · 공명 자리 4개');
     t.ok(e.decline, '거절하면 아무 일도 없음');
     noErrors(t, g, '공명 자리 · 위험한 선택'); await p.close();
+  },
+
+  async '코드 검토 수정 (v3.113)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
+    const r = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } };
+      const reset = () => { ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight'; CFG.god = 1; run.mapWalls = []; run.walls = []; P.x = 300; P.y = 380; run.syn = {}; run.synNo = {}; run.synPend = null; run.boons = {}; run.exZones = []; };
+      const eb = (x, y, dir, src) => ({ x, y, dir, spd: 200, base: 200, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1, srcE: src });
+      // 1 · 짝수 웨이브를 비운 직후 카드를 골라도 그 웨이브 보상이 나옴
+      reset(); run.cycle = 1; run.wave = 4; run._evW = 0; run.forceEvent = 'horde'; spawnEnemyAt('mob', 700, 300); killEnemy(ens[0]); step(2);
+      o.evOpen = /위험한 선택/.test($('#rwHd').innerText); takeReward(1); o.backClear = run.phase === 'clear';
+      for (let i = 0; i < 400 && !$('#reward').classList.contains('on'); i++) step(1);
+      o.normalReward = $('#reward').classList.contains('on') && !/위험한 선택/.test($('#rwHd').innerText); $('#reward').classList.remove('on'); run.phase = 'fight';
+      // 2 · 카드 화면에서 새로고침(R)으로 일반 보상이 나오지 않음
+      reset(); run.rerolls = 2; openRiskEvent('blood'); rerollReward(); o.noReroll = rwPicks[0].k === 'ev_yes' && run.rerolls === 2; takeReward(1);
+      // 3 · 이미 죽은 적을 또 잡아도 효과가 두 번 안 돎 (흡수체 폭발)
+      reset(); spawnEnemyAt('absorber', 600, 300); const ab = ens[0]; ab.charge = 4; killEnemy(ab); const b1 = bullets.filter(b => b.from === '흡수체 폭발').length; killEnemy(ab);
+      o.once = b1 === 8 && bullets.filter(b => b.from === '흡수체 폭발').length === 8;
+      // 4 · 최후의 반격 1초 무적이 피격 무적에 덮이지 않음
+      reset(); run.boons.edge = 1; run.boons.counter = 1; synCheck(); run._lastN = 0; CFG.god = 0; P.inv = 0; P.barrier = 0; P.guard = 0; P.absorbT = 0; P.phase = 0; P.hp = Math.round(CFG.hpMax * 0.25);
+      bullets.push(eb(P.x + 40, P.y, Math.PI)); step(15); o.lastInv = P.inv > 0.7; CFG.god = 1; P.hp = CFG.hpMax;
+      // 5 · 일시정지 중엔 화염 장판 피해 없음
+      reset(); CFG.god = 0; P.inv = 0; P.hp = CFG.hpMax; addZone('fire', P.x, P.y); paused = true; for (let i = 0; i < 90; i++) update(1 / 60); o.pauseSafe = P.hp === CFG.hpMax; paused = false; run.exZones = []; CFG.god = 1;
+      // 6 · 연습장 보스 처치 시간은 기록 안 함
+      reset(); localStorage.removeItem('aether_x_bossT'); run.practice = { g: 'boss:core' }; spawnEnemyAt('boss', 600, 300); const bb = ens[0]; bb.exT0 = run.time - 30; killEnemy(bb);
+      o.noRec = !localStorage.getItem('aether_x_bossT'); run.practice = null;
+      // 8 · 전방위 감지를 껐다 켜도 시야가 줄지 않음
+      reset(); CFG.fov = 175; run.boons.range = 1; run.boons.fov = 1; synCheck(); const f1 = CFG.fov; run.syn.eye = 0; const S = SYNERGY.find(x => x.k === 'eye'); o.fovOn = f1;
+      return o; }).catch(e => ({ err: e.message }));
+    t.ok(!r.err, '확인 중 오류 없음', r.err);
+    t.ok(r.evOpen && r.backClear && r.normalReward, '짝수 웨이브를 비운 직후 위험한 선택을 골라도 그 웨이브 보상이 나옴', JSON.stringify({ open: r.evOpen, clear: r.backClear, reward: r.normalReward }));
+    t.ok(r.noReroll, '카드 화면(위험한 선택 · 공명)에서 새로고침이 안 됨');
+    t.ok(r.once, '이미 죽은 적을 다시 잡아도 처치 효과가 두 번 안 돎 (흡수체 폭발 8발 한 번)');
+    t.ok(r.lastInv, '최후의 반격 1초 무적이 피격 무적에 덮이지 않음');
+    t.ok(r.pauseSafe, '일시정지 중엔 화염 장판 피해 없음');
+    t.ok(r.noRec, '연습장 보스 처치 시간은 최고 기록에 안 들어감');
+    t.eq(r.fovOn, 180, '전방위 감지: 시야 상한 180');
+    noErrors(t, g, '코드 검토 수정'); await p.close();
   },
 };

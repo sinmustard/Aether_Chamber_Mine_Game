@@ -123,6 +123,7 @@ function takeReward(i){
 /* v3.62 출격 직후 보상(선행 보급)을 고르면 벽 설치 단계가 'break'로 덮여 사라지던 문제 — 원래 단계로 돌아간다 */
 function endReward(){
   if(run.rwPrev==='build') run.phase='build';
+  else if(run.rwPrev==='clear') run.phase='clear';   // v3.113 웨이브를 비운 직후 뜬 카드(위험한 선택 · 공명) — 비운 뒤 3초가 끝나야 그 웨이브 보상이 나온다
   else { run.phase='break'; run.phaseT=Math.max(run.phaseT,0.9); }   // v2.2 보스 직후 CYCLE 연출 시간 유지
 }
 $('#rwRow').addEventListener('click',e=>{

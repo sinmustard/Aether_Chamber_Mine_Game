@@ -3,6 +3,9 @@
    기존 함수를 감싸서 붙인다 — 이 파일과 index.html의 'extras' 한 단어를 빼면 v3.87 그대로.
    앞 묶음: 탄 위 왕복 수 · 저체력 경고 · 쓰러진 원인 · 웨이브 그래프 · 결과 문구 복사 · 무피격 연속 패링 · 엘리트 접두사 · 보스 처치 시간 · 보스 경고 · 적 도감
    뒤 묶음: 패링 목표 미리보기 · 랠리 피니시 · 패링 통계 · 첫 등장 안내 · 연습장 · 폰 진동 · 거울 벽 · 흡수체 · 탄 폭풍 · 위험 계약 · 일일 미션 · 강화 프리셋 · 리플레이 · 보스 러시 */
+const __coreUpdate=update;   // v3.113 일시정지 · 보상 중엔 추가 기능의 매 프레임 처리를 건너뛰려고 원래 update를 잡아 둠
+/* 늦게 뜨는 알림이 다음 판에 뜨지 않게 — 부른 판이 그대로일 때만 */
+const later=(ms,fn)=>{ const r=run; setTimeout(()=>{ if(run&&run===r&&screen==='game') fn(); },ms); };
 const feat=k=>k==='aim'?!!OPT.aimPrev:k==='vibe'?!!OPT.vibe:true;   // 설정으로 끄고 켜는 것만 OPT를 본다
 const exRun=()=>run&&(run.ex||(run.ex={waves:{},order:[],src:{},cause:'',streak:0,best:0,lastHp:P.hp,boss:[],warn:0,hb:0,snap:null}));
 const KO={mob:'잡몹',elite:'엘리트',bulwark:'방패병',boss:'알레테이아',relay:'송신기',healer:'힐러',cannon:'대포병',sniper:'저격수',
@@ -141,14 +144,14 @@ update=function(dt){
 
 /* ---- 보스 처치 시간 ---- */
 const _killEnemy=killEnemy;
-killEnemy=function(e){ const isBoss=e&&e.grade==='boss'&&e.exT0!=null&&run, t=isBoss?run.time-e.exT0:0;
+killEnemy=function(e){ const isBoss=e&&e.grade==='boss'&&e.exT0!=null&&run&&!run.practice&&!run.rush&&!run.cheat, t=isBoss?run.time-e.exT0:0;
   const n0=run?run.kills:0, r=_killEnemy.apply(this,arguments);
   if(run&&run.kills>n0){ const I=exRun(), key=run.cycle+'-'+(run.wave||1); if(!I.waves[key]){ I.waves[key]={d:0,k:0,boss:false}; I.order.push(key); } I.waves[key].k+=run.kills-n0; }
   if(isBoss&&feat('bosst')){ const v=e.variant||'core', k=run.mode+':'+v; let B={};
     try{ B=JSON.parse(localStorage.getItem('aether_x_bossT')||'{}')||{}; }catch(_){}
     const old=B[k], rec=old==null||t<old; if(rec){ B[k]=t; try{ localStorage.setItem('aether_x_bossT',JSON.stringify(B)); }catch(_){} }
     const msg=VKO[v]+' 처치 '+fmtT(t)+(rec?(old==null?'  ·  첫 기록':'  ·  최고 기록!'):'  ·  최고 '+fmtT(old));
-    setTimeout(()=>{ if(run) announce(msg,rec?'warn':'cyan'); },1300); exRun().warn=0;
+    later(1300,()=>{ announce(msg,rec?'warn':'cyan'); }); exRun().warn=0;
     exRun().boss.push({v,t,rec}); }
   return r; };
 
@@ -446,7 +449,7 @@ function missionDay(){ const d=todayKST(); let M=lsGet('aether_x_mission',null);
   return M; }
 function missionAdd(k,n){ if(!feat('mission')||!run||run.tut||run.cheat||run.mode==='daily') return; const M=missionDay(); if(!M.list.includes(k)||M.done[k]) return;
   const def=MISSIONS.find(m=>m[0]===k); M.prog[k]=(M.prog[k]||0)+(n||1);
-  if(M.prog[k]>=def[2]){ M.done[k]=1; META.cur+=MREW; save(); setTimeout(()=>{ if(run) announce('일일 미션 완료 — '+def[1]+'  ◆ +'+MREW,'warn'); },600); }
+  if(M.prog[k]>=def[2]){ M.done[k]=1; META.cur+=MREW; save(); later(600,()=>{ announce('일일 미션 완료 — '+def[1]+'  ◆ +'+MREW,'warn'); }); }
   lsSet('aether_x_mission',M); }
 const _stat=stat;
 stat=function(k,n){ const off=statOff(); const r=_stat.apply(this,arguments); if(!off&&['parries','kills','noHit','bossKills'].includes(k)) missionAdd(k,n); return r; };
@@ -599,7 +602,7 @@ update=function(dt){
       if(!e._dbl&&Math.random()<p){ e.fireT=0.35; e._dbl=1; } else e._dbl=0; }); }
   if(c0&&run.cycle>c0&&run.cycle>=LATE.addFrom&&([LATE.addFrom,LATE.dblFrom,LATE.add2From].includes(run.cycle)||run.cycle>=LATE.endFrom)||(c0&&run.cycle>c0&&run.cycle===LATE.patFrom)){
     const t=[run.cycle>=LATE.patFrom?'센 패턴':'',run.cycle>=LATE.addFrom?'적 +'+(run.cycle>=LATE.add2From?2:1):'',lateSpd()?'탄속 +'+Math.round(lateSpd()*100)+'%':'',run.cycle>=LATE.dblFrom?'연속 사격':''].filter(Boolean).join(' · ');
-    setTimeout(()=>{ if(run) announce('후반 압박 — '+t,'red'); },2600); } };
+    later(2600,()=>{ announce('후반 압박 — '+t,'red'); }); } };
 }
 
 /* ================= 보상 공명 (v3.105) — 두 보상을 같이 가지면 추가 효과. 고르는 순간마다 다음 조합을 노리는 전략이 생기게 ================= */
@@ -628,14 +631,15 @@ const synName=s=>s.n+' '+synSrc(s);
 const synCap=()=>3+(run.synSlots||0);
 const synCount=()=>SYN.filter(s=>run.syn&&run.syn[s.k]).length;
 function synApply(s,on){   // 켜고 끌 때 한 번만 바뀌는 수치
-  if(s.k==='eye'){ if(on){ CFG.rangeM*=1.1; CFG.fov=Math.min(180,CFG.fov+10); } else { CFG.rangeM/=1.1; CFG.fov-=10; } }
+  if(s.k==='eye'){ if(on){ CFG.rangeM*=1.1; run._eyeFov=Math.min(180,CFG.fov+10)-CFG.fov; CFG.fov+=run._eyeFov; } else { CFG.rangeM/=1.1; CFG.fov-=run._eyeFov||0; run._eyeFov=0; } }
 }
 function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{}; run.synNo=run.synNo||{};
   SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return;
-    if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); setTimeout(()=>{ if(run) announce('공명 — '+synName(s),'warn'); },400); }
+    if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); later(400,()=>{ announce('공명 — '+synName(s),'warn'); }); }
     else if(!run.synNo[s.k]&&!run.synPend) run.synPend=s.k; }); }
 /* 보상 화면을 빌려 카드를 띄운다 (공명 고르기 · 위험한 선택) */
-function openCardPanel(title){ rwOpenAt=performance.now(); if(run.phase!=='reward') run.rwPrev=run.phase; run.phase='reward'; unlockMouse();
+function openCardPanel(title){ rwOpenAt=performance.now(); run.rwStatPick=1;   // 새로고침 막기 (takeReward가 풂)
+  if(run.phase!=='reward') run.rwPrev=run.phase; run.phase='reward'; unlockMouse();
   $('#rwHd').innerHTML=title; $('#rwReroll').disabled=true; renderRwRow(); $('#rwOwn').innerHTML=''; $('#reward').classList.add('on'); sfx('ui'); }
 function openSynChoice(){ const ns=SYN.find(s=>s.k===run.synPend); run.synPend=null; if(!ns) return;
   rwPicks=SYN.filter(s=>run.syn[s.k]).map(s=>({k:'syn_sw',n:s.n+' 끄고 → '+ns.n,d:'끔 — <b>'+synName(s)+'</b> '+s.d+'<br>켬 — <b>'+synName(ns)+'</b> '+ns.d,tag:'공명 바꾸기',chaos:1,
@@ -681,9 +685,9 @@ drawMortars=function(){ _drawMortarsA(); if(!run||!run.afx) return; const now=pe
     ctx.restore(); }); };
 /* 다중 반사: 한 번에 2발 이상 빼앗음 */
 const _doParryS=doParry;
-doParry=function(){ const n0=run?bullets.filter(b=>b.owner==='player').length:0, l0=P.lock; const r=_doParryS.apply(this,arguments);
+doParry=function(){ const pre=run?bullets.filter(b=>b.owner==='enemy'):[], l0=P.lock; const r=_doParryS.apply(this,arguments);
   if(run&&l0<=0&&P.lockKind==='miss'&&P.lock>0) leaveAfterimage();
-  if(run&&synOn('mp')&&bullets.filter(b=>b.owner==='player').length-n0>=2){ P.inv=Math.max(P.inv,0.4); say('다중 반사','warn'); } return r; };
+  if(run&&synOn('mp')&&pre.filter(b=>b.owner==='player').length>=2){ P.inv=Math.max(P.inv,0.4); say('다중 반사','warn'); } return r; };
 /* 피격: 황금 회로용 기록 · 최후의 반격 */
 const _onHurtS=onHurt;
 onHurt=function(){ if(run){ run._syHit=1; leaveAfterimage();
@@ -702,8 +706,9 @@ killEnemy=function(e){ const had=run&&ens.includes(e), hp0=P.hp; const r=_killEn
   return r; };
 /* 매 프레임: 꿰뚫는 집념 · 반격 본능 · 벼랑 끝 · 잔상 질주 · 황금 회로 */
 const _updateS=update;
-update=function(dt){ const ph0=run&&run.phase; _updateS(dt);
+update=function(dt){ const ph0=run&&run.phase, h0=P&&P.hp; _updateS(dt);
   if(!run||screen!=='game') return;
+  if(run.phase==='fight'&&P.hp<h0) run._syHit=1;
   afterTick(dt);
   const low=P.hp>0&&P.hp<=CFG.hpMax*0.3;
   bullets.forEach(b=>{ if(b.owner!=='player') return;
@@ -748,7 +753,7 @@ const _killEnemyE=killEnemy;
 killEnemy=function(e){ const had=run&&ens.includes(e), r=_killEnemyE.apply(this,arguments);
   if(run&&had&&!ens.includes(e)&&e.evE&&run.evLeft>0&&--run.evLeft===0){
     const pool=SPECIALS.filter(s=>boonLv(s.k)<(s.max||1)&&(!s.ok||s.ok())&&!s.stay&&!s.chaos), s=pool[Math.floor(Math.random()*pool.length)];
-    if(s){ run.boons[s.k]=(run.boons[s.k]||0)+1; if(s.fn) s.fn(); stat('specials'); setTimeout(()=>{ if(run) announce('정예 격파 — '+s.n,'warn'); },300); synCheck(); } }
+    if(s){ run.boons[s.k]=(run.boons[s.k]||0)+1; if(s.fn) s.fn(); stat('specials'); later(300,()=>{ announce('정예 격파 — '+s.n,'warn'); }); synCheck(); } }
   return r; };
 /* 탄막 서약: 이번 사이클 동안 적 탄속 +20% */
 const _spawnBulletE=spawnBullet;
@@ -760,4 +765,14 @@ const _endRunS=endRun;
 endRun=function(){ const r=run, out=_endRunS.apply(this,arguments), more=$('#exMore');
   if(more&&r&&r.syn){ const on=SYN.filter(s=>r.syn[s.k]); if(on.length) more.insertAdjacentHTML('afterbegin','<div style="color:var(--dim)">공명 — '+on.map(s=>'<b style="color:var(--warn)">'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }
   return out; };
+}
+
+/* ================= 맨 바깥 안전장치 (v3.113, 코드 검토 반영) ================= */
+{
+/* 연쇄 폭발 · 여진 · 잔상 폭발이 적 목록 복사본을 돌다 이미 죽은 적을 또 잡으면, 감싼 효과(흡수체 폭발 · 랠리 피니시 · 보스 러시 진행 등)가 두 번 돌았다 */
+const _killEnemyZ=killEnemy;
+killEnemy=function(e){ if(!run||!ens.includes(e)) return; return _killEnemyZ.apply(this,arguments); };
+/* 원래 update는 일시정지 · 히트스톱 · 보상 중에 바로 돌아가는데, 감싼 추가 기능(장판 피해 · 잔상 폭발 · 원혼탄)은 계속 돌았다 */
+const _updateZ=update;
+update=function(dt){ if(paused||hitstop>0||(run&&run.phase==='reward')) return __coreUpdate(dt); return _updateZ(dt); };
 }
