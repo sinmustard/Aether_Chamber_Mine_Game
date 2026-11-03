@@ -171,7 +171,7 @@ async function syncFromCloud(){
         if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); renderSkillSel(); renderRecs(); }
         toast('다른 기기에서 진행한 최신 기록을 불러왔어요'); }
     }
-  }catch(e){ badSession(e); } finally{ syncing=false; }
+  }catch(e){ badSession(e); } finally{ syncing=false; catchUpAch(); }
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&screen!=='game') syncFromCloud(); });
 async function cloudCall(fn,body){
@@ -399,7 +399,11 @@ function checkAch(){ const s=META.stats||{}; META.ach=META.ach||{}; const got=[]
     g.tiers.forEach(t=>{ const id=g.id+'_'+t.n;
       if(!META.ach[id]&&v>=t.n){ META.ach[id]=Date.now(); got.push({id,n:t.d,r:t.r}); } }); });
   return got; }
-function openAch(){ const s=META.stats||{}; META.ach=META.ach||{};
+function catchUpAch(){ if(screen==='game') return; const got=checkAch(); if(!got.length) return;
+  const g=got.reduce((a,x)=>a+x.r,0); META.cur+=g; save(); cloudAutoSave();
+  if(screen==='hub'){ $('#cur').textContent=META.cur.toLocaleString(); renderCards(); renderDetail(); }
+  toast('업적 달성 — '+got.map(x=>x.n).join(' · ')+'  ◆ +'+g.toLocaleString()); }
+function openAch(){ catchUpAch(); const s=META.stats||{}; META.ach=META.ach||{};
   let totalDone=0, totalTiers=0;
   const rows=ACH_GROUPS.map(g=>{
     const v=g.get(s);

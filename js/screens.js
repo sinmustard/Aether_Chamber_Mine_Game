@@ -78,7 +78,7 @@ function go(id){
   if(id==='hub'||id==='title'){ BOT.on=false; if(window.__botTemp) botRestore(); }
   if(id!=='result') settleRoulette();
   if(id==='hub'&&!getSession()&&!offlineOK){ openLogin(); return; }   // v2.58 로그인 먼저
-  if(id==='hub') setTimeout(syncFromCloud,0);   // v2.68 HUB에 들어갈 때마다 다른 기기 기록 확인
+  if(id==='hub'){ setTimeout(syncFromCloud,0); if(!getSession()) setTimeout(catchUpAch,300); }   // v2.68 HUB에 들어갈 때마다 다른 기기 기록 확인
   if(id!=='game') unseedRandom();   // v2.68 데일리 시드 해제
   screen=id;
   document.body.classList.toggle('in-game',id==='game');
