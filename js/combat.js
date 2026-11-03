@@ -336,6 +336,7 @@ function update(dt){
       if(b.trap&&!b.trapGo){ if(b.age<0.35) b.spd=b.base*0.9; else if(b.age<1.9) b.spd=0; else { b.trapGo=1; b.spd=Math.min(b.base*1.3,cap()); b.dir=toP; b.straight=1; } }
       if(b.blink===1&&b.age>=0.45){ b.blink=2; const jump=Math.min(120,dist(b.x,b.y,P.x,P.y)-90), nx=b.x+Math.cos(b.dir)*jump, ny=b.y+Math.sin(b.dir)*jump;
         if(jump>20&&!wallBetween(b.x,b.y,nx,ny)){ burst(b.x,b.y,'#c27cff',6,110); b.x=nx; b.y=ny; b.trail.length=0; burst(b.x,b.y,'#c27cff',8,130); } }
+      if(!b.straight&&!b.armor&&!(b.trap&&!b.trapGo)&&!(b.curl&&b.age<1.05)&&(b.age>3.5||(dist(b.x,b.y,aimPt().x,aimPt().y)<150&&Math.abs(norm(toP-b.dir))>1.5))){ b.straight=1; b.sway=0; }
       if(b.curl&&b.age<1.05) b.dir+=b.curl*2.7*dt;
       else if(b.sway&&P.phase<=0){ if(b.sb==null) b.sb=b.dir; b.sb+=norm(toP-b.sb)*Math.min(1,dt*2.2); b.dir=b.sb+Math.sin(b.age*7)*0.85*b.sway; }
       else if(P.phase<=0 && !b.armor && !b.straight && !(b.trap&&!b.trapGo)) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);
