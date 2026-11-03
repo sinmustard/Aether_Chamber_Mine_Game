@@ -45,7 +45,7 @@ function zonesTick(dt){ const Z=run.exZones; if(!Z||!Z.length) return;
   for(let i=Z.length-1;i>=0;i--){ const z=Z[i]; z.t-=dt; const inside=dist(z.x,z.y,P.x,P.y)<z.r+R_PLAYER*0.5;
     if(live&&inside&&P.hp>0&&P.phase<=0){
       if(z.kind==='frost') chillOn(0.2);
-      if(z.kind==='fire'&&P.inv<=0&&!CFG.god){ P.fireAcc=(P.fireAcc||0)+6*dmgScale()*dt;
+      if(z.kind==='fire'&&P.inv<=0&&!CFG.god&&!(P.guard>0)){ P.fireAcc=(P.fireAcc||0)+6*dmgScale()*(1-(CFG.armor||0))*dt;
         if(P.fireAcc>=1){ const d=Math.floor(P.fireAcc); P.fireAcc-=d; P.hp-=d; P.hurt=Math.max(P.hurt,.12); I.lastHp=P.hp; exBlame(I,d,'화염 장판'); } } }
     if(z.t<=0){ if(z.kind==='ghost'&&live){ for(let k=0;k<8;k++){ const a=k*TAU/8; exShot(z.x+Math.cos(a)*20,z.y+Math.sin(a)*20,a,null,'엘리트 · 원한'); }
         burst(z.x,z.y,'#c77dff',20,220); sfx('fire'); }
@@ -80,7 +80,8 @@ onHurt=function(){ const I=run&&exRun();
     const bulletName=b=>{ if(!b.from){ let best=null,bd=1e9; ens.forEach(e=>{ const d=dist(e.x,e.y,b.x,b.y); if(d<bd){bd=d;best=e;} }); b.from=nameOf(best); }
       return b.from+(b.returns>0?' (되뺏긴 탄)':b.armor!=null?' 장갑탄':' 탄'); };
     const hit=by&&by.owner?by:S.near.filter(b=>dist(b.x,b.y,P.x,P.y)<R_PLAYER+R_BULLET+16).sort((a,b)=>dist(a.x,a.y,P.x,P.y)-dist(b.x,b.y,P.x,P.y))[0];
-    if(by==='mortar') name='박격포';
+    if(by==='mortar_boss') name='알레테이아 · 붕괴형 포격';
+    else if(by==='mortar') name='박격포';
     else if(by&&by.grade) name=nameOf(by)+' 돌진';
     else if(hit) name=bulletName(hit);
     else if(S.mort.some(z=>!(run.mortars||[]).includes(z))) name='박격포';

@@ -132,7 +132,7 @@ function update(dt){
       if(dist(z.x,z.y,P.x,P.y)<z.r&&P.hp>0&&P.phase<=0){
         if(P.guard>0){ say('막음','cyan'); sfx('block'); }
         else if(P.barrier>0&&P.inv<=0&&!CFG.god){ P.barrier--; P.inv=0.4; say(P.barrier?'보호막 · 남은 '+P.barrier:'보호막 깨짐','cyan'); }
-        else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round(PLAYER_DMG*dmgScale()*(1-(CFG.armor||0))); P.hurt=.3; P.hurtBy='mortar'; onHurt(); } } } } }
+        else if(P.inv<=0&&!CFG.god){ P.hp-=Math.round(PLAYER_DMG*dmgScale()*(1-(CFG.armor||0))); P.hurt=.3; P.hurtBy=z.src==='boss'?'mortar_boss':'mortar'; onHurt(); } } } } }
   ens.forEach(e=>{
     if(e.hackT>0) e.hackT-=dt;
     e.frozenT=inStasis(e.x,e.y)?1:0;   // v2.29 해킹 지속 시간
@@ -238,7 +238,7 @@ function update(dt){
       e.spiralT=(e.spiralT==null?5:e.spiralT-dt); e.mortT=(e.mortT==null?8:e.mortT-dt); e.gunT=(e.gunT==null?10:e.gunT-dt);
       if(e.spiralT<=0){ e.spiralT=e.p2?5:7; const base=Math.random()*TAU; bossVolley(e,Array.from({length:12},(_,k)=>({t:k*0.11,ang:base+k*0.52,straight:1})));
         say('붕괴형 — 나선 탄막','red'); sfx('boss'); }
-      if(e.mortT<=0){ e.mortT=e.p2?7:10; dropMortar(P.x,P.y,true); for(let k=0;k<2;k++){ const a=Math.random()*TAU; dropMortar(P.x+Math.cos(a)*130,P.y+Math.sin(a)*130); }
+      if(e.mortT<=0){ e.mortT=e.p2?7:10; dropMortar(P.x,P.y,true,'boss'); for(let k=0;k<2;k++){ const a=Math.random()*TAU; dropMortar(P.x+Math.cos(a)*130,P.y+Math.sin(a)*130,false,'boss'); }
         say('붕괴형 — 포격','red'); sfx('fire'); }
       if(e.p2&&e.gunT<=0){ e.gunT=14; if(ens.length<12){ spawnNear('gunner',e,110,180); spawnNear('gunner',e,110,180); } say('붕괴형 — 연사병 호출','red'); sfx('boss'); } }
     if(e.variant==='phantom'&&run.phase==='fight'&&!halted&&!(e.bindT>0)){ e.blinkT-=dt;   // v3.63 순간이동은 이동이라 구속에도 막힌다
@@ -607,4 +607,4 @@ function bossVolley(e,specs){
   const room=CFG.maxB+8-(bullets.length+queue.length); if(room<=0) return;
   specs.slice(0,room).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:true,hack:(e.hackT>0),src:e}));
 }
-function dropMortar(x,y,big){ (run.mortars||(run.mortars=[])).push({x:clamp(x,40,WORLD.w-40),y:clamp(y,40,WORLD.h-40),t:1.3,max:1.3,r:big?90:70}); }
+function dropMortar(x,y,big,src){ (run.mortars||(run.mortars=[])).push({x:clamp(x,40,WORLD.w-40),y:clamp(y,40,WORLD.h-40),t:1.3,max:1.3,r:big?90:70,src:src||''}); }
