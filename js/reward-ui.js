@@ -57,7 +57,6 @@ function openReward(afterBoss,fromReroll){
   if(run.phase!=='reward') run.rwPrev=run.phase;   // v3.62 보상을 고른 뒤 돌아갈 단계 (출격 직후 보상은 벽 설치 단계)
   run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+run.wave*50+run.rwRoll);   // v3.62
   const pool=BOONS.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
-  if(!pool.length){ endReward(); return; }
   unlockMouse();   // v3.62 마우스가 잠긴 채면 커서가 안 보이고 클릭이 카드 대신 캔버스(패링)로 갔다
   rwPicks=[];
   const bag=pool.slice();
@@ -68,7 +67,8 @@ function openReward(afterBoss,fromReroll){
   const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
   if(run.mode==='chaosx'&&Math.random()<Math.max(spChance,0.25)){
     const r=Math.random(), pick=r<0.24?chaosDisguise():r<0.4?chaosTrap():r<0.415?(prismUseful()?chaosPrismTrap():chaosTrap()):r<0.6?chaosPick():r<0.8?chaosPickHidden():chaosPlayerPick();
-    rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=pick;
+    if(rwPicks.length<3) rwPicks.splice(Math.floor(Math.random()*(rwPicks.length+1)),0,pick);
+    else rwPicks[Math.floor(Math.random()*rwPicks.length)]=pick;
   }
   else if(CFG.specialChance>0 && Math.random()<spChance){
     const sp=SPECIALS.filter(x=>boonLv(x.k)<x.max&&!(run.mode==='chaosx'&&x.k==='s_prismdur')&&(!x.ok||x.ok()));
@@ -76,7 +76,10 @@ function openReward(afterBoss,fromReroll){
       if(rwPicks.length<3) rwPicks.splice(Math.floor(Math.random()*(rwPicks.length+1)),0,pick);
       else rwPicks[Math.floor(Math.random()*rwPicks.length)]=pick; }
   }
-  if(run.mode==='chaosx'&&fromReroll&&Math.random()<0.45) rwPicks[Math.floor(Math.random()*Math.max(1,rwPicks.length))]=chaosAmp8();
+  if(run.mode==='chaosx'&&fromReroll&&Math.random()<0.45){ const a8=chaosAmp8(); if(rwPicks.length<3) rwPicks.push(a8); else rwPicks[Math.floor(Math.random()*rwPicks.length)]=a8; }
+  const fill=[{k:'f_heal',n:'응급 정비',d:'체력 30% 회복',tag:'보급',chaos:1,fn:()=>{ P.hp=Math.min(CFG.hpMax,P.hp+Math.round(CFG.hpMax*0.3)); }},
+    {k:'f_score',n:'보너스 점수',d:'점수 +'+(300*run.cycle).toLocaleString(),tag:'보급',chaos:1,fn:()=>{ run.score+=300*run.cycle; }}];
+  for(const f of fill){ if(rwPicks.length>=3) break; rwPicks.push(f); }
   run.rwBoss=afterBoss;
   const rr=$('#rwReroll'); rr.textContent='새로고침 R · 남은 '+(run.rerolls||0); rr.disabled=!(run.rerolls>0);
   run.phase='reward';
