@@ -121,7 +121,10 @@ function botPrep(){
   const F=UPG.filter(u=>u.skill===1).map(u=>u.k), Q=UPG.filter(u=>u.skill==='q').map(u=>u.k), Rr=UPG.filter(u=>u.skill==='r').map(u=>u.k), i=BOT.idx;
   META.skill=F[i%F.length]; META.skillQ=Q[i%Q.length]; let r=Rr[i%Rr.length]; if(META.skillQ==='frost'&&r==='blaze') r=Rr[(i+1)%Rr.length]; META.skillR=r;
 }
-function botReact(){ return BOT.skill?0.04+Math.random()*0.1:0.12+Math.random()*0.2; }
+/* v3.104 실력 2 = 사람형 — 반응 0.18~0.33초, 둘레(320) 안 적 탄 1발마다 +0.03초, 6%는 늦게(0.8초) 반응. 보통 · 잘함은 패링이 거의 다 맞아서 탄이 늘어나는 난이도를 못 쟀다 */
+function botReact(){
+  if(BOT.skill===2){ const near=bullets.filter(b=>b.owner==='enemy'&&dist(b.x,b.y,P.x,P.y)<320).length; return Math.random()<0.06?0.8:0.18+Math.random()*0.15+0.03*near; }
+  return BOT.skill?0.04+Math.random()*0.1:0.12+Math.random()*0.2; }
 function botNewRun(){ BOT.cur={att:0,ok:0,dmg:0,hits:0,lastHp:P.hp,enemyWall:0,bulletWall:0,pierce:0,fUse:0,qUse:0,rUse:0,stalls:[],wk:'',wt:0,hideT:0,wp:null,wpT:0,sE:new WeakSet(),sB:new WeakSet(),sP:new WeakSet(),own:new WeakMap()}; BOT.readyT=0; BOT.react=botReact(); BOT.rwT=0; BOT.mv=null; BOT.mvS=null; }
 function botStart(){
   BOT.on=true; BOT.left=BOT.cfg.n; BOT.speed=BOT.cfg.speed; BOT.skill=BOT.cfg.skill; BOT.runs=[]; BOT.idx=0;
@@ -213,7 +216,7 @@ function openBotPanel(){
     '<div class="rkNote">빌드 — 전부 최대: 모든 강화를 최대로 찍고, 판마다 F · Q · R 스킬을 바꿔 가며 전부 시험(좋은 증강 우선 선택). 끝나면 원래 강화 · 스킬로 돌아와요.</div><div class="optTabs">'+tab('botb','max','전부 최대 · 스킬 순환',cf.build)+tab('botb','cur','지금 그대로',cf.build)+'</div>'+
     '<div class="rkNote">판 수</div><div class="optTabs">'+tab('botn',1,'1판',cf.n)+tab('botn',6,'6판',cf.n)+tab('botn',12,'12판',cf.n)+'</div>'+
     '<div class="rkNote">속도</div><div class="optTabs">'+tab('bots',1,'×1',cf.speed)+tab('bots',3,'×3',cf.speed)+tab('bots',6,'×6',cf.speed)+'</div>'+
-    '<div class="rkNote">실력</div><div class="optTabs">'+tab('botk',0,'보통',cf.skill)+tab('botk',1,'잘함',cf.skill)+'</div>'+
+    '<div class="rkNote">실력</div><div class="optTabs">'+tab('botk',0,'보통',cf.skill)+tab('botk',1,'잘함',cf.skill)+tab('botk',2,'사람형',cf.skill)+'</div>'+
     '<div class="optTabs"><button data-bot="start" class="on">시작</button>'+(BOT.runs.length?'<button data-bot="last">지난 리포트</button>':'')+'</div>';
   $('#modal').classList.add('on');
 }

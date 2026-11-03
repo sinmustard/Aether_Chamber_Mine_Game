@@ -21,6 +21,9 @@ spawnBullet=function(q){ const n=bullets.length; _spawnBullet(q);
 
 /* ---- 적 등장: 엘리트 접두사 · 보스 시간 · 경고 띠 ---- */
 /* 다른 적의 특성과 겹치지 않게 고른다 (재생=힐러 · 분열=분열형 · 다중=분사병 · 점멸=환영형이라 v3.97에 뺌) */
+/* 접두사 붙을 확률 — 2사이클부터 50%, v3.104 10사이클부터 사이클마다 +10% (15사이클에 100%). 데일리는 50% 그대로 */
+const affixP=()=>run.cycle>=10&&run.mode!=='daily'?Math.min(1,0.5+0.1*(run.cycle-9)):0.5;
+window.affixP=affixP;
 const AFFIX=[['강철','최대 체력 ×1.6','#9fb3c8'],['냉기','이 적의 탄에 맞으면 2초 동안 이동 −40% · 죽으면 서리 장판','#8fe3ff'],['분노','발사 간격 ×0.6','#ff4d6a'],
   ['신속','이동 속도 ×1.5','#ffd34d'],['불굴','처음 쓰러질 때 한 번 1칸 남기고 버팀','#e8c27a'],['흡혈','이 적의 탄에 맞으면 그 적이 1칸 회복','#ff4d8d'],
   ['원한','죽으면 남은 적이 곧바로 쏘고, 1.5초 뒤 그 자리에서 원혼탄 8발','#c77dff'],['은신','멀리 있으면 거의 안 보이고 체력바도 숨음','#b9c6d3'],['가시','내 탄에 맞을 때마다 탄 2발로 반격','#ff7a3d'],
@@ -61,7 +64,7 @@ function exShot(x,y,dir,src,from){ const s=CFG.spd;   // 접두사 · 흡수체�
 const _spawnEnemy=spawnEnemy;
 spawnEnemy=function(grade){ const n=ens.length, r=_spawnEnemy.apply(this,arguments), e=ens.length>n?ens[ens.length-1]:null;
   if(e&&run){ const I=exRun();
-    if(e.grade==='elite'&&run.cycle>=2&&Math.random()<0.5){ const a=AFFIX[Math.floor(Math.random()*AFFIX.length)][0]; e.affix=a;
+    if(e.grade==='elite'&&run.cycle>=2&&Math.random()<affixP()){ const a=AFFIX[Math.floor(Math.random()*AFFIX.length)][0]; e.affix=a;
       if(a==='강철'){ e.hp*=1.6; e.hpMax=e.hp; } }
     if(e.grade==='boss'){ e.exT0=run.time; if(feat('warn')) I.warn=2.6; } }
   return r; };
@@ -567,13 +570,14 @@ titleBtns.forEach(([id,label,k,fn])=>{ const b=document.createElement('button');
 
 /* ================= 후반 압박 (v3.103) — 강화를 다 찍으면 하드도 30분을 버텨서(봇 10판 모두) 사이클이 오를수록 조금씩 세게 ================= */
 {
-const LATE={patFrom:4, patP:0.35, addFrom:5, add2From:8, maxEns:8, spdFrom:5, spdStep:0.04, spdMax:0.32, dblFrom:6, dblP:0.2, dbl2From:8, dbl2P:0.35};
+const LATE={endFrom:12, endAdd:3, endMaxEns:9, endSpd:0.02, endSpdMax:0.8, endDblStep:0.03, endDblMax:0.6,   // v3.104 12사이클 뒤에도 계속 오름
+  patFrom:4, patP:0.35, addFrom:5, add2From:8, maxEns:8, spdFrom:5, spdStep:0.04, spdMax:0.32, dblFrom:6, dblP:0.2, dbl2From:8, dbl2P:0.35};
 window.LATE=LATE;   // 테스트 · 조정용
 /* 등급별로 후반에 섞이는 더 센 패턴 (PATTERNS 번호) */
 const LATE_POOL={mob:[2,4,16,15],elite:[6,15,13,14],bulwark:[10,12,16],splitter:[10,11,16],splinter:[1,11],mortar:[10,12],
   gunner:[16,13],weaver:[21,15],sprayer:[24,25],trapper:[23,11],cannon:[9]};
 const lateOn=()=>run&&!run.tut&&!run.practice&&!run.rush&&run.mode!=='daily'&&run.mode!=='chaosx';
-const lateSpd=()=>lateOn()&&run.cycle>=LATE.spdFrom?Math.min(LATE.spdMax,(run.cycle-LATE.spdFrom+1)*LATE.spdStep):0;
+const lateSpd=()=>!lateOn()||run.cycle<LATE.spdFrom?0:run.cycle>LATE.endFrom?Math.min(LATE.endSpdMax,LATE.spdMax+(run.cycle-LATE.endFrom)*LATE.endSpd):Math.min(LATE.spdMax,(run.cycle-LATE.spdFrom+1)*LATE.spdStep);
 window.lateSpd=lateSpd;
 /* 패턴: 4사이클부터 노멀도 어려운 패턴을 쓰고, 등급별 센 패턴이 섞인다 */
 const _advOK=advPatternsOK;
@@ -586,8 +590,8 @@ pickPattern=function(e){ if(e&&e.grade!=='boss'&&lateOn()&&run.cycle>=LATE.patFr
 const _waveSpawnL=waveSpawn;
 waveSpawn=function(){ _waveSpawnL.apply(this,arguments);
   if(!lateOn()||run.phase!=='fight'||run.storm||ens.some(e=>e.grade==='boss')) return;
-  const add=run.cycle>=LATE.add2From?2:run.cycle>=LATE.addFrom?1:0, gs=ens.map(e=>e.grade).filter(g=>g!=='relay'&&g!=='minion');
-  for(let i=0;i<add&&ens.length<LATE.maxEns&&gs.length;i++) spawnEnemy(gs[Math.floor(Math.random()*gs.length)]); };
+  const add=run.cycle>=LATE.endFrom?LATE.endAdd:run.cycle>=LATE.add2From?2:run.cycle>=LATE.addFrom?1:0, cap=run.cycle>=LATE.endFrom?LATE.endMaxEns:LATE.maxEns, gs=ens.map(e=>e.grade).filter(g=>g!=='relay'&&g!=='minion');
+  for(let i=0;i<add&&ens.length<cap&&gs.length;i++) spawnEnemy(gs[Math.floor(Math.random()*gs.length)]); };
 /* 탄속: 5사이클부터 사이클당 +4% (적 탄만) */
 const _spawnBulletL=spawnBullet;
 spawnBullet=function(q){ const n=bullets.length; _spawnBulletL(q); const k=1+lateSpd();
@@ -598,10 +602,10 @@ update=function(dt){
   if(run&&screen==='game') ens.forEach(e=>{ e._lf=e.fireT; });
   const c0=run&&run.cycle; _updateL(dt);
   if(!run||screen!=='game'||!lateOn()) return;
-  if(run.cycle>=LATE.dblFrom){ const p=run.cycle>=LATE.dbl2From?LATE.dbl2P:LATE.dblP;
+  if(run.cycle>=LATE.dblFrom){ const p=run.cycle>LATE.endFrom?Math.min(LATE.endDblMax,LATE.dbl2P+(run.cycle-LATE.endFrom)*LATE.endDblStep):run.cycle>=LATE.dbl2From?LATE.dbl2P:LATE.dblP;
     ens.forEach(e=>{ if(e.grade==='boss'||e._lf==null||!(e.fireT>e._lf+0.05)) return;   // 이번 프레임에 쐈다
       if(!e._dbl&&Math.random()<p){ e.fireT=0.35; e._dbl=1; } else e._dbl=0; }); }
-  if(c0&&run.cycle>c0&&run.cycle>=LATE.addFrom&&[LATE.addFrom,LATE.dblFrom,LATE.add2From].includes(run.cycle)||(c0&&run.cycle>c0&&run.cycle===LATE.patFrom)){
+  if(c0&&run.cycle>c0&&run.cycle>=LATE.addFrom&&([LATE.addFrom,LATE.dblFrom,LATE.add2From].includes(run.cycle)||run.cycle>=LATE.endFrom)||(c0&&run.cycle>c0&&run.cycle===LATE.patFrom)){
     const t=[run.cycle>=LATE.patFrom?'센 패턴':'',run.cycle>=LATE.addFrom?'적 +'+(run.cycle>=LATE.add2From?2:1):'',lateSpd()?'탄속 +'+Math.round(lateSpd()*100)+'%':'',run.cycle>=LATE.dblFrom?'연속 사격':''].filter(Boolean).join(' · ');
     setTimeout(()=>{ if(run) announce('후반 압박 — '+t,'red'); },2600); } };
 }

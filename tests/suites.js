@@ -678,13 +678,14 @@ module.exports = {
     noErrors(t, g, '초반 피해'); await p.close();
   },
 
-  async '후반 압박 (v3.103)'(t, { browser, url }) {
+  async '후반 압박 · 끝없는 단계 · 사람형 봇 (v3.103 · v3.104)'(t, { browser, url }) {
     const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
     const r = await p.evaluate(() => { const o = {}, rnd = Math.random;
       const wave = (c, w) => { ens.length = 0; bullets.length = 0; queue.length = 0; run.cycle = c; run.wave = w - 1; run.stormCycle = c; run.phase = 'break'; waveSpawn(); const n = ens.length; ens.length = 0; queue.length = 0; return n; };
       Math.random = () => 0.99;   // 무작위로 바뀌는 구성 · 탄 폭풍 · 흡수체를 고정
-      o.n4 = wave(4, 8); o.n5 = wave(5, 8); o.n8 = wave(8, 8); Math.random = rnd;
-      o.spd = [4, 5, 6, 12, 20].map(c => { run.cycle = c; return Math.round(lateSpd() * 100); }).join();
+      o.n4 = wave(4, 8); o.n5 = wave(5, 8); o.n8 = wave(8, 8); o.n12 = wave(12, 8); Math.random = rnd;
+      o.aff = [2, 9, 10, 12, 15, 20].map(c => { run.cycle = c; return Math.round(affixP() * 100); }).join();
+      o.spd = [4, 5, 6, 12, 13, 20, 40].map(c => { run.cycle = c; return Math.round(lateSpd() * 100); }).join();
       run.cycle = 3; o.adv3 = advPatternsOK(); run.cycle = 4; o.adv4 = advPatternsOK();
       // 연속 사격: 6사이클에서 쏜 직후 다시 쏠 준비 (확률 1로)
       LATE.dblP = 1; run.cycle = 6; run.wave = 3; run.phase = 'fight'; ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 1;
@@ -692,11 +693,15 @@ module.exports = {
       for (let i = 0; i < 3; i++) { hitstop = 0; update(1 / 60); } o.dbl = e.fireT > 0 && e.fireT <= 0.36; LATE.dblP = 0.2;
       run.mode = 'daily'; run.cycle = 9; o.dailyOff = lateSpd() === 0 && !advPatternsOK(); run.mode = 'normal';
       return o; });
-    t.ok(r.n5 === r.n4 + 1 && r.n8 === r.n4 + 2, '적 수: 5사이클부터 +1, 8사이클부터 +2', JSON.stringify({ c4: r.n4, c5: r.n5, c8: r.n8 }));
-    t.eq(r.spd, '0,4,8,32,32', '적 탄속: 5사이클부터 사이클당 +4%, 최대 +32%');
+    t.ok(r.n5 === r.n4 + 1 && r.n8 === r.n4 + 2 && r.n12 === r.n4 + 3, '적 수: 5사이클부터 +1, 8사이클부터 +2, 12사이클부터 +3', JSON.stringify({ c4: r.n4, c5: r.n5, c8: r.n8, c12: r.n12 }));
+    t.eq(r.aff, '50,50,60,80,100,100', '엘리트 접두사 확률: 50% → 10사이클부터 +10%씩, 15사이클에 100%');
+    t.eq(r.spd, '0,4,8,32,34,48,80', '적 탄속: 5사이클부터 +4%씩 → 12사이클 +32% → 그 뒤 +2%씩, 최대 +80%');
     t.ok(!r.adv3 && r.adv4, '노멀도 4사이클부터 어려운 패턴');
     t.ok(r.dbl, '6사이클부터 쏜 직후 확률로 0.35초 뒤 한 번 더');
     t.ok(r.dailyOff, '데일리에는 후반 압박 없음');
+    const bot = await p.evaluate(() => { const k0 = BOT.skill; BOT.skill = 2; const v = []; for (let i = 0; i < 200; i++) v.push(botReact()); BOT.skill = k0;
+      openBotPanel && openBotPanel(); return { min: Math.min(...v), max: Math.max(...v), btn: !!document.querySelector('[data-botk="2"]') }; }).catch(e => ({ err: e.message }));
+    t.ok(bot.min >= 0.18 && bot.btn, '테스트 봇 실력 "사람형" — 반응 0.18초 이상, 선택 버튼 있음', JSON.stringify(bot));
     noErrors(t, g, '후반 압박'); await p.close();
   },
 };
