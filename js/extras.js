@@ -369,7 +369,12 @@ waveSpawn=function(){
   if(feat('absorb')&&normalRun()&&!bossWave&&(run.forceAbsorb||(run.wave>=3&&Math.random()<0.35))){ run.forceAbsorb=0; spawnEnemy('absorber'); }
 };
 const _openReward=openReward;
-openReward=function(){ if(run&&run.practice) return; return _openReward.apply(this,arguments); };
+openReward=function(){ if(run&&run.practice) return;
+  if(run&&run.rush&&run.rush.i>=RUSH_ORDER.length) return;   // v3.118 마지막 보스 뒤엔 보상 없이 바로 결과
+  const r=_openReward.apply(this,arguments);
+  if(run&&run.rush&&run.rush.i>0&&run.phase==='reward')   // 보스 러시는 웨이브가 늘 2라 "웨이브 2 완료"로 나왔다
+    $('#rwHd').innerHTML='보스 러시 · '+VKO[RUSH_ORDER[run.rush.i-1]]+' 격파 ('+run.rush.i+' / '+RUSH_ORDER.length+') &nbsp;—&nbsp; 하나를 고르세요';
+  return r; };
 
 /* ---- 탄 폭풍 탄의 출처 ---- */
 const _spawnBullet2=spawnBullet;

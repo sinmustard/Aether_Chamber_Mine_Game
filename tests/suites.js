@@ -494,8 +494,8 @@ module.exports = {
     if (r.rp) { await click(p, '#exRpBtn'); await wait(500); t.ok(await p.evaluate(() => !!$('#exRp') && $('#modal').classList.contains('on')), '리플레이 창이 열림'); }
     await p.evaluate(() => { $('#modal').classList.remove('on'); go('title'); }); await wait(300);
     await click(p, '#exDex'); await wait(300);
-    const dex = await p.evaluate(() => ({ n: $('#modalBox').querySelectorAll('img').length, txt: $('#modalBox').innerText }));
-    t.ok(dex.n >= 21 && /흡수체/.test(dex.txt) && /붕괴형/.test(dex.txt), '적 도감 — 모든 적 · 보스 변형 + 흡수체', 'img ' + dex.n);
+    const dex = await p.evaluate(() => ({ n: (window.ENEMY_DEX || []).length, txt: $('#modalBox').innerText }));   // v3.119부터 안 만난 적은 ???로 가림
+    t.ok(dex.n >= 22 && /적 전체/.test(dex.txt) && (/흡수체/.test(dex.txt) || /\?\?\?/.test(dex.txt)), '적 도감 — 모든 적 · 보스 변형 5종 + 흡수체 (안 만난 적은 ???)', 'dex ' + dex.n);
     noErrors(t, g, '추가 기능 전투 표시'); await p.close();
   },
 
@@ -862,6 +862,11 @@ module.exports = {
     t.eq(d.seized, 0, '드론 탄은 적이 되뺏지 못함');
     t.ok(d.pauseStop, '일시정지 중엔 드론도 멈춤');
     t.ok(d.noDroneNormal, '드론은 보스 러시에만 (일반 판엔 없음)');
+    await p.evaluate(() => { go('hub'); run = null; go('title'); $('#exRush').click(); takeReward(0); takeReward(0); });
+    const h = await p.evaluate(() => { const o = {}; run.rush.i = 2; run.phase = 'break'; openReward(false); o.hd = $('#rwHd').innerText; takeReward(0);
+      run.rush.i = RUSH_ORDER.length; run.phase = 'break'; openReward(false); o.last = !$('#reward').classList.contains('on') && run.phase !== 'reward'; return o; });
+    t.ok(h.hd.includes('수호형 격파 (2 / 5)'), '보스 러시 보상 창 제목에 잡은 보스 ("웨이브 2 완료" 대신)', h.hd);
+    t.ok(h.last, '마지막 보스 뒤엔 보상 없이 바로 결과');
     noErrors(t, g, '보스 러시'); await p.close();
   },
 
