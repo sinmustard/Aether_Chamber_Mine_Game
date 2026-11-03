@@ -311,6 +311,16 @@ const statsBtn=document.querySelector('#title [data-modal=stats]'); if(statsBtn)
 const DEX2=window.ENEMY_DEX;
 const RUSH_ORDER=['core','warden','phantom','collapse','prime'];   // v3.116 마지막에 정예형
 window.RUSH_ORDER=RUSH_ORDER;
+/* v3.127 5연전은 짧고 쉬웠다 → 3라운드 15연전. 라운드마다 사이클 수준(체력 · 받는 피해 · 어려운 패턴)과 접두사 엘리트 호위가 늘어난다 */
+const RUSH_ROUNDS=[{cycle:2,escort:1},{cycle:5,escort:3},{cycle:8,escort:4}];   // 봇 시험: 강화 최대 사람형 2/10 · 잘함 9/10 완주
+window.RUSH_ROUNDS=RUSH_ROUNDS;
+/* 보스 사이 회복 비율 · 보상 간격(보스 몇 마리마다). 도전은 아끼고, 이지는 예전처럼 넉넉히 — 시험 · 조정용으로 밖에 둠 */
+const RUSH_CFG={heal:0.15,rewardEvery:2,easyHeal:0.3,easyEvery:1};
+const rushHeal=()=>run.rushEasy?RUSH_CFG.easyHeal:RUSH_CFG.heal, rushEvery=()=>run.rushEasy?RUSH_CFG.easyEvery:RUSH_CFG.rewardEvery;
+window.RUSH_CFG=RUSH_CFG;
+const rushTotal=()=>RUSH_ORDER.length*RUSH_ROUNDS.length;
+window.rushTotal=rushTotal;
+const rushVar=i=>RUSH_ORDER[i%RUSH_ORDER.length];
 document.head.insertAdjacentHTML("beforeend","<style>.exBtn{background:transparent;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:5px 10px;font:600 12px ui-monospace,monospace;cursor:pointer}.exBtn:hover{border-color:var(--cyan);color:var(--cyan)}</style>");
 const lsGet=(k,d)=>{ try{ return JSON.parse(localStorage.getItem(k)||'null')||d; }catch(e){ return d; } };
 const lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
@@ -348,9 +358,15 @@ waveSpawn=function(){
     else { const n=['elite','cannon','summoner','bulwark','mortar'].includes(g)?2:3; for(let i=0;i<n;i++) spawnEnemy(g); }
     announce('연습장  ·  '+(g.indexOf('boss')===0?'알레테이아 · '+VKO[g.split(':')[1]||'core']:KO[g]),'cyan'); sfx('wave'); run.phase='fight'; return; }
   if(run&&run.rush){ const R=run.rush; run.wave=2; P.barrier=CFG.barrier||0;
-    if(R.i>=RUSH_ORDER.length){ endRun(); return; }
+    if(R.i>=rushTotal()){ endRun(); return; }
     if(R.t0==null) R.t0=run.time;
-    exBoss(RUSH_ORDER[R.i]); announce('보스 러시  '+(R.i+1)+' / '+RUSH_ORDER.length,'warn'); run.phase='fight'; return; }
+    const rd=Math.floor(R.i/RUSH_ORDER.length), RD=RUSH_ROUNDS[rd];
+    if(run.cycle!==RD.cycle){ run.cycle=RD.cycle; if(rd>0) announce('라운드 '+(rd+1)+' — 보스가 강해짐'+(RD.escort?' · 호위 '+RD.escort+'기':''),'red'); }
+    exBoss(rushVar(R.i));
+    const A=window.ELITE_AFFIX||[];
+    for(let k=0;k<RD.escort;k++){ spawnEnemy('elite'); const el=ens[ens.length-1];
+      if(el&&el.grade==='elite'&&!el.affix&&A.length){ el.affix=A[Math.floor(Math.random()*A.length)][0]; if(el.affix==='강철'){ el.hp*=1.6; el.hpMax=el.hp; } } }
+    announce('보스 러시  '+(rd?'R'+(rd+1)+'  ':'')+(R.i+1)+' / '+rushTotal(),'warn'); run.phase='fight'; return; }
   const nw=run.wave+1;
   if(feat('storm')&&normalRun()&&exMode()&&(run.forceStorm||(run.cycle>=2&&nw>=3&&nw<=BOSS_WAVE&&run.stormCycle!==run.cycle&&Math.random()<0.3))){   // v3.102 1사이클엔 안 나옴 — 봇 120판에서 1사이클 4~6웨이브 피해의 24%가 탄 폭풍
     run.forceStorm=0; run.stormCycle=run.cycle; run.wave++; P.barrier=CFG.barrier||0;
@@ -370,10 +386,10 @@ waveSpawn=function(){
 };
 const _openReward=openReward;
 openReward=function(){ if(run&&run.practice) return;
-  if(run&&run.rush&&run.rush.i>=RUSH_ORDER.length) return;   // v3.118 마지막 보스 뒤엔 보상 없이 바로 결과
+  if(run&&run.rush&&(run.rush.i>=rushTotal()||(run.rush.i>0&&run.rush.i%rushEvery()!==0))) return;   // v3.118 마지막 보스 뒤엔 보상 없이 바로 결과
   const r=_openReward.apply(this,arguments);
   if(run&&run.rush&&run.rush.i>0&&run.phase==='reward')   // 보스 러시는 웨이브가 늘 2라 "웨이브 2 완료"로 나왔다
-    $('#rwHd').innerHTML='보스 러시 · '+VKO[RUSH_ORDER[run.rush.i-1]]+' 격파 ('+run.rush.i+' / '+RUSH_ORDER.length+') &nbsp;—&nbsp; 하나를 고르세요';
+    $('#rwHd').innerHTML='보스 러시 · '+VKO[rushVar(run.rush.i-1)]+' 격파 ('+run.rush.i+' / '+rushTotal()+') &nbsp;—&nbsp; 하나를 고르세요';
   return r; };
 
 /* ---- 탄 폭풍 탄의 출처 ---- */
@@ -456,8 +472,8 @@ killEnemy=function(e){
         feint:0,orbitDir:0,orbitAmt:0,straight:1,zig:0,fake:0,blink:0,from:'흡수체 폭발',fromAbs:1}); }
     announce('흡수체 폭발 · '+n+'발','red'); shake=Math.max(shake,12); }
   if(e.grade==='boss'){ vib([80,50,160]);
-    if(run.rush){ const R=run.rush; R.i++; P.hp=Math.min(CFG.hpMax,P.hp+CFG.hpMax*0.3);
-      if(R.i>=RUSH_ORDER.length){ const t=run.time-R.t0, B=lsGet('aether_x_rush',{}), rk=run.mode+(run.rushEasy?':easy':''), rec=B[rk]==null||t<B[rk]; if(rec){ B[rk]=t; lsSet('aether_x_rush',B); }
+    if(run.rush){ const R=run.rush; R.i++; P.hp=Math.min(CFG.hpMax,P.hp+CFG.hpMax*rushHeal());
+      if(R.i>=rushTotal()){ const t=run.time-R.t0, B=lsGet('aether_x_rush',{}), rk=run.mode+(run.rushEasy?':easy':'')+':'+rushTotal(), rec=B[rk]==null||t<B[rk]; if(rec){ B[rk]=t; lsSet('aether_x_rush',B); }
         R.time=t; R.rec=rec; setTimeout(()=>{ if(run&&run.rush) announce('보스 러시 완료  '+fmtT(t)+(rec?'  ·  최고 기록!':''),'warn'); },1400); } } }
   return r; };
 
@@ -550,7 +566,7 @@ endRun=function(){
     if(feat('pstat')){ const par=I.par||0, wh=I.whiff||0, rt=I.rt||[], avg=rt.length?rt.reduce((a,b)=>a+b,0)/rt.length:0;
       h+='<div style="color:var(--dim)">패링 <b style="color:var(--fg)">'+par+'</b>회 · 빗나감 <b style="color:var(--fg)">'+wh+'</b>회 · 성공률 <b style="color:var(--cyan)">'+(par+wh?Math.round(par/(par+wh)*100):0)+'%</b>'+
         (rt.length?' · 평균 반응 <b style="color:var(--fg)">'+avg.toFixed(2)+'초</b>':'')+'</div>'; }
-    if(r.rush) h+='<div style="color:var(--dim)">보스 러시'+(r.rushEasy?' (이지)':'')+' — '+(r.rush.time!=null?'<b style="color:var(--warn)">완주 '+fmtT(r.rush.time)+'</b>'+(r.rush.rec?' · 최고 기록':''):'<b style="color:var(--fg)">'+r.rush.i+' / '+RUSH_ORDER.length+'</b>에서 쓰러짐')+'</div>';
+    if(r.rush) h+='<div style="color:var(--dim)">보스 러시'+(r.rushEasy?' (이지)':'')+' — '+(r.rush.time!=null?'<b style="color:var(--warn)">완주 '+fmtT(r.rush.time)+'</b>'+(r.rush.rec?' · 최고 기록':''):'<b style="color:var(--fg)">'+r.rush.i+' / '+rushTotal()+'</b>에서 쓰러짐')+'</div>';
     if(I.mirror) h+='<div style="color:var(--dim)">거울로 꺾은 탄 — <b style="color:var(--cyan)">'+I.mirror+'</b></div>';
     if(feat('replay')&&RP.frames.some(c=>c&&c._run===r)) h+='<button id="exRpBtn" style="margin-top:8px;margin-right:6px;background:transparent;border:1px solid var(--cyan);color:var(--cyan);border-radius:6px;padding:6px 14px;font:700 12px ui-monospace,monospace;cursor:pointer">마지막 5초 보기</button>';
     more.innerHTML=h; const b=$('#exRpBtn'); if(b) b.onclick=()=>openReplay(r); }
@@ -581,7 +597,7 @@ drawEnemyBody=function(e){ _drawEnemyBody2(e); if(e.grade!=='absorber') return; 
 const _drawHUD2=drawHUD;
 drawHUD=function(){ _drawHUD2(); if(!run) return; const W=VW, I=run.ex;
   if(run.practice||run.rush){ ctx.textAlign='left'; ctx.font='700 12px ui-monospace,monospace'; ctx.fillStyle=C.warn;
-    ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시'+(run.rushEasy?' · 이지 ':' ')+Math.min(RUSH_ORDER.length,run.rush.i+1)+' / '+RUSH_ORDER.length+' · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
+    ctx.fillText(run.practice?'연습장 · 기록 · 재화 없음 · ESC → HUB로 나가기':'보스 러시'+(run.rushEasy?' · 이지 ':' ')+(run.rush.i>=RUSH_ORDER.length?'R'+(Math.floor(Math.min(run.rush.i,rushTotal()-1)/RUSH_ORDER.length)+1)+' ':'')+Math.min(rushTotal(),run.rush.i+1)+' / '+rushTotal()+' · '+(run.rush.t0!=null?fmtT(run.time-run.rush.t0):'0:00.0'),18,run.revives>0?76:60); }
   if(I&&I.firstQ&&I.firstQ.length){ const f=I.firstQ[0], a=Math.min(1,f.t*2,(4.5-f.t)*4), img=SPRITES[f.g], x=18, y=H-96;
     ctx.font='600 11.5px ui-monospace,monospace'; const w=Math.min(W-36,Math.max(300,ctx.measureText(f.d).width+64));
     ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='rgba(8,12,17,.9)'; ctx.fillRect(x,y,w,46); ctx.strokeStyle=C.cyan; ctx.lineWidth=1; ctx.strokeRect(x+.5,y+.5,w-1,45);

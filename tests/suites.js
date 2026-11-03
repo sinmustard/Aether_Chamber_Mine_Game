@@ -594,7 +594,7 @@ module.exports = {
     // 보스 러시: 네 변형 → 결과
     await p.evaluate(() => go('title')); await wait(200); await click(p, '#exRush'); await wait(2500);
     const order = [];
-    for (let k = 0; k < 5; k++) {
+    for (let k = 0; k < 15; k++) {
       for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
         if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
       order.push(await p.evaluate(() => { CFG.god = 1; const b = ens.find(e => e.grade === 'boss'); const v = b && b.variant; if (b) killEnemy(b); for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; return v; }));
@@ -602,7 +602,7 @@ module.exports = {
     }
     for (let i = 0; i < 60 && await p.evaluate(() => screen) === 'game'; i++) { if (await p.evaluate(() => $('#reward').classList.contains('on'))) { await wait(500); await p.keyboard.press('1'); } await wait(250); }
     const rush = await p.evaluate(() => ({ screen, txt: ($('#exMore') || {}).innerText || '', cheat: run && run.cheat }));
-    t.eq(order.join(), 'core,warden,phantom,collapse,prime', '보스 러시 순서: 기본형 → 수호형 → 환영형 → 붕괴형 → 정예형');
+    t.eq(order.join(), Array(3).fill('core,warden,phantom,collapse,prime').join(), '보스 러시 3라운드: 기본형 → 수호형 → 환영형 → 붕괴형 → 정예형 × 3');
     t.ok(rush.screen === 'result' && /보스 러시 — 완주/.test(rush.txt), '네 변형을 다 잡으면 완주 시간과 함께 결과 화면', rush.txt.replace(/\n/g, ' / '));
     noErrors(t, g, '추가 기능 새 적 · 모드'); await p.close();
   },
@@ -875,9 +875,19 @@ module.exports = {
     t.ok(d.noDroneNormal, '드론은 보스 러시에만 (일반 판엔 없음)');
     await p.evaluate(() => { go('hub'); run = null; go('title'); $('#exRush').click(); takeReward(0); takeReward(0); });
     const h = await p.evaluate(() => { const o = {}; run.rush.i = 2; run.phase = 'break'; openReward(false); o.hd = $('#rwHd').innerText; takeReward(0);
-      run.rush.i = RUSH_ORDER.length; run.phase = 'break'; openReward(false); o.last = !$('#reward').classList.contains('on') && run.phase !== 'reward'; return o; });
-    t.ok(h.hd.includes('수호형 격파 (2 / 5)'), '보스 러시 보상 창 제목에 잡은 보스 ("웨이브 2 완료" 대신)', h.hd);
+      run.rush.i = rushTotal(); run.phase = 'break'; openReward(false); o.last = !$('#reward').classList.contains('on') && run.phase !== 'reward'; return o; });
+    t.ok(h.hd.includes('수호형 격파 (2 / 15)'), '보스 러시 보상 창 제목에 잡은 보스 ("웨이브 2 완료" 대신)', h.hd);
     t.ok(h.last, '마지막 보스 뒤엔 보상 없이 바로 결과');
+    const rd = await p.evaluate(() => { const o = {}, at = i => { ens.length = 0; bullets.length = 0; queue.length = 0; run.rush.i = i; run.phase = 'break'; waveSpawn();
+        const b = ens.find(e => e.grade === 'boss'); const el = ens.filter(e => e.grade === 'elite'); const r = { v: b && b.variant, hp: b ? Math.round(b.hpMax) : 0, cyc: run.cycle, el: el.length, aff: el.every(e => e.affix) }; ens.length = 0; queue.length = 0; return r; };
+      o.r1 = at(0); o.r2 = at(5); o.r3 = at(10); o.r3prime = at(14); run.rush.i = 0; return o; });
+    t.ok(rd.r1.v === 'core' && rd.r2.v === 'core' && rd.r3.v === 'core' && rd.r3prime.v === 'prime', '라운드마다 기본형부터 다시, 15번째는 정예형', JSON.stringify(rd));
+    t.ok(rd.r1.cyc === 2 && rd.r2.cyc === 5 && rd.r3.cyc === 8 && rd.r1.hp < rd.r2.hp && rd.r2.hp < rd.r3.hp, '라운드가 오를수록 사이클 수준(2 · 5 · 8) · 보스 체력 증가');
+    t.ok(rd.r1.el === 1 && rd.r2.el === 3 && rd.r3.el === 4 && rd.r2.aff && rd.r3.aff, '라운드마다 접두사 엘리트 호위 1 · 3 · 4기');
+    const rw = await p.evaluate(() => { const o = {}; run.rushEasy = false; run.rush.i = 1; run.phase = 'break'; openReward(false); o.odd = $('#reward').classList.contains('on'); if (o.odd) takeReward(0);
+      run.rush.i = 2; run.phase = 'break'; openReward(false); o.even = $('#reward').classList.contains('on'); if (o.even) takeReward(0);
+      run.rushEasy = true; run.rush.i = 1; run.phase = 'break'; openReward(false); o.easyOdd = $('#reward').classList.contains('on'); if (o.easyOdd) takeReward(0); run.rushEasy = false; return o; });
+    t.ok(!rw.odd && rw.even && rw.easyOdd, '도전은 보스 2마리마다 보상, 이지는 매번', JSON.stringify(rw));
     noErrors(t, g, '보스 러시'); await p.close();
   },
 
