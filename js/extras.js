@@ -621,6 +621,8 @@ window.SYNERGY=SYN;
 const synOn=k=>!!(run&&run.syn&&run.syn[k]);
 window.synCheck=()=>synCheck();   // 테스트용
 const bname=k=>{ const b=boonDef(k); return b?b.n:k; };
+const synSrc=s=>'('+bname(s.a)+' + '+bname(s.b)+')';
+const synName=s=>s.n+' '+synSrc(s);
 /* 새로 완성된 공명을 켠다 — 한 번만 바뀌는 수치는 여기서 */
 /* v3.106 공명은 판마다 3개까지 (저주받은 보물로 +1) — 다 차면 새 공명을 켤지 카드로 고른다. 오래 가는 판은 보상을 거의 다 모아서 공명이 전부 켜졌다 */
 const synCap=()=>3+(run.synSlots||0);
@@ -630,16 +632,16 @@ function synApply(s,on){   // 켜고 끌 때 한 번만 바뀌는 수치
 }
 function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{}; run.synNo=run.synNo||{};
   SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return;
-    if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); setTimeout(()=>{ if(run) announce('공명 — '+s.n,'warn'); },400); }
+    if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); setTimeout(()=>{ if(run) announce('공명 — '+synName(s),'warn'); },400); }
     else if(!run.synNo[s.k]&&!run.synPend) run.synPend=s.k; }); }
 /* 보상 화면을 빌려 카드를 띄운다 (공명 고르기 · 위험한 선택) */
 function openCardPanel(title){ rwOpenAt=performance.now(); if(run.phase!=='reward') run.rwPrev=run.phase; run.phase='reward'; unlockMouse();
   $('#rwHd').innerHTML=title; $('#rwReroll').disabled=true; renderRwRow(); $('#rwOwn').innerHTML=''; $('#reward').classList.add('on'); sfx('ui'); }
 function openSynChoice(){ const ns=SYN.find(s=>s.k===run.synPend); run.synPend=null; if(!ns) return;
-  rwPicks=SYN.filter(s=>run.syn[s.k]).map(s=>({k:'syn_sw',n:s.n+' 끄고 → '+ns.n,d:'끔 — '+s.d+'<br>켬 — '+ns.d,tag:'공명 바꾸기',chaos:1,
-    fn:()=>{ run.syn[s.k]=0; synApply(s,false); run.synNo[s.k]=1; run.syn[ns.k]=1; synApply(ns,true); announce('공명 — '+ns.n,'warn'); }}));
-  rwPicks.push({k:'syn_no',n:ns.n+' 켜지 않기',d:'지금 공명을 그대로 둠 — 자리가 나면 그때 켜짐',tag:'공명',chaos:1,fn:()=>{ run.synNo[ns.k]=1; }});
-  openCardPanel('공명 자리 '+synCap()+'개가 다 찼어요 &nbsp;—&nbsp; 새 공명 「'+ns.n+'」을 켤까요?'); }
+  rwPicks=SYN.filter(s=>run.syn[s.k]).map(s=>({k:'syn_sw',n:s.n+' 끄고 → '+ns.n,d:'끔 — <b>'+synName(s)+'</b> '+s.d+'<br>켬 — <b>'+synName(ns)+'</b> '+ns.d,tag:'공명 바꾸기',chaos:1,
+    fn:()=>{ run.syn[s.k]=0; synApply(s,false); run.synNo[s.k]=1; run.syn[ns.k]=1; synApply(ns,true); announce('공명 — '+synName(ns),'warn'); }}));
+  rwPicks.push({k:'syn_no',n:ns.n+' 켜지 않기',d:synName(ns)+' — 지금 공명을 그대로 둠, 자리가 나면 그때 켜짐',tag:'공명',chaos:1,fn:()=>{ run.synNo[ns.k]=1; }});
+  openCardPanel('공명 자리 '+synCap()+'개가 다 찼어요 &nbsp;—&nbsp; 새 공명 「'+synName(ns)+'」을 켤까요?'); }
 window.synCap=()=>synCap();
 const _takeReward=takeReward;
 takeReward=function(){ const r=_takeReward.apply(this,arguments); synCheck(); if(run&&run.synPend&&run.phase!=='reward') openSynChoice(); return r; };
@@ -648,13 +650,13 @@ const _renderRwRow=renderRwRow;
 renderRwRow=function(){ _renderRwRow.apply(this,arguments); if(!run) return;
   document.querySelectorAll('#rwRow .bc').forEach(el=>{ const b=rwPicks[+el.dataset.i]; if(!b||b.chaos) return; const k=b.look||b.k;
     const done=SYN.filter(s=>!synOn(s.k)&&((s.a===k&&boonLv(s.b))||(s.b===k&&boonLv(s.a))));
-    if(done.length) el.insertAdjacentHTML('beforeend','<div style="margin-top:6px;font-size:11px;color:var(--warn)">공명 완성 — '+done.map(s=>'<b>'+s.n+'</b>').join(' · ')+'</div>'); }); };
+    if(done.length) el.insertAdjacentHTML('beforeend','<div style="margin-top:6px;font-size:11px;color:var(--warn)">공명 완성 — '+done.map(s=>'<b>'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }); };
 /* 이번 판 보상 목록 아래에 공명 표 */
 const _boonListHTML=boonListHTML;
 boonListHTML=function(){ const h=_boonListHTML.apply(this,arguments); if(!run) return h;
   return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">공명 '+synCount()+' / '+synCap()+'</div>'+SYN.map(s=>{ const on=synOn(s.k), ha=boonLv(s.a)>0, hb=boonLv(s.b)>0;
-    return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> '+
-      '<span style="color:'+(ha?'var(--cyan)':'var(--dim)')+'">'+bname(s.a)+'</span> + <span style="color:'+(hb?'var(--cyan)':'var(--dim)')+'">'+bname(s.b)+'</span> — '+s.d+'</div>'; }).join(''); };
+    return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> ('+
+      '<span style="color:'+(ha?'var(--cyan)':'var(--dim)')+'">'+bname(s.a)+'</span> + <span style="color:'+(hb?'var(--cyan)':'var(--dim)')+'">'+bname(s.b)+'</span>) — '+s.d+'</div>'; }).join(''); };
 /* 잔상 폭발: 잔상을 남기고 0.6초 뒤 크게 터진다 (run.afx — 잔상 · 고리 그리기용) */
 const AFTER={delay:0.6,r:170,dmg:0.5,cd:4};
 window.AFTERIMAGE=AFTER;
@@ -756,6 +758,6 @@ spawnBullet=function(q){ const n=bullets.length; _spawnBulletE(q);
 /* 결과 화면: 이번 판 공명 */
 const _endRunS=endRun;
 endRun=function(){ const r=run, out=_endRunS.apply(this,arguments), more=$('#exMore');
-  if(more&&r&&r.syn){ const on=SYN.filter(s=>r.syn[s.k]); if(on.length) more.insertAdjacentHTML('afterbegin','<div style="color:var(--dim)">공명 — '+on.map(s=>'<b style="color:var(--warn)">'+s.n+'</b>').join(' · ')+'</div>'); }
+  if(more&&r&&r.syn){ const on=SYN.filter(s=>r.syn[s.k]); if(on.length) more.insertAdjacentHTML('afterbegin','<div style="color:var(--dim)">공명 — '+on.map(s=>'<b style="color:var(--warn)">'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }
   return out; };
 }
