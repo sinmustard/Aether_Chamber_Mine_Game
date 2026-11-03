@@ -361,9 +361,9 @@ function update(dt){
            → 패링 때 노린 적을 끝까지 따라가고(뒤로 넘어가면 포기), 노린 적이 없을 때만 앞쪽 36° 안의 적을 살짝 쫓는다.
            한 프레임에 꺾이는 각도에도 상한을 둬서 자연스러운 곡선으로 */
         const angTo=e=>Math.abs(norm(Math.atan2(e.y-b.y,e.x-b.x)-b.dir));
-        let tg=(b.htg&&ens.includes(b.htg)&&angTo(b.htg)<Math.PI*0.5&&!wallBetween(b.x,b.y,b.htg.x,b.htg.y))?b.htg:null;   // v2.89 벽에 가리면 포기
+        let tg=(b.htg&&ens.includes(b.htg)&&!pierced(b,b.htg)&&angTo(b.htg)<Math.PI*0.5&&!wallBetween(b.x,b.y,b.htg.x,b.htg.y))?b.htg:null;   // v2.89 벽에 가리면 포기
         if(b.htg&&!tg){ bMark(b.x,b.y,!ens.includes(b.htg)?'목표 사라짐':angTo(b.htg)>=Math.PI*0.5?'목표 지나침':'목표 벽에 가림','#9aa6ff'); b.htg=null; }   // v3.00
-        if(!tg){ let bd=1e9; for(const e of ens){ const d=dist(b.x,b.y,e.x,e.y); if(d<bd&&angTo(e)<Math.PI*0.2&&!wallBetween(b.x,b.y,e.x,e.y)){ bd=d; tg=e; } } }
+        if(!tg){ let bd=1e9; for(const e of ens){ const d=dist(b.x,b.y,e.x,e.y); if(d<bd&&angTo(e)<Math.PI*0.2&&!pierced(b,e)&&!wallBetween(b.x,b.y,e.x,e.y)){ bd=d; tg=e; } } }
         if(tg){
           const close=dist(b.x,b.y,tg.x,tg.y)<140?2:1;
           const diff=norm(Math.atan2(tg.y-b.y,tg.x-b.x)-b.dir), lim=dt*Math.min(7,1.8*CFG.homing*close);
@@ -444,7 +444,7 @@ function update(dt){
       let hitIdx=-1, hitD=1e9;
       for(let j=0;j<ens.length;j++){
         const d=dist(b.x,b.y,ens[j].x,ens[j].y);
-        if(d<ens[j].r+R_BULLET && d<hitD){ hitD=d; hitIdx=j; }
+        if(d<ens[j].r+R_BULLET && d<hitD && !pierced(b,ens[j])){ hitD=d; hitIdx=j; }
       }
       if(hitIdx>=0 && ens[hitIdx].inv>0) hitIdx=-1;
       if(hitIdx>=0 && shielded(ens[hitIdx],b) && CFG.shieldPierce>0 && Math.random()<CFG.shieldPierce){ say('방패 관통','cyan'); burst(b.x,b.y,'cyan',10,160); }
@@ -495,7 +495,7 @@ function update(dt){
           burst(b.x,b.y,'warn',10,200);
         }
         /* v2.0 관통 — 남은 관통 횟수만큼 적을 뚫고 지나간다 (적 무적 0.1초 덕에 재충돌하지 않음) */
-        if(b.pierceLeft>0 && ens.length){ b.pierceLeft--; continue; }
+        if(b.pierceLeft>0 && ens.length){ b.pierceLeft--; if(b.pcsR!==b.returns){ b.pcs=[]; b.pcsR=b.returns; } b.pcs.push(e); if(b.htg===e) b.htg=null; continue; }
         bullets.splice(i,1); continue;
       }
     } else if(P.decoyT>0&&P.decoy&&dist(b.x,b.y,P.decoy.x,P.decoy.y)<R_PLAYER+R_BULLET){
@@ -577,6 +577,7 @@ function spawnBullet(q){
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
 }
 const DECOY_PULL=130;
+const pierced=(b,e)=>!!(b.pcs&&b.pcsR===b.returns&&b.pcs.includes(e));
 function decoyHitDmg(b){ return Math.round(enemyShotDmg()*(b.boss===2?1.75:b.boss?1.5:1)*dmgScale()*(1-(CFG.armor||0))); }
 function decoyBlast(){
   const D=P.decoy, bag=(P.decoyBag||[]).slice(), n=bag.length;
