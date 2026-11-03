@@ -845,10 +845,13 @@ module.exports = {
       o.panel1 = $('#reward').classList.contains('on') && /특수 특전/.test($('#rwHd').innerText); o.allSp = rwPicks.length === 3 && rwPicks.every(b => b.sp);
       const s0 = spSum(); takeReward(0); o.special = spSum() === s0 + 1;
       o.panel2 = $('#reward').classList.contains('on') && !/특수 특전/.test($('#rwHd').innerText) && rwPicks.every(b => !b.sp || b.chaos === undefined);
-      const n0 = Object.keys(run.boons).length; takeReward(0); o.normal = Object.keys(run.boons).length >= n0 && run.phase !== 'reward';
+      const ar0 = CFG.armor || 0; o.soft = rushSoftActive();
+      const n0 = Object.keys(run.boons).length; takeReward(0); o.second = $('#reward').classList.contains('on'); takeReward(0); o.normal = Object.keys(run.boons).length >= n0 && run.phase !== 'reward';
+      run.rush.i = RUSH_SOFT.until; for (let i = 0; i < 3; i++) { hitstop = 0; update(1 / 60); } o.softOff = !rushSoftActive() && (CFG.armor || 0) < ar0; run.rush.i = 0;
       return o; });
     t.ok(a.panel1 && a.allSp, '보스 러시 시작 → 특수 특전 3장 중 1장 고르기');
-    t.ok(a.special && a.panel2 && a.normal, '특전을 고르면 이어서 일반 보상 1개', JSON.stringify(a));
+    t.ok(a.special && a.panel2 && a.second && a.normal, '특전을 고르면 이어서 일반 보상 2개 (v3.121)', JSON.stringify(a));
+    t.ok(a.soft && a.softOff, '앞쪽 두 보스 동안만 받는 탄 피해 ×0.8, 수호형을 잡으면 원래대로 (v3.121)');
     const d = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } }; CFG.god = 1;
       for (let i = 0; i < 400 && run.phase !== 'fight'; i++) step(1);
       run.mapWalls = []; run.walls = [];   // 벽 너머엔 안 쏘므로 시험 동안 벽을 치움
@@ -862,7 +865,7 @@ module.exports = {
     t.eq(d.seized, 0, '드론 탄은 적이 되뺏지 못함');
     t.ok(d.pauseStop, '일시정지 중엔 드론도 멈춤');
     t.ok(d.noDroneNormal, '드론은 보스 러시에만 (일반 판엔 없음)');
-    await p.evaluate(() => { go('hub'); run = null; go('title'); $('#exRush').click(); takeReward(0); takeReward(0); });
+    await p.evaluate(() => { go('hub'); run = null; go('title'); $('#exRush').click(); takeReward(0); takeReward(0); takeReward(0); });
     const h = await p.evaluate(() => { const o = {}; run.rush.i = 2; run.phase = 'break'; openReward(false); o.hd = $('#rwHd').innerText; takeReward(0);
       run.rush.i = RUSH_ORDER.length; run.phase = 'break'; openReward(false); o.last = !$('#reward').classList.contains('on') && run.phase !== 'reward'; return o; });
     t.ok(h.hd.includes('수호형 격파 (2 / 5)'), '보스 러시 보상 창 제목에 잡은 보스 ("웨이브 2 완료" 대신)', h.hd);

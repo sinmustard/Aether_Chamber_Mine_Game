@@ -858,12 +858,20 @@ drawEnemyBody=function(e){ if(!e.prime) return _drawEnemyBodyP(e); const p=proj(
 
 /* ================= 보스 러시 전용 (v3.114) — 시작 특전 · 시작 보상 · 공격 드론. 보상 없이 바로 보스라 강화를 다 찍은 봇도 2번째 보스에서 쓰러졌다 ================= */
 {
-/* 시작: 특수 특전 3장 중 1장 → 이어서 일반 보상 1개 (takeReward가 startRewards를 보고 엶) */
+/* v3.121 사람형 봇이 첫 보스에서 거의 다 쓰러져서: 시작 보상 2개 · 앞쪽 두 보스(기본형 · 수호형) 동안만 받는 탄 피해 ×0.8 */
+const RUSH_SOFT={start:2,dmg:0.8,until:2};
+window.RUSH_SOFT=RUSH_SOFT;
+/* 탄 피해식이 (1−장갑)을 곱하므로, 그동안만 장갑을 올려 ×0.8을 만든다. 켤 때 올린 만큼 끌 때 되돌림 */
+function rushSoftOn(){ if(run._softD) return; run._softD=(1-(CFG.armor||0))*(1-RUSH_SOFT.dmg); CFG.armor=(CFG.armor||0)+run._softD; }
+function rushSoftOff(){ if(!run._softD) return; CFG.armor-=run._softD; run._softD=0; }
+window.rushSoftActive=()=>!!(run&&run._softD);
+/* 시작: 특수 특전 3장 중 1장 → 이어서 일반 보상 (takeReward가 startRewards를 보고 엶) */
 window.exRushStart=function(){ if(!run||!run.rush) return;
   const pool=SPECIALS.filter(s=>boonLv(s.k)<(s.max||1)&&(!s.ok||s.ok())&&!s.stay&&!s.chaos), picks=[];
   while(picks.length<3&&pool.length) picks.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   if(!picks.length) return;
-  run.startRewards=1; rwPicks=picks; window.exCardPanel('보스 러시 &nbsp;—&nbsp; 특수 특전 하나를 고르세요 (다음엔 보상 하나)'); };
+  run.startRewards=RUSH_SOFT.start; rwPicks=picks; window.exCardPanel('보스 러시 &nbsp;—&nbsp; 특수 특전 하나를 고르세요 (다음엔 보상 '+RUSH_SOFT.start+'개)');
+  rushSoftOn(); };
 /* 공격 드론: 플레이어 둘레를 돌며 1.2초마다 가장 가까운 적(보스 우선)에게 0.5칸짜리 내 탄. 적은 이 탄을 되뺏지 못함
    플레이어 공격 수단은 패링뿐이라는 원칙(폐기한 설계)이 있어서 보스 러시에만 */
 const DRONE={r:54,cd:1.2,dmg:0.5,spd:560,life:2.5};
@@ -871,6 +879,7 @@ window.DRONE=DRONE;
 const _updateD=update;
 update=function(dt){ _updateD(dt);
   if(!run||screen!=='game'||!run.rush) return;
+  if(run._softD&&run.rush.i>=RUSH_SOFT.until){ rushSoftOff(); announce('여기서부터 원래 피해','warn'); }
   const d=run.drone||(run.drone={a:0,t:0.8,x:P.x,y:P.y}); d.a+=dt*2.4; d.x=P.x+Math.cos(d.a)*DRONE.r; d.y=P.y+Math.sin(d.a)*DRONE.r;
   for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.drone&&(b.age>DRONE.life||b.owner!=='player')) bullets.splice(i,1); }   // 빗나간 탄은 금방 사라짐
   if(run.phase!=='fight') return;
