@@ -677,4 +677,26 @@ module.exports = {
     t.ok(near.bad === 0, '판 중간 맵 교체 — 새 벽이 지금 플레이어 자리 가까이(100 안)에 생기지 않음 (v3.102)', near.bad + ' / ' + near.total);
     noErrors(t, g, '초반 피해'); await p.close();
   },
+
+  async '후반 압박 (v3.103)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
+    const r = await p.evaluate(() => { const o = {}, rnd = Math.random;
+      const wave = (c, w) => { ens.length = 0; bullets.length = 0; queue.length = 0; run.cycle = c; run.wave = w - 1; run.stormCycle = c; run.phase = 'break'; waveSpawn(); const n = ens.length; ens.length = 0; queue.length = 0; return n; };
+      Math.random = () => 0.99;   // 무작위로 바뀌는 구성 · 탄 폭풍 · 흡수체를 고정
+      o.n4 = wave(4, 8); o.n5 = wave(5, 8); o.n8 = wave(8, 8); Math.random = rnd;
+      o.spd = [4, 5, 6, 12, 20].map(c => { run.cycle = c; return Math.round(lateSpd() * 100); }).join();
+      run.cycle = 3; o.adv3 = advPatternsOK(); run.cycle = 4; o.adv4 = advPatternsOK();
+      // 연속 사격: 6사이클에서 쏜 직후 다시 쏠 준비 (확률 1로)
+      LATE.dblP = 1; run.cycle = 6; run.wave = 3; run.phase = 'fight'; ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 1;
+      spawnEnemyAt('mob', P.x + 300, P.y); const e = ens[ens.length - 1]; e.fireT = 0.001;
+      for (let i = 0; i < 3; i++) { hitstop = 0; update(1 / 60); } o.dbl = e.fireT > 0 && e.fireT <= 0.36; LATE.dblP = 0.2;
+      run.mode = 'daily'; run.cycle = 9; o.dailyOff = lateSpd() === 0 && !advPatternsOK(); run.mode = 'normal';
+      return o; });
+    t.ok(r.n5 === r.n4 + 1 && r.n8 === r.n4 + 2, '적 수: 5사이클부터 +1, 8사이클부터 +2', JSON.stringify({ c4: r.n4, c5: r.n5, c8: r.n8 }));
+    t.eq(r.spd, '0,4,8,32,32', '적 탄속: 5사이클부터 사이클당 +4%, 최대 +32%');
+    t.ok(!r.adv3 && r.adv4, '노멀도 4사이클부터 어려운 패턴');
+    t.ok(r.dbl, '6사이클부터 쏜 직후 확률로 0.35초 뒤 한 번 더');
+    t.ok(r.dailyOff, '데일리에는 후반 압박 없음');
+    noErrors(t, g, '후반 압박'); await p.close();
+  },
 };

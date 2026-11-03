@@ -564,3 +564,44 @@ const titleBtns=[['exPrac','연습장','practice',openPractice],['exRush','보�
 let anchor=$('#exDex')||document.querySelector('#title [data-modal=stats]');
 titleBtns.forEach(([id,label,k,fn])=>{ const b=document.createElement('button'); b.id=id; b.textContent=label; b.onclick=()=>{ if(feat(k)) fn(); }; anchor.after(b); anchor=b; });
 }
+
+/* ================= 후반 압박 (v3.103) — 강화를 다 찍으면 하드도 30분을 버텨서(봇 10판 모두) 사이클이 오를수록 조금씩 세게 ================= */
+{
+const LATE={patFrom:4, patP:0.35, addFrom:5, add2From:8, maxEns:8, spdFrom:5, spdStep:0.04, spdMax:0.32, dblFrom:6, dblP:0.2, dbl2From:8, dbl2P:0.35};
+window.LATE=LATE;   // 테스트 · 조정용
+/* 등급별로 후반에 섞이는 더 센 패턴 (PATTERNS 번호) */
+const LATE_POOL={mob:[2,4,16,15],elite:[6,15,13,14],bulwark:[10,12,16],splitter:[10,11,16],splinter:[1,11],mortar:[10,12],
+  gunner:[16,13],weaver:[21,15],sprayer:[24,25],trapper:[23,11],cannon:[9]};
+const lateOn=()=>run&&!run.tut&&!run.practice&&!run.rush&&run.mode!=='daily'&&run.mode!=='chaosx';
+const lateSpd=()=>lateOn()&&run.cycle>=LATE.spdFrom?Math.min(LATE.spdMax,(run.cycle-LATE.spdFrom+1)*LATE.spdStep):0;
+window.lateSpd=lateSpd;
+/* 패턴: 4사이클부터 노멀도 어려운 패턴을 쓰고, 등급별 센 패턴이 섞인다 */
+const _advOK=advPatternsOK;
+advPatternsOK=function(){ return _advOK.apply(this,arguments)||(lateOn()&&run.cycle>=LATE.patFrom); };
+const _pickPattern=pickPattern;
+pickPattern=function(e){ if(e&&e.grade!=='boss'&&lateOn()&&run.cycle>=LATE.patFrom){ const L=LATE_POOL[G(e).pool];
+    if(L&&Math.random()<LATE.patP) return PATTERNS[L[Math.floor(Math.random()*L.length)]]; }
+  return _pickPattern.apply(this,arguments); };
+/* 적 수: 5사이클부터 +1, 8사이클부터 +2 (한 웨이브 최대 8기, 보스 웨이브 제외) */
+const _waveSpawnL=waveSpawn;
+waveSpawn=function(){ _waveSpawnL.apply(this,arguments);
+  if(!lateOn()||run.phase!=='fight'||run.storm||ens.some(e=>e.grade==='boss')) return;
+  const add=run.cycle>=LATE.add2From?2:run.cycle>=LATE.addFrom?1:0, gs=ens.map(e=>e.grade).filter(g=>g!=='relay'&&g!=='minion');
+  for(let i=0;i<add&&ens.length<LATE.maxEns&&gs.length;i++) spawnEnemy(gs[Math.floor(Math.random()*gs.length)]); };
+/* 탄속: 5사이클부터 사이클당 +4% (적 탄만) */
+const _spawnBulletL=spawnBullet;
+spawnBullet=function(q){ const n=bullets.length; _spawnBulletL(q); const k=1+lateSpd();
+  if(k>1) for(let i=n;i<bullets.length;i++){ const b=bullets[i]; if(b.owner==='enemy'){ b.spd*=k; b.base*=k; } } };
+/* 연속 사격: 6사이클부터 쏜 직후 확률로 0.35초 뒤 한 번 더 (연달아 세 번은 안 함) */
+const _updateL=update;
+update=function(dt){
+  if(run&&screen==='game') ens.forEach(e=>{ e._lf=e.fireT; });
+  const c0=run&&run.cycle; _updateL(dt);
+  if(!run||screen!=='game'||!lateOn()) return;
+  if(run.cycle>=LATE.dblFrom){ const p=run.cycle>=LATE.dbl2From?LATE.dbl2P:LATE.dblP;
+    ens.forEach(e=>{ if(e.grade==='boss'||e._lf==null||!(e.fireT>e._lf+0.05)) return;   // 이번 프레임에 쐈다
+      if(!e._dbl&&Math.random()<p){ e.fireT=0.35; e._dbl=1; } else e._dbl=0; }); }
+  if(c0&&run.cycle>c0&&run.cycle>=LATE.addFrom&&[LATE.addFrom,LATE.dblFrom,LATE.add2From].includes(run.cycle)||(c0&&run.cycle>c0&&run.cycle===LATE.patFrom)){
+    const t=[run.cycle>=LATE.patFrom?'센 패턴':'',run.cycle>=LATE.addFrom?'적 +'+(run.cycle>=LATE.add2From?2:1):'',lateSpd()?'탄속 +'+Math.round(lateSpd()*100)+'%':'',run.cycle>=LATE.dblFrom?'연속 사격':''].filter(Boolean).join(' · ');
+    setTimeout(()=>{ if(run) announce('후반 압박 — '+t,'red'); },2600); } };
+}
