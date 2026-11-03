@@ -837,4 +837,31 @@ module.exports = {
     t.eq(r.fovOn, 180, '전방위 감지: 시야 상한 180');
     noErrors(t, g, '코드 검토 수정'); await p.close();
   },
+
+  async '보스 러시 시작 특전 · 드론 (v3.114)'(t, { browser, url }) {
+    const g = await openGame(browser, url), p = g.page; await wait(500);
+    await p.evaluate(() => go('title')); await click(p, '#exRush'); await wait(400);
+    const a = await p.evaluate(() => { const o = {}, spSum = () => SPECIALS.reduce((x, s) => x + boonLv(s.k), 0);
+      o.panel1 = $('#reward').classList.contains('on') && /특수 특전/.test($('#rwHd').innerText); o.allSp = rwPicks.length === 3 && rwPicks.every(b => b.sp);
+      const s0 = spSum(); takeReward(0); o.special = spSum() === s0 + 1;
+      o.panel2 = $('#reward').classList.contains('on') && !/특수 특전/.test($('#rwHd').innerText) && rwPicks.every(b => !b.sp || b.chaos === undefined);
+      const n0 = Object.keys(run.boons).length; takeReward(0); o.normal = Object.keys(run.boons).length >= n0 && run.phase !== 'reward';
+      return o; });
+    t.ok(a.panel1 && a.allSp, '보스 러시 시작 → 특수 특전 3장 중 1장 고르기');
+    t.ok(a.special && a.panel2 && a.normal, '특전을 고르면 이어서 일반 보상 1개', JSON.stringify(a));
+    const d = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } }; CFG.god = 1;
+      for (let i = 0; i < 400 && run.phase !== 'fight'; i++) step(1);
+      run.mapWalls = []; run.walls = [];   // 벽 너머엔 안 쏘므로 시험 동안 벽을 치움
+      const boss = ens.find(e => e.grade === 'boss'); o.boss = !!boss; const hp0 = boss ? boss.hp : 0; let shots = 0, seized = 0;
+      for (let i = 0; i < 360; i++) { step(1); bullets.forEach(b => { if (b.drone && !b._seen) { b._seen = 1; shots++; } if (b.drone && b.owner !== 'player') seized++; }); }
+      o.shots = shots; o.seized = seized; o.dmg = boss ? hp0 - boss.hp : 0; o.drone = !!run.drone;
+      paused = true; const t0 = run.drone.t, n0 = bullets.filter(b => b.drone).length; for (let i = 0; i < 120; i++) update(1 / 60); o.pauseStop = run.drone.t === t0 && bullets.filter(b => b.drone).length <= n0; paused = false;
+      go('hub'); run = null; startRun('normal'); for (let i = 0; i < 200; i++) step(1); o.noDroneNormal = !run.drone && !bullets.some(b => b.drone);
+      return o; });
+    t.ok(d.boss && d.shots >= 4 && d.dmg > 0, '전용 드론이 1.2초마다 보스에게 쏴서 피해', JSON.stringify(d));
+    t.eq(d.seized, 0, '드론 탄은 적이 되뺏지 못함');
+    t.ok(d.pauseStop, '일시정지 중엔 드론도 멈춤');
+    t.ok(d.noDroneNormal, '드론은 보스 러시에만 (일반 판엔 없음)');
+    noErrors(t, g, '보스 러시'); await p.close();
+  },
 };

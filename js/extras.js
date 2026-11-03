@@ -300,7 +300,7 @@ function exBoss(v){ spawnEnemy('boss'); const bb=ens[ens.length-1]; bb.variant=v
 let exPending=null;
 const _newRun=newRun;
 newRun=function(){ const r=_newRun.apply(this,arguments); if(exPending&&run){ Object.assign(run,exPending); exPending=null; } return r; };
-function exStart(extra){ exPending=Object.assign({cheat:1,startRewards:0},extra); $('#modal').classList.remove('on'); startRun('normal'); if(run){ run.chaos=false; run.startRewards=0; } }
+function exStart(extra){ exPending=Object.assign({cheat:1,startRewards:0},extra); $('#modal').classList.remove('on'); startRun('normal'); if(run){ run.chaos=false; run.startRewards=0; if(run.rush&&window.exRushStart) window.exRushStart(); } }
 
 /* ---- 웨이브: 연습장 · 보스 러시 · 탄 폭풍 · 위험 계약 · 흡수체 ---- */
 const _waveSpawn=waveSpawn;
@@ -647,6 +647,7 @@ function openSynChoice(){ const ns=SYN.find(s=>s.k===run.synPend); run.synPend=n
   rwPicks.push({k:'syn_no',n:ns.n+' 켜지 않기',d:synName(ns)+' — 지금 공명을 그대로 둠, 자리가 나면 그때 켜짐',tag:'공명',chaos:1,fn:()=>{ run.synNo[ns.k]=1; }});
   openCardPanel('공명 자리 '+synCap()+'개가 다 찼어요 &nbsp;—&nbsp; 새 공명 「'+synName(ns)+'」을 켤까요?'); }
 window.synCap=()=>synCap();
+window.exCardPanel=t=>openCardPanel(t);   // 보스 러시 시작 특전 고르기에서 씀
 const _takeReward=takeReward;
 takeReward=function(){ const r=_takeReward.apply(this,arguments); synCheck(); if(run&&run.synPend&&run.phase!=='reward') openSynChoice(); return r; };
 /* 보상 카드: 이걸 고르면 완성되는 공명을 표시 */
@@ -765,6 +766,40 @@ const _endRunS=endRun;
 endRun=function(){ const r=run, out=_endRunS.apply(this,arguments), more=$('#exMore');
   if(more&&r&&r.syn){ const on=SYN.filter(s=>r.syn[s.k]); if(on.length) more.insertAdjacentHTML('afterbegin','<div style="color:var(--dim)">공명 — '+on.map(s=>'<b style="color:var(--warn)">'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }
   return out; };
+}
+
+/* ================= 보스 러시 전용 (v3.114) — 시작 특전 · 시작 보상 · 공격 드론. 보상 없이 바로 보스라 강화를 다 찍은 봇도 2번째 보스에서 쓰러졌다 ================= */
+{
+/* 시작: 특수 특전 3장 중 1장 → 이어서 일반 보상 1개 (takeReward가 startRewards를 보고 엶) */
+window.exRushStart=function(){ if(!run||!run.rush) return;
+  const pool=SPECIALS.filter(s=>boonLv(s.k)<(s.max||1)&&(!s.ok||s.ok())&&!s.stay&&!s.chaos), picks=[];
+  while(picks.length<3&&pool.length) picks.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+  if(!picks.length) return;
+  run.startRewards=1; rwPicks=picks; window.exCardPanel('보스 러시 &nbsp;—&nbsp; 특수 특전 하나를 고르세요 (다음엔 보상 하나)'); };
+/* 공격 드론: 플레이어 둘레를 돌며 1.2초마다 가장 가까운 적(보스 우선)에게 0.5칸짜리 내 탄. 적은 이 탄을 되뺏지 못함
+   플레이어 공격 수단은 패링뿐이라는 원칙(폐기한 설계)이 있어서 보스 러시에만 */
+const DRONE={r:54,cd:1.2,dmg:0.5,spd:560,life:2.5};
+window.DRONE=DRONE;
+const _updateD=update;
+update=function(dt){ _updateD(dt);
+  if(!run||screen!=='game'||!run.rush) return;
+  const d=run.drone||(run.drone={a:0,t:0.8,x:P.x,y:P.y}); d.a+=dt*2.4; d.x=P.x+Math.cos(d.a)*DRONE.r; d.y=P.y+Math.sin(d.a)*DRONE.r;
+  for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; if(b.drone&&(b.age>DRONE.life||b.owner!=='player')) bullets.splice(i,1); }   // 빗나간 탄은 금방 사라짐
+  if(run.phase!=='fight') return;
+  d.t-=dt; if(d.t>0) return;
+  const vis=ens.filter(e=>!wallBetween(d.x,d.y,e.x,e.y)), boss=vis.find(e=>e.grade==='boss');
+  const tgt=boss||vis.sort((a,b)=>dist(a.x,a.y,d.x,d.y)-dist(b.x,b.y,d.x,d.y))[0];
+  if(!tgt){ d.t=0.3; return; }
+  d.t=DRONE.cd; const dir=Math.atan2(tgt.y-d.y,tgt.x-d.x);
+  bullets.push({x:d.x,y:d.y,dir,spd:DRONE.spd,base:DRONE.spd,owner:'player',returns:0,age:0,trail:[],glow:1,hcd:0.3,tried:ens.slice(),ready:false,
+    feint:0,orbitDir:0,orbitAmt:0,pierceLeft:0,pdm:DRONE.dmg,htg:tgt,drone:1});
+  burst(d.x,d.y,'cyan',5,90); };
+const _drawPlayerBodyD=drawPlayerBody;
+drawPlayerBody=function(){ _drawPlayerBodyD(); if(!run||!run.rush||!run.drone) return;
+  const d=run.drone, q=proj(d.x,d.y), k=run.phase==='fight'?Math.max(0,1-d.t/DRONE.cd):0, s=9;
+  ctx.save(); ctx.globalAlpha=0.25+0.35*k; ctx.fillStyle=C.cyan; ctx.beginPath(); ctx.arc(q[0],q[1],s+6+k*4,0,TAU); ctx.fill();
+  ctx.globalAlpha=1; ctx.translate(q[0],q[1]); ctx.rotate(d.a*2); ctx.fillStyle=C.cyan; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,-s); ctx.lineTo(s,0); ctx.lineTo(0,s); ctx.lineTo(-s,0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); };
 }
 
 /* ================= 맨 바깥 안전장치 (v3.113, 코드 검토 반영) ================= */
