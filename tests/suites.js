@@ -559,9 +559,9 @@ module.exports = {
     // 위험한 선택 「증원」(예전 위험 계약): 웨이브 비우기 → 카드 → 수락 → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
     for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));   // 다음 전투가 시작될 때까지 (이미 비운 웨이브면 '비운 순간'이 없다)
       if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
-    await p.evaluate(() => { run.wave = Math.max(run.wave, 3); run._evW = 0; run.forceEvent = 'horde'; for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
+    await p.evaluate(() => { run.wave = Math.max(run.wave, 3); run._evW = 0; run.forceEvent = 'horde'; for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; run.phase = 'fight'; });   // 다음 프레임에 '비운 순간'이 꼭 생기게
     for (let i = 0; i < 30 && !(await p.evaluate(() => $('#reward').classList.contains('on'))); i++) await wait(100);
-    const offer = await p.evaluate(() => $('#rwHd').innerText); await wait(600); await p.keyboard.press('1'); await wait(150);
+    const offer = await p.evaluate(() => $('#rwHd').innerText + ' | wave ' + run.cycle + '-' + run.wave + ' ' + run.phase + ' force ' + run.forceEvent + ' evW ' + run._evW + ' ens ' + ens.length); await wait(600); await p.keyboard.press('1'); await wait(150);
     const next = await p.evaluate(() => run.riskNext);
     t.ok(/증원/.test(offer) && next === 1, '웨이브 클리어 직후 위험한 선택 「증원」 카드 → 수락 (폰에서도 카드로)', offer);
     for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
@@ -718,16 +718,19 @@ module.exports = {
       // 보상 카드: 이걸 고르면 완성되는 공명이 보임
       run.boons.pierce = 1; rwPicks = [boonDef('grit'), boonDef('range'), boonDef('move')]; renderRwRow(); o.hint = /공명 완성 — 꿰뚫는 집념/.test($('#rwRow').innerText);
       run.boons = {}; run.syn = {};
-      // 명경지수 · 전방위 감지: 한 번만 바뀌는 수치
-      const wh = CFG.whiff, rg = CFG.rangeM; give('calm', 's_focus', 'range', 'fov'); o.zen = Math.abs(CFG.whiff - wh * 0.5) < 1e-6; o.eye = Math.abs(CFG.rangeM - rg * 1.1) < 1e-6;
-      synCheck(); o.once = Math.abs(CFG.whiff - wh * 0.5) < 1e-6;
+      // 전방위 감지: 한 번만 바뀌는 수치
+      const rg = CFG.rangeM; give('range', 'fov'); o.eye = Math.abs(CFG.rangeM - rg * 1.1) < 1e-6;
+      synCheck(); o.once = Math.abs(CFG.rangeM - rg * 1.1) < 1e-6;
       // 꿰뚫는 집념
       reset(); give('pierce', 'grit'); const b1 = pb(500, 200, 3); step(1); o.pg = b1.pierceLeft === 1;
       // 반격 본능 · 벼랑 끝
       reset(); give('counter', 'fury'); P.counterT = 1; const b2 = pb(500, 200, 1); step(1); o.rev = b2.pdm === 1.5; P.counterT = 0;
       reset(); run.boons.edge = 1; P.hp = CFG.hpMax * 0.2; const b3 = pb(500, 200, 1); step(1); o.edgeDmg = b3.pdm === 1.5; P.hp = CFG.hpMax;
-      // 잔상 질주
-      reset(); give('iframe', 'move'); const ms = CFG.moveSpd; P.inv = 1; step(1); o.gh1 = CFG.moveSpd === ms + 60; P.inv = 0; step(1); o.gh2 = CFG.moveSpd === ms;
+      // 잔상 폭발: 맞으면 잔상 → 0.6초 뒤 둘레 적 탄을 지우고 주변 적에게 피해, 4초 동안 다시 안 남음
+      reset(); give('iframe', 'calm'); run._afCd = 0; spawnEnemyAt('mob', P.x + 120, P.y); const em = ens[ens.length - 1]; em.bindT = 99; em.fireT = 99; const ehp = em.hp;
+      for (let i = 0; i < 5; i++) bullets.push({ x: P.x - 100 + i * 10, y: P.y - 60, dir: 0, spd: 1, base: 1, owner: 'enemy', returns: 0, boss: 0, age: 0, trail: [], glow: 0, hcd: 0, tried: [], ready: false, feint: 0, orbitDir: 0, orbitAmt: 0, straight: 1 });
+      onHurt(); o.afLeft = (run.afx || []).length; onHurt(); o.afCd = (run.afx || []).length;
+      step(45); o.afClear = bullets.filter(b => b.owner === 'enemy').length === 0; o.afHit = em.hp < ehp || !ens.includes(em);
       // 연쇄 폭발
       reset(); give('shard', 'aftershock'); spawnEnemyAt('mob', 600, 300); spawnEnemyAt('mob', 660, 300); const [k1, k2] = ens; k2.hp = HIT_UNIT * 0.4; killEnemy(k1); o.chain = !ens.includes(k2);
       // 생명 순환: 가득 찬 상태에서 넘친 회복 20마다 보호막
@@ -744,13 +747,14 @@ module.exports = {
       reset(); give('greed', 's_score'); o.list = boonListHTML().includes('공명 1 / 3') && /✓ <b[^>]*>황금 회로/.test(boonListHTML());
       return o; }).catch(e => ({ err: e.message }));
     t.ok(!r.err, '공명 확인 중 오류 없음', r.err);
-    t.eq(r.pairs, '10:10', '공명 10종 — 재료 보상이 모두 실제로 있음');
+    t.eq(r.pairs, '9:9', '공명 9종 — 재료 보상이 모두 실제로 있음');
     t.ok(r.edge, '새 보상 「벼랑 끝」');
     t.ok(r.hint, '보상 카드에 "공명 완성" 표시');
-    t.ok(r.zen && r.eye && r.once, '명경지수 · 전방위 감지 — 수치는 한 번만 바뀜');
+    t.ok(r.eye && r.once, '전방위 감지 — 수치는 한 번만 바뀜');
     t.ok(r.pg, '꿰뚫는 집념: 왕복 3회 탄 관통 +1');
     t.ok(r.rev && r.edgeDmg, '반격 본능 · 벼랑 끝: 패링한 탄 피해 ×1.5');
-    t.ok(r.gh1 && r.gh2, '잔상 질주: 무적 동안만 이동 +60');
+    t.ok(r.afLeft === 1 && r.afCd === 1, '잔상 폭발: 맞으면 잔상 하나 (재사용 대기 중엔 안 남음)');
+    t.ok(r.afClear && r.afHit, '잔상 폭발: 0.6초 뒤 둘레 적 탄을 지우고 주변 적에게 피해', JSON.stringify({ clear: r.afClear, hit: r.afHit }));
     t.ok(r.chain, '연쇄 폭발: 처치 폭발로 옆 적이 죽음');
     t.eq(r.life, 1, '생명 순환: 넘친 회복 20 → 보호막 1');
     t.ok(r.gold, '황금 회로: 맞지 않고 넘긴 웨이브 보너스');
@@ -764,15 +768,15 @@ module.exports = {
     const g = await openGame(browser, url), p = g.page; await toHub(p); await launchRun(p); await wait(1000);
     // 공명 3개가 찬 뒤 4번째 → 카드 4장 (3장 바꾸기 + 켜지 않기), 4번 키로 고를 수 있음
     const a = await p.evaluate(() => { const o = {}; run.boons = {}; run.syn = {}; run.synNo = {}; run.synPend = null; ens.length = 0; bullets.length = 0; queue.length = 0; run.phase = 'fight';
-      const wh = CFG.whiff; ['calm', 's_focus', 'pierce', 'grit', 'iframe', 'move', 'greed', 's_score'].forEach(k => run.boons[k] = 1);
-      rwPicks = [boonDef('range')]; run.phase = 'reward'; takeReward(0);
+      const rg = CFG.rangeM; ['pierce', 'grit', 'leech', 'vital', 'range', 'fov', 'edge', 'counter'].forEach(k => run.boons[k] = 1);
+      rwPicks = [boonDef('move')]; run.phase = 'reward'; takeReward(0);
       o.on = SYNERGY.filter(s => run.syn[s.k]).map(s => s.k).join(); o.cards = rwPicks.length; o.hd = $('#rwHd').innerText; o.panel = $('#reward').classList.contains('on');
-      o.zenHalf = Math.abs(CFG.whiff - wh) > 1e-9; o.wh = wh; return o; });
-    t.eq(a.on, 'pg,zen,gh', '공명은 3개까지 — 4번째(황금 회로)는 바로 안 켜짐');
-    t.ok(a.panel && a.cards === 4 && /황금 회로/.test(a.hd), '4번째가 완성되면 카드 4장: 3개 중 하나와 바꾸기 / 켜지 않기', a.hd);
-    await wait(600); await p.keyboard.press('2'); await wait(200);   // 2번째 카드 = 명경지수 끄고 황금 회로
-    const b = await p.evaluate(wh => ({ on: SYNERGY.filter(s => run.syn[s.k]).map(s => s.k).join(), whBack: Math.abs(CFG.whiff - wh) < 1e-9, phase: run.phase }), a.wh);
-    t.ok(b.on === 'pg,gh,gold' && b.whBack, '바꾸면 끈 공명 효과가 되돌아감 (명경지수 경직 −50% 해제)', JSON.stringify(b));
+      o.rg = rg; return o; });
+    t.eq(a.on, 'pg,life,eye', '공명은 3개까지 — 4번째(최후의 반격)는 바로 안 켜짐');
+    t.ok(a.panel && a.cards === 4 && /최후의 반격/.test(a.hd), '4번째가 완성되면 카드 4장: 3개 중 하나와 바꾸기 / 켜지 않기', a.hd);
+    await wait(600); await p.keyboard.press('3'); await wait(200);   // 3번째 카드 = 전방위 감지 끄고 최후의 반격
+    const b = await p.evaluate(rg => ({ on: SYNERGY.filter(s => run.syn[s.k]).map(s => s.k).join(), whBack: Math.abs(CFG.rangeM - rg) < 1e-9, phase: run.phase }), a.rg);
+    t.ok(b.on === 'pg,life,last' && b.whBack, '바꾸면 끈 공명 효과가 되돌아감 (전방위 감지 사거리 +10% 해제)', JSON.stringify(b));
     // 위험한 선택 5종
     const e = await p.evaluate(() => { const o = {}, acc = k => { openRiskEvent(k); const ok = $('#reward').classList.contains('on') && /위험한 선택/.test($('#rwHd').innerText); takeReward(0); return ok; };
       run.phase = 'fight'; ens.length = 0; bullets.length = 0; queue.length = 0; CFG.god = 1;

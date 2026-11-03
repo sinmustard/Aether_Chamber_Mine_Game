@@ -612,8 +612,7 @@ const SYN=[
   {k:'life',n:'생명 순환',   a:'leech',  b:'vital',    d:'체력이 가득할 때 넘친 처치 회복 20마다 보호막 +1 (최대 3)'},
   {k:'rev', n:'반격 본능',   a:'counter',b:'fury',     d:'맞은 뒤 2초 동안 패링한 탄 피해 ×1.5'},
   {k:'mp',  n:'다중 반사',   a:'multi',  b:'flow',     d:'한 번에 2발 이상 빼앗으면 0.4초 무적'},
-  {k:'zen', n:'명경지수',    a:'calm',   b:'s_focus',  d:'빗나감 경직 −50% 더'},
-  {k:'gh',  n:'잔상 질주',   a:'iframe', b:'move',     d:'피격 무적 동안 이동 속도 +60'},
+  {k:'after',n:'잔상 폭발', a:'iframe', b:'calm',     d:'빗나가거나 맞으면 그 자리에 잔상 — 0.6초 뒤 터져 둘레 170의 적 탄을 지우고 주변 적에게 0.5칸 (재사용 4초)'},   // v3.108 명경지수 · 잔상 질주를 합침
   {k:'gold',n:'황금 회로',   a:'greed',  b:'s_score',  d:'맞지 않고 넘긴 웨이브마다 보너스 점수 (300 × 사이클)'},
   {k:'eye', n:'전방위 감지', a:'range',  b:'fov',      d:'패링 사거리 +10% · 시야 +10° 더'},
   {k:'last',n:'최후의 반격', a:'edge',   b:'counter',  d:'체력 30% 이하에서 맞으면 1초 무적 (판마다 3번)'},
@@ -627,9 +626,8 @@ const bname=k=>{ const b=boonDef(k); return b?b.n:k; };
 const synCap=()=>3+(run.synSlots||0);
 const synCount=()=>SYN.filter(s=>run.syn&&run.syn[s.k]).length;
 function synApply(s,on){   // 켜고 끌 때 한 번만 바뀌는 수치
-  if(s.k==='zen') CFG.whiff*=on?0.5:2;
   if(s.k==='eye'){ if(on){ CFG.rangeM*=1.1; CFG.fov=Math.min(180,CFG.fov+10); } else { CFG.rangeM/=1.1; CFG.fov-=10; } }
-  if(s.k==='gh'&&!on&&P._syMv){ CFG.moveSpd-=60; P._syMv=0; } }
+}
 function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{}; run.synNo=run.synNo||{};
   SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return;
     if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); setTimeout(()=>{ if(run) announce('공명 — '+s.n,'warn'); },400); }
@@ -657,13 +655,36 @@ boonListHTML=function(){ const h=_boonListHTML.apply(this,arguments); if(!run) r
   return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">공명 '+synCount()+' / '+synCap()+'</div>'+SYN.map(s=>{ const on=synOn(s.k), ha=boonLv(s.a)>0, hb=boonLv(s.b)>0;
     return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> '+
       '<span style="color:'+(ha?'var(--cyan)':'var(--dim)')+'">'+bname(s.a)+'</span> + <span style="color:'+(hb?'var(--cyan)':'var(--dim)')+'">'+bname(s.b)+'</span> — '+s.d+'</div>'; }).join(''); };
+/* 잔상 폭발: 잔상을 남기고 0.6초 뒤 크게 터진다 (run.afx — 잔상 · 고리 그리기용) */
+const AFTER={delay:0.6,r:170,dmg:0.5,cd:4};
+window.AFTERIMAGE=AFTER;
+function leaveAfterimage(){ if(!synOn('after')||(run._afCd||0)>0||run.phase!=='fight') return;
+  run._afCd=AFTER.cd; (run.afx||(run.afx=[])).push({x:P.x,y:P.y,t:AFTER.delay,ring:0}); say('잔상','cyan'); }
+function afterTick(dt){ if(run._afCd>0) run._afCd-=dt; const A=run.afx; if(!A||!A.length) return;
+  for(let i=A.length-1;i>=0;i--){ const a=A[i];
+    if(a.t>0){ a.t-=dt; if(a.t<=0){ let n=0;
+        for(let j=bullets.length-1;j>=0;j--){ const b=bullets[j]; if(b.owner==='enemy'&&dist(b.x,b.y,a.x,a.y)<AFTER.r){ burst(b.x,b.y,'cyan',4,120); bullets.splice(j,1); n++; } }
+        ens.slice().forEach(e=>{ if(dist(e.x,e.y,a.x,a.y)<AFTER.r+e.r){ e.hp-=HIT_UNIT*AFTER.dmg; e.hurt=.25; if(e.hp<=HIT_UNIT*0.25) killEnemy(e); } });
+        burst(a.x,a.y,'cyan',46,AFTER.r*2); shake=Math.max(shake,14); sfx('breach'); say('잔상 폭발'+(n?' · 탄 '+n:''),'cyan'); a.ring=0.45; } }
+    else { a.ring-=dt; if(a.ring<=0) A.splice(i,1); } } }
+const _drawMortarsA=drawMortars;
+drawMortars=function(){ _drawMortarsA(); if(!run||!run.afx) return; const now=performance.now();
+  run.afx.forEach(a=>{ const q=proj(a.x,a.y); ctx.save();
+    if(a.t>0){ const k=1-a.t/AFTER.delay;   // 잔상: 플레이어 모양이 깜빡이며 커지는 예고 원
+      ctx.globalAlpha=0.35+0.3*Math.sin(now/40); ctx.fillStyle=C.cyan; ctx.beginPath(); ctx.ellipse(q[0],q[1],R_PLAYER,R_PLAYER*SQUASH,0,0,TAU); ctx.fill();
+      ctx.globalAlpha=0.5; ctx.strokeStyle=C.cyan; ctx.lineWidth=2; ctx.setLineDash([6,6]); ctx.beginPath(); ctx.ellipse(q[0],q[1],AFTER.r*k,AFTER.r*k*SQUASH,0,0,TAU); ctx.stroke(); }
+    else { const k=1-a.ring/0.45;   // 폭발 고리: 바깥으로 퍼지며 사라진다
+      ctx.globalAlpha=Math.max(0,1-k); ctx.strokeStyle=C.cyan; ctx.lineWidth=10*(1-k)+2; ctx.beginPath(); ctx.ellipse(q[0],q[1],AFTER.r*(0.6+0.6*k),AFTER.r*(0.6+0.6*k)*SQUASH,0,0,TAU); ctx.stroke();
+      ctx.globalAlpha=Math.max(0,0.25*(1-k)); ctx.fillStyle=C.cyan; ctx.beginPath(); ctx.ellipse(q[0],q[1],AFTER.r*(0.6+0.6*k),AFTER.r*(0.6+0.6*k)*SQUASH,0,0,TAU); ctx.fill(); }
+    ctx.restore(); }); };
 /* 다중 반사: 한 번에 2발 이상 빼앗음 */
 const _doParryS=doParry;
-doParry=function(){ const n0=run?bullets.filter(b=>b.owner==='player').length:0; const r=_doParryS.apply(this,arguments);
+doParry=function(){ const n0=run?bullets.filter(b=>b.owner==='player').length:0, l0=P.lock; const r=_doParryS.apply(this,arguments);
+  if(run&&l0<=0&&P.lockKind==='miss'&&P.lock>0) leaveAfterimage();
   if(run&&synOn('mp')&&bullets.filter(b=>b.owner==='player').length-n0>=2){ P.inv=Math.max(P.inv,0.4); say('다중 반사','warn'); } return r; };
 /* 피격: 황금 회로용 기록 · 최후의 반격 */
 const _onHurtS=onHurt;
-onHurt=function(){ if(run){ run._syHit=1;
+onHurt=function(){ if(run){ run._syHit=1; leaveAfterimage();
     if(synOn('last')&&P.hp>0&&P.hp<=CFG.hpMax*0.3&&(run._lastN||0)<3){ run._lastN=(run._lastN||0)+1; P.inv=Math.max(P.inv,1); say('최후의 반격','warn'); } }
   return _onHurtS.apply(this,arguments); };
 /* 처치: 연쇄 폭발 · 생명 순환 */
@@ -681,12 +702,12 @@ killEnemy=function(e){ const had=run&&ens.includes(e), hp0=P.hp; const r=_killEn
 const _updateS=update;
 update=function(dt){ const ph0=run&&run.phase; _updateS(dt);
   if(!run||screen!=='game') return;
+  afterTick(dt);
   const low=P.hp>0&&P.hp<=CFG.hpMax*0.3;
   bullets.forEach(b=>{ if(b.owner!=='player') return;
     if(synOn('pg')&&b.returns>=3&&b._syP!==b.returns){ b.pierceLeft=(b.pierceLeft||0)+1; b._syP=b.returns; }
     if(synOn('rev')&&P.counterT>0&&!b._syC){ b.pdm=(b.pdm||1)*1.5; b._syC=1; }
     if(boonLv('edge')&&low&&!b._syE){ b.pdm=(b.pdm||1)*1.5; b._syE=1; } });
-  if(synOn('gh')){ if(P.inv>0&&!P._syMv){ CFG.moveSpd+=60; P._syMv=1; } else if(P.inv<=0&&P._syMv){ CFG.moveSpd-=60; P._syMv=0; } }
   if(ph0==='fight'&&run.phase==='clear'){ if(synOn('gold')&&!run._syHit){ const pts=Math.round(300*run.cycle*(CFG.scoreMul||1)); run.score+=pts; say('황금 회로 +'+pts,'warn'); } run._syHit=0; }
 };
 /* v3.106 위험한 선택 — 웨이브를 비운 직후 가끔(30%, 3웨이브부터 · 보스 앞 웨이브 제외 · 두 번 연달아는 안 나옴) 수락 / 거절 카드 */
