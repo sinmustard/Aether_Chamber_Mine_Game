@@ -26,7 +26,9 @@ const EARLY_DMG=8;   // v3.48 1사이클 1~4웨이브의 적 탄 피해 (강화 
 const EARLY_MID=10;
 const enemyShotDmg=()=>run.cycle===1&&run.wave<=4?EARLY_DMG:run.cycle===1&&run.wave===5?EARLY_MID:PLAYER_DMG;
 /* v2.63 후반으로 갈수록 받는 피해 증가 — 웨이브당 +3%, 사이클당 +25%, 최대 ×2.5 (체험판은 그대로) */
-const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1))*(run.mode==='hard'?1.3:run.mode==='hotd'?1.95:1);   // v2.68 하드 ×1.3
+const NORMAL_EASE={dmg:0.6,fire:1.3,spd:0.9,fov:15,range:0.3,whiff:0.8,iframe:1.5,heal:0.15};
+const normalEase=()=>!!(run&&run.mode==='normal'&&!run.rush&&!run.practice&&!run.tut);
+const dmgScale=()=> (!run||run.tut)? 1 : Math.min(2.5, 1+0.03*Math.max(0,(run.wave||1)-1)+0.25*Math.max(0,(run.cycle||1)-1))*(run.mode==='hard'?1.3:run.mode==='hotd'?1.95:normalEase()?NORMAL_EASE.dmg:1);   // v2.68 하드 ×1.3
 /* v2.78 적 체력의 사이클 배율 — 예전엔 사이클마다 ×1.15씩 복리로 불어나서(cycle10이면 ×3.5) 후반에 잡몹도
    총알받이가 됐다. 로그형으로 바꿔서 초반 체감(2사이클 ×1.15)은 그대로 두고 후반 증가폭만 점점 완만해지게 */
 const cycleHpMul=c=>1+0.22*Math.log(Math.max(1,c||1));

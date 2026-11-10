@@ -236,6 +236,7 @@ function startRun(mode){
   /* ③ 하드 — 적 체력 ×1.5 · 탄속 ×1.15 · 발사 간격 ×0.85 · 받는 피해 ×1.3 / 점수 ×1.3 · 재화 ×1.5 */
   if(mode==='hard'||mode==='hotd'){ run.diff*=1.5; CFG.spd*=1.15; CFG.fire*=0.85; CFG.scoreMul*=1.3; CFG.gainMul=(CFG.gainMul||1)*1.5; }
   if(mode==='hotd') run.diff*=1.5;
+  if(normalEase()){ CFG.fire*=NORMAL_EASE.fire; CFG.spd*=NORMAL_EASE.spd; CFG.fov+=NORMAL_EASE.fov; CFG.rangeM+=NORMAL_EASE.range; CFG.whiff*=NORMAL_EASE.whiff; CFG.iframe*=NORMAL_EASE.iframe; }
   if(mode==='daily'){ CFG.gainMul=(CFG.gainMul||1)*0.5; run.startRewards=0; run.revives=0; run.randBoosts=[]; }
   else applyRandBoosts();
   go('game');
