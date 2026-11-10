@@ -104,6 +104,7 @@ function update(dt){
     run.phaseT-=dt;
     if(run.phaseT<=0){ run.phase='break'; run.phaseT=1.0; announce('시작','cyan'); sfx('wave'); }
   } else if(run.phase==='break'){
+    if(run.dunOffer){ run.dunOffer=0; dungeonOffer(); }
     run.phaseT-=dt*(CFG.fastwave?4:1);
     if(run.phaseT<=0){ waveSpawn(); if(run.dungeon>0) say('던전 '+(DUNGEON.waves-run.dungeon+1)+' / '+DUNGEON.waves,'red'); }
   } else if(run.phase==='clear'){
@@ -112,7 +113,7 @@ function update(dt){
     if(run.phaseT<=0){
       const wasBoss = run.wave>BOSS_WAVE;
       if(wasBoss){ run.cycle++; run.wave=0;
-        if(!run.tut&&!run.practice&&!run.rush&&run.mode!=='daily'&&Math.random()<DUNGEON.chance){ run.dungeon=DUNGEON.waves; later(1200,()=>{ if(run) announce('던전이 열렸다 — '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+' · 보상 강화','red'); }); }
+        if(!run.tut&&!run.practice&&!run.rush&&run.mode!=='daily'&&Math.random()<DUNGEON.chance){ run.dunOffer=1; }
         CFG.spd*=1.06; CFG.fire=Math.max(0.6,CFG.fire*0.92);
         announce('사이클 '+run.cycle,'warn'); run.phaseT=2.2; }
       else run.phaseT=1.2;
@@ -579,6 +580,13 @@ function spawnBullet(q){
     fake:(q.spec.fake||(q.spec.fakeP&&Math.random()<q.spec.fakeP))?1:0, blink:q.spec.blink?1:0,
     sway:q.spec.sway||0, curl:q.spec.curl?q.spec.curl*(q.spec.curlRand&&Math.random()<.5?-1:1):0, trap:q.spec.trap?1:0});
   if(q.spec.slow){ const nb=bullets[bullets.length-1]; nb.spd*=q.spec.slow; nb.base*=q.spec.slow; }
+}
+function dungeonOffer(){
+  if(!window.exCardPanel){ run.dungeon=DUNGEON.waves; return; }
+  rwPicks=[{k:'dun_in',n:'던전 입장',d:'다음 '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+'<br>대신 웨이브마다 보상 · 유물 확정 · 특수 특전 확률 2배',tag:'던전',chaos:1,
+      fn:()=>{ run.dungeon=DUNGEON.waves; announce('던전 입장 — '+DUNGEON.waves+'웨이브','red'); }},
+    {k:'dun_out',n:'지나가기',d:'던전에 들어가지 않고 평소처럼 다음 웨이브로',tag:'던전',chaos:1,fn:()=>{ say('던전을 지나침','dim'); }}];
+  window.exCardPanel('<b style="color:var(--red)">던전이 열렸다</b> &nbsp;—&nbsp; 들어갈까요?');
 }
 const DECOY_PULL=130;
 const pierced=(b,e)=>!!(b.pcs&&b.pcsR===b.returns&&b.pcs.includes(e));
