@@ -105,23 +105,25 @@ function update(dt){
     if(run.phaseT<=0){ run.phase='break'; run.phaseT=1.0; announce('시작','cyan'); sfx('wave'); }
   } else if(run.phase==='break'){
     run.phaseT-=dt*(CFG.fastwave?4:1);
-    if(run.phaseT<=0) waveSpawn();
+    if(run.phaseT<=0){ waveSpawn(); if(run.dungeon>0) say('던전 '+(DUNGEON.waves-run.dungeon+1)+' / '+DUNGEON.waves,'red'); }
   } else if(run.phase==='clear'){
     /* v2.1 웨이브를 비운 직후 3초는 그대로 대기한다. 보상/다음 웨이브 전환이 바로 튀어나오지 않게 한다 */
     run.phaseT-=dt;
     if(run.phaseT<=0){
       const wasBoss = run.wave>BOSS_WAVE;
       if(wasBoss){ run.cycle++; run.wave=0;
+        if(!run.tut&&!run.practice&&!run.rush&&run.mode!=='daily'&&Math.random()<DUNGEON.chance){ run.dungeon=DUNGEON.waves; later(1200,()=>{ if(run) announce('던전이 열렸다 — '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+' · 보상 강화','red'); }); }
         CFG.spd*=1.06; CFG.fire=Math.max(0.6,CFG.fire*0.92);
         announce('사이클 '+run.cycle,'warn'); run.phaseT=2.2; }
       else run.phaseT=1.2;
       run.phase='break';
       /* v2.0 2웨이브마다 + 보스 격파 직후에 보상 선택.
          매 웨이브마다 주면 한 사이클에 10개가 쌓여 성장이 너무 빠르다 */
-      if(wasBoss || run.wave%2===0) openReward(wasBoss);
+      if(wasBoss || run.wave%2===0 || run.dunReward) openReward(wasBoss);
     }
   } else if(run.phase!=='tut' && !ens.length && !queue.length){   // v2.60 체험판은 웨이브 진행 안 함
     run.phase='clear'; run.phaseT=3; run.mortars=[]; say('웨이브 클리어','cyan');
+    if(run.dungeon>0){ run.dungeon--; run.dunReward=1; }
     if(normalEase()&&NORMAL_EASE.heal>0&&P.hp>0&&P.hp<CFG.hpMax){ P.hp=Math.min(CFG.hpMax,P.hp+Math.round(CFG.hpMax*NORMAL_EASE.heal)); }   // 남은 박격포 장판도 같이 지움
     if(P.hp>0&&P.hp<CFG.hpMax){ const h=Math.min(CFG.hpMax-P.hp,Math.round(CFG.hpMax*CFG.waveHeal)); P.hp+=h; say('회복 +'+h,'cyan'); }   // v3.38 웨이브 회복
     if(!run.waveHurt) stat('noHit'); run.waveHurt=0;   // v2.68 피격 없이 넘긴 웨이브

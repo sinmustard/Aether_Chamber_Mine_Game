@@ -145,7 +145,8 @@ const dexHas=(t,k)=>!!(META.dex&&META.dex[t]&&META.dex[t][k]);
 function dexScan(){ if(!run||run.tut) return;
   ens.forEach(e=>dexMark('e',e.grade==='boss'?(e.variant&&e.variant!=='core'?'boss_'+e.variant:'boss'):e.grade));
   Object.keys(run.boons||{}).forEach(k=>{ if(run.boons[k]>0) dexMark('b',k); });
-  Object.keys(run.syn||{}).forEach(k=>{ if(run.syn[k]) dexMark('s',k); }); }
+  Object.keys(run.syn||{}).forEach(k=>{ if(run.syn[k]) dexMark('s',k); });
+  (run.relics||[]).forEach(k=>dexMark('r',k)); }
 function dexSeed(){ META.dex=META.dex||{}; if(META.dex.seeded) return;
   try{ const old=JSON.parse(localStorage.getItem('aether_x_seen')||'{}'); Object.keys(old).forEach(k=>dexMark('e',k)); }catch(e){}
   if((META.stats||{}).bossKills>0) dexMark('e','boss');

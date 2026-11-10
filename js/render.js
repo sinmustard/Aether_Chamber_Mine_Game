@@ -734,7 +734,7 @@ function drawHUD(){
   ctx.fillStyle=mx>0?C.cyan:C.dim;ctx.fillText('왕복 ×'+mx,W-18,H-22);
   ctx.textAlign='center';ctx.font='600 11px ui-monospace,monospace';
   /* v3.0 플레이어가 화면 아래쪽 끝까지 내려가면 이 줄에 가려서 안 보였다 — 뒤에 반투명 패널을 깔아 항상 읽히게 */
-  const hudLine='사이클 '+run.cycle+'  ·  웨이브 '+(run.wave||1)+'  ·  '+fmtTime(run.time)+(dmgScale()>1.001?'  ·  받는 피해 ×'+dmgScale().toFixed(2):'');
+  const hudLine='사이클 '+run.cycle+'  ·  웨이브 '+(run.wave||1)+(run.dungeon>0?'  ·  던전 '+(DUNGEON.waves-run.dungeon+1)+'/'+DUNGEON.waves:'')+'  ·  '+fmtTime(run.time)+(dmgScale()>1.001?'  ·  받는 피해 ×'+dmgScale().toFixed(2):'');
   const hudW=ctx.measureText(hudLine).width;
   ctx.fillStyle='rgba(8,12,17,.62)'; ctx.fillRect(W/2-hudW/2-10,H-34,hudW+20,22);
   ctx.fillStyle=C.dim; ctx.fillText(hudLine,W/2,H-22);   // v2.63

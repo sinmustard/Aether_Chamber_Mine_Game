@@ -51,6 +51,30 @@ function chaosDisguise(){
     else { const c=chaosPick(); c.fn(); }
   }};
 }
+const RELICS=[
+ {k:'r_shard',   n:'날 선 파편',  tags:['관통'],        d:'되돌린 탄 가속 +5%',          fn:()=>{ CFG.accel*=1.05; }},
+ {k:'r_tip',     n:'파편 탄두',   tags:['관통'],        d:'되돌린 탄 가속 +3% · 패링 사거리 +0.1m', fn:()=>{ CFG.accel*=1.03; CFG.rangeM+=0.1; }},
+ {k:'r_lens',    n:'송곳 렌즈',   tags:['관통','잔상'], d:'패링 사거리 +0.2m',            fn:()=>{ CFG.rangeM+=0.2; }},
+ {k:'r_quill',   n:'꿰뚫는 깃',   tags:['관통','반격'], d:'왕복 2회 이상 된 탄 피해 +10%', fn:()=>{ CFG.rallyDmg=(CFG.rallyDmg||0)+0.1; }},
+ {k:'r_compass', n:'유도 나침반', tags:['관통','탐욕'], d:'유도 +0.3',                    fn:()=>{ CFG.homing=(CFG.homing||0)+0.3; }},
+ {k:'r_shield',  n:'낡은 방패',   tags:['수호'],        d:'최대 체력 +10',                fn:()=>{ CFG.hpMax+=10; P.hp+=10; }},
+ {k:'r_stone',   n:'수호석',      tags:['수호'],        d:'보호막 +1',                    fn:()=>{ P.barrier=(P.barrier||0)+1; }},
+ {k:'r_scale',   n:'강철 비늘',   tags:['수호','반격'], d:'받는 피해 −5%',                fn:()=>{ CFG.armor=Math.min(0.6,(CFG.armor||0)+0.05); }},
+ {k:'r_glass',   n:'모래시계',    tags:['수호','잔상'], d:'스킬 재사용 대기 −5%',         fn:()=>{ CFG.cdrMul=(CFG.cdrMul||1)*0.95; }},
+ {k:'r_cloak',   n:'그림자 망토', tags:['잔상','수호'], d:'최대 체력 +5 · 이동 속도 +10', fn:()=>{ CFG.hpMax+=5; P.hp+=5; CFG.moveSpd+=10; }},
+ {k:'r_seal',    n:'분노의 인장', tags:['반격'],        d:'빗나감 경직 −10%',             fn:()=>{ CFG.whiff*=0.9; }},
+ {k:'r_ring',    n:'역류의 고리', tags:['반격','잔상'], d:'맞은 뒤 무적 +0.1초',          fn:()=>{ CFG.iframe+=0.1; }},
+ {k:'r_fang',    n:'송곳니',      tags:['반격','탐욕'], d:'패링 시야각 +5°',              fn:()=>{ CFG.fov=Math.min(180,CFG.fov+5); }},
+ {k:'r_feather', n:'바람 깃털',   tags:['잔상'],        d:'이동 속도 +15',                fn:()=>{ CFG.moveSpd+=15; }},
+ {k:'r_coin',    n:'녹슨 금화',   tags:['탐욕'],        d:'재화 +10%',                    fn:()=>{ CFG.gainMul=(CFG.gainMul||1)*1.1; }},
+ {k:'r_scales',  n:'황금 저울',   tags:['탐욕'],        d:'점수 +10%',                    fn:()=>{ CFG.scoreMul=(CFG.scoreMul||1)*1.1; }},
+ {k:'r_dice',    n:'행운 주사위', tags:['탐욕','잔상'], d:'보상 새로고침 +1',             fn:()=>{ run.rerolls=(run.rerolls||0)+1; }},
+];
+const relicPool=()=>RELICS.filter(r=>!(run.relics||[]).includes(r.k));
+function gainRelic(id){ const r=RELICS.find(x=>x.k===id); if(!r||!run) return; (run.relics||(run.relics=[])).push(id); r.fn();
+  if(typeof dexMark==='function') dexMark('r',id); announce('유물 — '+r.n+' ['+r.tags.join(' · ')+']','warn'); if(typeof synCheck==='function') synCheck(); }
+function relicCard(r){ return {k:'relic',rid:r.k,n:r.n,d:r.d+'<br><span style="color:var(--warn)">태그 — '+r.tags.join(' · ')+'</span>',tag:'유물',chaos:1,fn:()=>gainRelic(r.k)}; }
+function relicChance(afterBoss){ if(!run||run.tut||run.practice) return 0; if(run.dunReward) return 1; return Math.min(0.9,(afterBoss?0.45:0.2)*(run.syn&&run.syn.luck?2:1)); }
 let rwOpenAt=0;   // v3.67 보상 창이 열린 시각 (R 키 새로고침 0.5초 막기)
 function openReward(afterBoss,fromReroll){
   if(!fromReroll) rwOpenAt=performance.now();
@@ -64,7 +88,7 @@ function openReward(afterBoss,fromReroll){
     rwPicks.push(bag.splice(bag.indexOf(rarePick(bag)),1)[0]);
   /* v2.37 특수 특전 — 확률로 마지막 칸을 특수 특전으로 바꾼다 */
   /* v2.41 보스를 잡은 직후 보상은 특수 특전 확률 +30%p (최대 90%) */
-  const spChance=afterBoss? CFG.specialBoss : CFG.specialChance;   // v2.47 보스 후 38 / 47 / 50%
+  const spChance=Math.min(0.9,(afterBoss? CFG.specialBoss : CFG.specialChance)*(run.dunReward?2:1));   // v2.47 보스 후 38 / 47 / 50%
   if(run.mode==='chaosx'&&Math.random()<Math.max(spChance,0.25)){
     const r=Math.random(), pick=r<0.24?chaosDisguise():r<0.4?chaosTrap():r<0.415?(prismUseful()?chaosPrismTrap():chaosTrap()):r<0.6?chaosPick():r<0.8?chaosPickHidden():chaosPlayerPick();
     if(rwPicks.length<3) rwPicks.splice(Math.floor(Math.random()*(rwPicks.length+1)),0,pick);
@@ -77,13 +101,15 @@ function openReward(afterBoss,fromReroll){
       else rwPicks[Math.floor(Math.random()*rwPicks.length)]=pick; }
   }
   if(run.mode==='chaosx'&&fromReroll&&Math.random()<0.45){ const a8=chaosAmp8(); if(rwPicks.length<3) rwPicks.push(a8); else rwPicks[Math.floor(Math.random()*rwPicks.length)]=a8; }
+  { const rp=relicPool(); if(rp.length&&Math.random()<relicChance(afterBoss)){ const rc=relicCard(rp[Math.floor(Math.random()*rp.length)]); if(rwPicks.length<3) rwPicks.push(rc); else rwPicks[Math.floor(Math.random()*rwPicks.length)]=rc; } }
   const fill=[{k:'f_heal',n:'응급 정비',d:'체력 30% 회복',tag:'보급',chaos:1,fn:()=>{ P.hp=Math.min(CFG.hpMax,P.hp+Math.round(CFG.hpMax*0.3)); }},
     {k:'f_score',n:'보너스 점수',d:'점수 +'+(300*run.cycle).toLocaleString(),tag:'보급',chaos:1,fn:()=>{ run.score+=300*run.cycle; }}];
   for(const f of fill){ if(rwPicks.length>=3) break; rwPicks.push(f); }
   run.rwBoss=afterBoss;
   const rr=$('#rwReroll'); rr.textContent='새로고침 R · 남은 '+(run.rerolls||0); rr.disabled=!(run.rerolls>0);
   run.phase='reward';
-  $('#rwHd').innerHTML=(afterBoss?'알레테이아 격파 · <b>사이클 '+run.cycle+'</b>'
+  const dunHd=run.dunReward?'<b style="color:var(--red)">던전 보상</b> · ':''; run.dunReward=0;
+  $('#rwHd').innerHTML=dunHd+(afterBoss?'알레테이아 격파 · <b>사이클 '+run.cycle+'</b>'
                                  :(run.wave===0?'선행 보급':'웨이브 '+run.wave+' 완료'))+' &nbsp;—&nbsp; 하나를 고르세요';
   run.rwStatPick=0;
   renderRwRow();

@@ -276,17 +276,19 @@ function openDex(){
   const tagOf=b=>b.tag||'기타';
   const boonRows=l=>l.map(b=>dexHas('b',b.k)?row(b.n,'최대 '+b.max+'번',b.d,b.req,tagOf(b)):lock('아직 얻지 않은 특전')).join('');
   const spRows=()=>SPECIALS.map(b=>dexHas('b',b.k)?row(b.n,'특수 특전',b.d,b.req):lock('아직 얻지 않은 특수 특전')).join('');
-  const synRows=()=>SY.map(s=>dexHas('s',s.k)?row(s.n,'('+bn(s.a)+' + '+bn(s.b)+')',s.d,'「'+bn(s.a)+'」 · 「'+bn(s.b)+'」 둘 다 가지면 켜짐'):lock('아직 켜 본 적 없는 공명')).join('');
+  const synRows=()=>SY.map(s=>dexHas('s',s.k)?row(s.n,'('+s.tag+' '+s.tier+')',s.d,'「'+s.tag+'」 태그 유물 '+s.tier+'개'):lock('아직 켜 본 적 없는 시너지')).join('');
+  const relicRows=()=>RELICS.map(r=>dexHas('r',r.k)?row(r.n,'['+r.tags.join(' · ')+']',r.d):lock('아직 얻지 않은 유물')).join('');
   const rkRows=()=>RK.map(e=>row(e.n,'위험한 선택','대가 — '+e.cost+'<br>보상 — '+e.gain)).join('');
   let chips=[], body='';
   if(tab==='boon'){ const tg=[...new Set(BOONS.map(tagOf))]; chips=[['all','전체',got('b',BOONS,bK)+'/'+BOONS.length]].concat(tg.map(t=>{ const l=BOONS.filter(b=>tagOf(b)===t); return [t,t,got('b',l,bK)+'/'+l.length]; })); body=boonRows(BOONS.filter(b=>fl==='all'||tagOf(b)===fl)); }
-  else if(tab==='all') body=head('특전 '+got('b',BOONS,bK)+' / '+BOONS.length)+boonRows(BOONS)+head('특수 특전 '+got('b',SPECIALS,bK)+' / '+SPECIALS.length)+spRows()+head('공명 '+got('s',SY,s=>s.k)+' / '+SY.length)+synRows()+head('위험한 선택 '+RK.length)+rkRows();
+  else if(tab==='all') body=head('특전 '+got('b',BOONS,bK)+' / '+BOONS.length)+boonRows(BOONS)+head('특수 특전 '+got('b',SPECIALS,bK)+' / '+SPECIALS.length)+spRows()+head('유물 '+got('r',RELICS,r=>r.k)+' / '+RELICS.length)+relicRows()+head('시너지 '+got('s',SY,s=>s.k)+' / '+SY.length)+synRows()+head('위험한 선택 '+RK.length)+rkRows();
   else if(tab==='special') body=spRows();
   else if(tab==='syn') body=synRows();
+  else if(tab==='relic') body=relicRows();
   else if(tab==='risk') body=rkRows();
   else { chips=[['all','전체',got('e',DEX,eK)+'/'+DEX.length]].concat(Object.keys(EG).map(k=>{ const l=DEX.filter(d=>egOf(d[0])===k); return [k,EG[k],got('e',l,eK)+'/'+l.length]; })); body=DEX.filter(d=>fl==='all'||egOf(d[0])===fl).map(d=>dexHas('e',d[0])?card(d):lockE).join(''); }
-  const gB=got('b',BOONS,bK), gS=got('b',SPECIALS,bK), gY=got('s',SY,s=>s.k);
-  const tabs=[['enemy','적 전체',got('e',DEX,eK)+'/'+DEX.length],['all','특성 전체',(gB+gS+gY+RK.length)+'/'+(BOONS.length+SPECIALS.length+SY.length+RK.length)],['boon','특전',gB+'/'+BOONS.length],['special','특수 특전',gS+'/'+SPECIALS.length],['syn','공명',gY+'/'+SY.length],['risk','위험한 선택',RK.length]];
+  const gB=got('b',BOONS,bK), gS=got('b',SPECIALS,bK), gY=got('s',SY,s=>s.k), gR=got('r',RELICS,r=>r.k);
+  const tabs=[['enemy','적 전체',got('e',DEX,eK)+'/'+DEX.length],['all','특성 전체',(gB+gS+gR+gY+RK.length)+'/'+(BOONS.length+SPECIALS.length+RELICS.length+SY.length+RK.length)],['boon','특전',gB+'/'+BOONS.length],['special','특수 특전',gS+'/'+SPECIALS.length],['relic','유물',gR+'/'+RELICS.length],['syn','시너지',gY+'/'+SY.length],['risk','위험한 선택',RK.length]];
   const on=' style="border-color:var(--cyan);color:var(--cyan)"';
   $('#modalBox').style.width='min(640px,100%)';
   $('#modalBox').innerHTML='<div style="position:sticky;top:0;z-index:2;background:var(--panel);box-shadow:0 -16px 0 var(--panel)">'+
@@ -668,33 +670,36 @@ update=function(dt){
 /* 새 보상: 벼랑 끝 — 체력이 낮을수록 세게 (공명 재료로도 씀) */
 BOONS.push({k:'edge',n:'벼랑 끝',d:'체력 30% 이하일 때 패링한 탄 피해 ×1.5',max:1,tag:'공격',fn:()=>{}});
 const SYN=[
-  {k:'pg',  n:'꿰뚫는 집념', a:'pierce', b:'grit',     d:'왕복 3회 이상 된 탄은 관통 +1'},
-  {k:'chain',n:'연쇄 폭발',  a:'shard',  b:'aftershock',d:'처치한 자리에서 주변 적에게 0.3칸 폭발 — 그걸로 죽으면 또 터짐 (최대 3번)'},
-  {k:'life',n:'생명 순환',   a:'leech',  b:'vital',    d:'체력이 가득할 때 넘친 처치 회복 20마다 보호막 +1 (최대 3)'},
-  {k:'rev', n:'반격 본능',   a:'counter',b:'fury',     d:'맞은 뒤 2초 동안 패링한 탄 피해 ×1.5'},
-  {k:'mp',  n:'다중 반사',   a:'multi',  b:'flow',     d:'한 번에 2발 이상 빼앗으면 0.4초 무적'},
-  {k:'after',n:'잔상 폭발', a:'iframe', b:'calm',     d:'빗나가거나 맞으면 그 자리에 잔상 — 0.6초 뒤 터져 둘레 170의 적 탄을 지우고 주변 적에게 0.5칸 (재사용 4초)'},   // v3.108 명경지수 · 잔상 질주를 합침
-  {k:'gold',n:'황금 회로',   a:'greed',  b:'s_score',  d:'맞지 않고 넘긴 웨이브마다 보너스 점수 (300 × 사이클)'},
-  {k:'eye', n:'전방위 감지', a:'range',  b:'fov',      d:'패링 사거리 +10% · 시야 +10° 더'},
-  {k:'last',n:'최후의 반격', a:'edge',   b:'counter',  d:'체력 30% 이하에서 맞으면 1초 무적 (판마다 3번)'},
+  {k:'pg',   n:'꿰뚫는 집념', tag:'관통', tier:2, d:'왕복 3회 이상 된 탄은 관통 +1'},
+  {k:'chain',n:'연쇄 폭발',   tag:'관통', tier:4, d:'처치한 자리에서 주변 적에게 0.3칸 폭발 — 그걸로 죽으면 또 터짐 (최대 3번)'},
+  {k:'life', n:'생명 순환',   tag:'수호', tier:2, d:'처치할 때마다 체력 회복 (처치 회복이 있으면 그만큼) — 가득 차서 넘친 회복 20마다 보호막 +1 (최대 3)'},
+  {k:'last', n:'최후의 반격', tag:'수호', tier:4, d:'체력 30% 이하에서 맞으면 1초 무적 (판마다 3번)'},
+  {k:'rev',  n:'반격 본능',   tag:'반격', tier:2, d:'맞은 뒤 2초 동안 패링한 탄 피해 ×1.5'},
+  {k:'mp',   n:'다중 반사',   tag:'반격', tier:4, d:'패링할 때 탄 1발 더 빼앗음 — 한 번에 2발 이상 빼앗으면 0.4초 무적'},
+  {k:'eye',  n:'전방위 감지', tag:'잔상', tier:2, d:'패링 사거리 +10% · 시야 +10° 더'},
+  {k:'after',n:'잔상 폭발',   tag:'잔상', tier:4, d:'빗나가거나 맞으면 그 자리에 잔상 — 0.6초 뒤 터져 둘레 170의 적 탄을 지우고 주변 적에게 0.5칸 (재사용 4초)'},
+  {k:'gold', n:'황금 회로',   tag:'탐욕', tier:2, d:'맞지 않고 넘긴 웨이브마다 보너스 점수 (300 × 사이클)'},
+  {k:'luck', n:'행운',        tag:'탐욕', tier:4, d:'유물 카드가 2배 자주 나옴 · 재화 +20%'},
 ];
 window.SYNERGY=SYN;
 const synOn=k=>!!(run&&run.syn&&run.syn[k]);
 window.synCheck=()=>synCheck();   // 테스트용
 const bname=k=>{ const b=boonDef(k); return b?b.n:k; };
-const synSrc=s=>'('+bname(s.a)+' + '+bname(s.b)+')';
+const synSrc=s=>'('+s.tag+' '+s.tier+')';
 const synName=s=>s.n+' '+synSrc(s);
 /* 새로 완성된 공명을 켠다 — 한 번만 바뀌는 수치는 여기서 */
 /* v3.106 공명은 판마다 3개까지 (저주받은 보물로 +1) — 다 차면 새 공명을 켤지 카드로 고른다. 오래 가는 판은 보상을 거의 다 모아서 공명이 전부 켜졌다 */
 const synCap=()=>3+(run.synSlots||0);
 const synCount=()=>SYN.filter(s=>run.syn&&run.syn[s.k]).length;
 function synApply(s,on){   // 켜고 끌 때 한 번만 바뀌는 수치
+  if(s.k==='mp') CFG.multi=(CFG.multi||1)+(on?1:-1);
+  if(s.k==='luck'){ if(on) CFG.gainMul=(CFG.gainMul||1)*1.2; else CFG.gainMul=(CFG.gainMul||1)/1.2; }
   if(s.k==='eye'){ if(on){ CFG.rangeM*=1.1; run._eyeFov=Math.min(180,CFG.fov+10)-CFG.fov; CFG.fov+=run._eyeFov; } else { CFG.rangeM/=1.1; CFG.fov-=run._eyeFov||0; run._eyeFov=0; } }
 }
-function synCheck(){ if(!run||!run.boons) return; run.syn=run.syn||{}; run.synNo=run.synNo||{};
-  SYN.forEach(s=>{ if(run.syn[s.k]||!boonLv(s.a)||!boonLv(s.b)) return;
-    if(synCount()<synCap()){ run.syn[s.k]=1; run.synNo[s.k]=0; synApply(s,true); later(400,()=>{ announce('공명 — '+synName(s),'warn'); }); }
-    else if(!run.synNo[s.k]&&!run.synPend) run.synPend=s.k; }); }
+function relicTagCount(){ const c={}; (run&&run.relics||[]).forEach(id=>{ const r=RELICS.find(x=>x.k===id); if(r) r.tags.forEach(t=>c[t]=(c[t]||0)+1); }); return c; }
+function synCheck(){ if(!run) return; run.syn=run.syn||{}; const c=relicTagCount();
+  SYN.forEach(s=>{ if(run.syn[s.k]||(c[s.tag]||0)<s.tier) return;
+    run.syn[s.k]=1; synApply(s,true); if(typeof dexMark==='function') dexMark('s',s.k); later(400,()=>{ announce('시너지 — '+synName(s),'warn'); }); }); }
 /* 보상 화면을 빌려 카드를 띄운다 (공명 고르기 · 위험한 선택) */
 function openCardPanel(title){ rwOpenAt=performance.now(); run.rwStatPick=1;   // 새로고침 막기 (takeReward가 풂)
   if(run.phase!=='reward') run.rwPrev=run.phase; run.phase='reward'; unlockMouse();
@@ -711,15 +716,16 @@ takeReward=function(){ const r=_takeReward.apply(this,arguments); synCheck(); if
 /* 보상 카드: 이걸 고르면 완성되는 공명을 표시 */
 const _renderRwRow=renderRwRow;
 renderRwRow=function(){ _renderRwRow.apply(this,arguments); if(!run) return;
-  document.querySelectorAll('#rwRow .bc').forEach(el=>{ const b=rwPicks[+el.dataset.i]; if(!b||b.chaos) return; const k=b.look||b.k;
-    const done=SYN.filter(s=>!synOn(s.k)&&((s.a===k&&boonLv(s.b))||(s.b===k&&boonLv(s.a))));
-    if(done.length) el.insertAdjacentHTML('beforeend','<div style="margin-top:6px;font-size:11px;color:var(--warn)">공명 완성 — '+done.map(s=>'<b>'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }); };
+  document.querySelectorAll('#rwRow .bc').forEach(el=>{ const b=rwPicks[+el.dataset.i]; if(!b||!b.rid) return; const r=RELICS.find(x=>x.k===b.rid); if(!r) return;
+    const c=relicTagCount(); r.tags.forEach(t=>c[t]=(c[t]||0)+1); const done=SYN.filter(s=>!synOn(s.k)&&(c[s.tag]||0)>=s.tier);
+    if(done.length) el.insertAdjacentHTML('beforeend','<div style="margin-top:6px;font-size:11px;color:var(--warn)">시너지 완성 — '+done.map(s=>'<b>'+s.n+'</b> '+synSrc(s)).join(' · ')+'</div>'); }); };
 /* 이번 판 보상 목록 아래에 공명 표 */
 const _boonListHTML=boonListHTML;
-boonListHTML=function(){ const h=_boonListHTML.apply(this,arguments); if(!run) return h;
-  return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">공명 '+synCount()+' / '+synCap()+'</div>'+SYN.map(s=>{ const on=synOn(s.k), ha=boonLv(s.a)>0, hb=boonLv(s.b)>0;
-    return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> ('+
-      '<span style="color:'+(ha?'var(--cyan)':'var(--dim)')+'">'+bname(s.a)+'</span> + <span style="color:'+(hb?'var(--cyan)':'var(--dim)')+'">'+bname(s.b)+'</span>) — '+s.d+'</div>'; }).join(''); };
+boonListHTML=function(){ const h=_boonListHTML.apply(this,arguments); if(!run) return h; const c=relicTagCount(), rl=(run.relics||[]).map(id=>RELICS.find(x=>x.k===id)).filter(Boolean);
+  return h+'<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">유물 '+rl.length+'</div>'+
+    (rl.length?'<div style="font-size:12px;margin:4px 0">'+rl.map(r=>'<b>'+r.n+'</b> <span style="color:var(--dim)">['+r.tags.join(' · ')+']</span>').join(' · ')+'</div>':'<div style="font-size:12px;margin:4px 0;color:var(--dim)">없음 — 웨이브 보상의 「유물」 카드로 얻음</div>')+
+    '<div style="margin-top:10px;font-size:11.5px;letter-spacing:.14em;color:var(--dim)">시너지</div>'+SYN.map(s=>{ const on=synOn(s.k), n=c[s.tag]||0;
+    return '<div style="font-size:12px;margin:4px 0;color:'+(on?'var(--warn)':'var(--dim)')+'">'+(on?'✓ ':'· ')+'<b style="color:'+(on?'var(--warn)':'var(--fg)')+'">'+s.n+'</b> ('+s.tag+' '+Math.min(n,s.tier)+'/'+s.tier+') — '+s.d+'</div>'; }).join(''); };
 /* 잔상 폭발: 잔상을 남기고 0.6초 뒤 크게 터진다 (run.afx — 잔상 · 고리 그리기용) */
 const AFTER={delay:0.6,r:170,dmg:0.5,cd:4};
 window.AFTERIMAGE=AFTER;
@@ -749,7 +755,7 @@ doParry=function(){ const pre=run?bullets.filter(b=>b.owner==='enemy'):[], l0=P.
   if(run&&synOn('mp')&&pre.filter(b=>b.owner==='player').length>=2){ P.inv=Math.max(P.inv,0.4); say('다중 반사','warn'); } return r; };
 /* 피격: 황금 회로용 기록 · 최후의 반격 */
 const _onHurtS=onHurt;
-onHurt=function(){ if(run){ run._syHit=1; leaveAfterimage();
+onHurt=function(){ if(run){ run._syHit=1; leaveAfterimage(); if(synOn('rev')) run._revUntil=run.time+2;
     if(synOn('last')&&P.hp>0&&P.hp<=CFG.hpMax*0.3&&(run._lastN||0)<3){ run._lastN=(run._lastN||0)+1; P.inv=Math.max(P.inv,1); say('최후의 반격','warn'); } }
   return _onHurtS.apply(this,arguments); };
 /* 처치: 연쇄 폭발 · 생명 순환 */
@@ -757,7 +763,7 @@ let chainDepth=0;
 const _killEnemyS=killEnemy;
 killEnemy=function(e){ const had=run&&ens.includes(e), hp0=P.hp; const r=_killEnemyS.apply(this,arguments);
   if(!run||!had||ens.includes(e)) return r;
-  if(synOn('life')&&boonLv('leech')&&e.grade!=='illusion'){ const L=(e.grade==='boss'?10:2)*boonLv('leech'), over=hp0+L-CFG.hpMax;
+  if(synOn('life')&&e.grade!=='illusion'){ const L=(e.grade==='boss'?10:2)*Math.max(1,boonLv('leech')), over=hp0+L-CFG.hpMax; if(!boonLv('leech')) P.hp=Math.min(CFG.hpMax,P.hp+L);
     if(over>0){ run._ovh=(run._ovh||0)+over; while(run._ovh>=20){ run._ovh-=20; if((P.barrier||0)<3){ P.barrier=(P.barrier||0)+1; say('생명 순환 · 보호막 +1','cyan'); } } } }
   if(synOn('chain')&&chainDepth<3){ chainDepth++; burst(e.x,e.y,'warn',16,200);
     ens.filter(o=>o!==e&&dist(o.x,o.y,e.x,e.y)<100).forEach(o=>{ o.hp-=HIT_UNIT*0.3; o.hurt=.2; if(o.hp<=HIT_UNIT*0.25&&ens.includes(o)) killEnemy(o); });
@@ -772,7 +778,7 @@ update=function(dt){ const ph0=run&&run.phase, h0=P&&P.hp; _updateS(dt);
   const low=P.hp>0&&P.hp<=CFG.hpMax*0.3;
   bullets.forEach(b=>{ if(b.owner!=='player') return;
     if(synOn('pg')&&b.returns>=3&&b._syP!==b.returns){ b.pierceLeft=(b.pierceLeft||0)+1; b._syP=b.returns; }
-    if(synOn('rev')&&P.counterT>0&&!b._syC){ b.pdm=(b.pdm||1)*1.5; b._syC=1; }
+    if(synOn('rev')&&(P.counterT>0||(run._revUntil||0)>run.time)&&!b._syC){ b.pdm=(b.pdm||1)*1.5; b._syC=1; }
     if(boonLv('edge')&&low&&!b._syE){ b.pdm=(b.pdm||1)*1.5; b._syE=1; } });
   if(ph0==='fight'&&run.phase==='clear'){ if(synOn('gold')&&!run._syHit){ const pts=Math.round(300*run.cycle*(CFG.scoreMul||1)); run.score+=pts; say('황금 회로 +'+pts,'warn'); } run._syHit=0; }
 };
@@ -783,7 +789,7 @@ const EVENTS=[
   {k:'horde',n:'증원',cost:'다음 웨이브 적 ×1.5',gain:'버티면 다음 보상 1개 더',go:()=>{ run.riskNext=1; }},
   {k:'elite',n:'정예 습격',cost:'다음 웨이브에 접두사 엘리트 2기',gain:'둘 다 잡으면 특수 특전 1개',go:()=>{ run.evElite=2; }},
   {k:'barrage',n:'탄막 서약',cost:'이번 사이클 끝까지 적 탄속 +20%',gain:'이번 판 점수 배율 +0.25',go:()=>{ run.evSpdC=run.cycle; CFG.scoreMul+=0.25; }},
-  {k:'curse',n:'저주받은 보물',cost:'이번 판 받는 피해 +15%',gain:'공명 자리 +1',ok:()=>!run.synSlots,go:()=>{ CFG.armor=(CFG.armor||0)-0.15; run.synSlots=(run.synSlots||0)+1; synCheck(); }},
+  {k:'curse',n:'저주받은 보물',cost:'이번 판 받는 피해 +15%',gain:'유물 1개',ok:()=>relicPool().length>0,go:()=>{ CFG.armor=(CFG.armor||0)-0.15; const p=relicPool(); gainRelic(p[Math.floor(Math.random()*p.length)].k); }},
 ];
 window.RISK_EVENTS=EVENTS;
 window.RISK_EVENT_P=0.3;   // 웨이브를 비울 때 나올 확률 (테스트에서 0으로)
