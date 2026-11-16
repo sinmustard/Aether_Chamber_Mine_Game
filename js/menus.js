@@ -471,6 +471,7 @@ function openModal(kind){
               ['배경음','bgm',OPT.bgm?OPT.bgm+'':'끔'],                                        // v2.52
               ['화면 흔들림','shake',({0:'끔',0.5:'약하게',1:'보통',1.6:'강하게'})[OPT.shake]||'보통'],   // v2.52
               ['저사양 모드','lowfx',OPT.lowfx?'켬 · 효과 줄임':'끔'],                          // v2.52
+              ['그래픽 가속 (WebGL)','gl',OPT.gl?(GL.ready?'켬 · WebGL로 그리는 중':GL.fail?'켬 · 이 기기는 지원 안 함 (기본 그리기)':'켬 · 준비 중'):'끔 · 기본 그리기'],
               ['색각 보조','cb',OPT.cb?'켬 · 적 탄환 ◆':'끔'],
               ['마우스 가두기','lockMouse',OPT.lockMouse?'켬':'끔'],
               ['입력 여유','inputBuf',({0:'끔',0.08:'짧게',0.12:'보통',0.18:'넉넉히'})[OPT.inputBuf]||'보통'],
@@ -501,7 +502,7 @@ function openModal(kind){
   const body=optTab==='ctrl'? R2(['lockMouse','holdParry','fixMove','fixAim'])+stickEditRow+R2(['skillRing','padPos','swapSticks','vibe'])+phoneDesc+keyRows
            : optTab==='sound'? R2(['vol','bgm'])
            : optTab==='acct'? acct
-           : R2(['shake','lowfx','cb','inputBuf','dmgNum','aimPrev','rushEasy'])+pimgRow+fsRow;
+           : R2(['shake','lowfx','gl','cb','inputBuf','dmgNum','aimPrev','rushEasy'])+pimgRow+fsRow;
   $('#modalBox').innerHTML='<div class="logHd"><h4>설정</h4><button class="xBtn" id="optClose" title="닫기">✕</button></div>'+tabH+body;
   $('#modal').classList.add('on');
 }

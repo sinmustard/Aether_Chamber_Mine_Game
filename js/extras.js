@@ -543,7 +543,7 @@ render=function(){ _render();
   if(!feat('replay')||!run||screen!=='game'||paused||OPT.lowfx) return; const now=performance.now(); if(now-RP.last<125) return; RP.last=now;
   if(!RP.h) RP.h=Math.round(RP.w*gcv.height/Math.max(1,gcv.width));
   let c=RP.frames[RP.i]; if(!c){ c=document.createElement('canvas'); c.width=RP.w; c.height=RP.h; RP.frames[RP.i]=c; }
-  const cx=c.getContext('2d'); cx.fillStyle='#0a0e13'; cx.fillRect(0,0,RP.w,RP.h); cx.drawImage(gcv,0,0,RP.w,RP.h); c._t=now; c._run=run; RP.i=(RP.i+1)%RP.n; };
+  const cx=c.getContext('2d'); cx.fillStyle='#0a0e13'; cx.fillRect(0,0,RP.w,RP.h); gameSnapshot(cx,RP.w,RP.h); c._t=now; c._run=run; RP.i=(RP.i+1)%RP.n; };
 let rpTimer=null;
 function openReplay(r){ const fr=RP.frames.filter(c=>c&&c._run===r).sort((a,b)=>a._t-b._t); if(!fr.length) return;
   $('#modalBox').style.width='min(560px,100%)';

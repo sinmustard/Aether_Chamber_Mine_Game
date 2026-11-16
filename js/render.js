@@ -1,6 +1,6 @@
 "use strict";
 /* ================= 렌더 ================= */
-const ctx=gcv.getContext('2d');
+let ctx=gcv.getContext('2d');
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 let C={};
 const proj=(x,y)=>[x,y*SQUASH+OY];
@@ -84,6 +84,7 @@ function drawBody(x,y,r,color,hurt){
     ctx.beginPath();ctx.ellipse(p[0],p[1],r+R_BULLET,(r+R_BULLET)*SQUASH,0,0,TAU);ctx.stroke();
     ctx.restore();
   }
+  if(GL.on){ const ga=ctx.globalAlpha; glDisk(p[0],p[1],r*.86,r*.86*SQUASH,'#000',.45*ga); glDisk(p[0],p[1],r*.84,r*.84*BODY_SQ,hurt>0?'#fff':color,ga); return; }
   ctx.fillStyle='rgba(0,0,0,.45)';
   ctx.beginPath();ctx.ellipse(p[0],p[1],r*.86,r*.86*SQUASH,0,0,TAU);ctx.fill();
   /* v2.8 몸통은 거의 원형으로 — 세로로 눌려 보이던 문제 */
@@ -275,10 +276,14 @@ function drawEnemyBody(e){
   }
   if(!img){ if(e.grade==='illusion'){ ctx.save(); ctx.globalAlpha=.5+.25*Math.sin(performance.now()/90); } drawBody(e.x,e.y,e.r,G(e).relay?C.warn:G(e).sniper?'#ff7a3d':(ENEMY_COL[e.grade]||C.red),e.hurt); if(e.grade==='illusion') ctx.restore(); return; }   // v2.65 저격수는 주황
   const p=proj(e.x,e.y);
-  ctx.fillStyle='rgba(0,0,0,.45)';
-  ctx.beginPath();ctx.ellipse(p[0],p[1],e.r*.86,e.r*.86*SQUASH,0,0,TAU);ctx.fill();
   const s=e.r*2.4;
   const face=enemyFacing(e);
+  if(GL.on){ const ga=ctx.globalAlpha, m=glMT(glMat(),p[0],p[1]);
+    glDisk(p[0],p[1],e.r*.86,e.r*.86*SQUASH,'#000',.45*ga);
+    if(face!=null){ glMS(m,1,SQUASH); glMR(m,face); if(e.grade!=='splinter'&&Math.abs(face)>Math.PI/2) glMS(m,1,-1); }
+    glImg(glImgTex(img),m,s,ga,e.hurt>0?e.hurt*6:0); return; }
+  ctx.fillStyle='rgba(0,0,0,.45)';
+  ctx.beginPath();ctx.ellipse(p[0],p[1],e.r*.86,e.r*.86*SQUASH,0,0,TAU);ctx.fill();
   ctx.save();
   if(e.hurt>0) ctx.filter='brightness('+(1+e.hurt*6)+') saturate('+Math.max(0,1-e.hurt*3)+')';
   if(face!=null){
@@ -300,9 +305,14 @@ function drawPlayerBody(){
   const img=skey?SPRITES[skey]:null;
   if(!img){ drawBody(P.x,P.y,R_PLAYER,P.inv>0?'#9fd8ff':C.cyan,P.hurt); return; }
   const p=proj(P.x,P.y);
+  const s=R_PLAYER*3.8;
+  if(GL.on){ const ga=ctx.globalAlpha, m=glMT(glMat(),p[0],p[1]), an=PANIM[skey];
+    glDisk(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,'#000',.45*ga);
+    if(!dir4&&OPT.pimgRotate) glMR(m,P.face);
+    const tex=an?glFrameTex(img,(OPT.pimgAnimMove&&!P.moving)?0:Math.floor(performance.now()/1000*an.fps)%an.n,an.n):glImgTex(img,1);
+    glImg(tex,m,s,ga,P.hurt>0?P.hurt*6:(P.inv>0?0.3:0)); return; }
   ctx.fillStyle='rgba(0,0,0,.45)';
-  ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();
-  const s=R_PLAYER*3.8;   // v2.97 일반 몹(72px)보다 조금 더 크게 — 판정(히트박스)은 그대로, 그림자도 기존 크기 유지
+  ctx.beginPath();ctx.ellipse(p[0],p[1],R_PLAYER*.86,R_PLAYER*.86*SQUASH,0,0,TAU);ctx.fill();   // v2.97 일반 몹(72px)보다 조금 더 크게 — 판정(히트박스)은 그대로, 그림자도 기존 크기 유지
   const willRotate=!dir4&&OPT.pimgRotate;   // v2.92 회전 중엔 세로압축(SQUASH)을 끈다 — 같이 걸면 이미지가 평행사변형처럼 기울어 보였다
   /* v3.1 회전 안 할 때만 SQUASH를 걸었더니 회전 여부에 따라 그림 세로 크기가 달라 보였다(평평해짐) — 그림엔 아예 SQUASH를 안 건다 */
   ctx.save();
@@ -627,8 +637,10 @@ function drawBullet(b){
   const col=b.owner==='player'?C.cyan:C.red;
   let fa=b.fake&&b.owner!=='player'?0.5+0.35*Math.abs(Math.sin(performance.now()/120+b.x*0.02)):1;
   if(b.blink===1&&b.age>0.3) fa*=Math.max(0.05,(0.45-b.age)/0.15);
+  const gl=GL.on, cb=OPT.cb&&b.owner==='enemy';
   b.trail.forEach((q,i)=>{
     const p=proj(q[0],q[1]);
+    if(gl){ const rr=4*(i/b.trail.length)+1; glDisk(p[0],p[1],rr,rr,col,(i/b.trail.length)*.3*fa); return; }
     ctx.globalAlpha=(i/b.trail.length)*.3*fa;ctx.fillStyle=col;
     ctx.beginPath();ctx.arc(p[0],p[1],4*(i/b.trail.length)+1,0,TAU);ctx.fill();
   });
@@ -639,17 +651,24 @@ function drawBullet(b){
     ctx.beginPath(); ctx.arc(p[0],p[1],13,0,TAU); ctx.stroke();
     ctx.globalAlpha=.5; ctx.beginPath(); ctx.arc(p[0],p[1],17,0,TAU); ctx.stroke(); ctx.restore();
   }
+  const rr=R_BULLET+3*clamp((b.spd-CFG.spd)/Math.max(1,cap()-CFG.spd),0,1);
+  if(gl){
+    if(b.owner==='player'){ const g=20+b.glow*14; glDisk(p[0],p[1],g,g,col,(.3+b.glow*.45)*.4*fa); }
+    const q=cb?rr*1.5:rr, t=cb?GL.tx.dia:GL.tx.disk;
+    glDisk(p[0],p[1],q+.75,q+.75,'#fff',.65*fa,t); glDisk(p[0],p[1],q-.75,q-.75,col,fa,t);
+  } else {
   if(b.owner==='player'){
     ctx.fillStyle=col;ctx.globalAlpha=(.3+b.glow*.45)*.4;
     ctx.beginPath();ctx.arc(p[0],p[1],20+b.glow*14,0,TAU);ctx.fill();ctx.globalAlpha=1;
   }
-  const rr=R_BULLET+3*clamp((b.spd-CFG.spd)/Math.max(1,cap()-CFG.spd),0,1);
   ctx.fillStyle=col;ctx.beginPath();
   if(OPT.cb&&b.owner==='enemy'){ const q=rr*1.5;
     ctx.moveTo(p[0],p[1]-q);ctx.lineTo(p[0]+q,p[1]);ctx.lineTo(p[0],p[1]+q);ctx.lineTo(p[0]-q,p[1]);ctx.closePath(); }
   else ctx.arc(p[0],p[1],rr,0,TAU);
   ctx.fill();
   ctx.strokeStyle='#fff';ctx.globalAlpha=.65;ctx.lineWidth=1.5;ctx.stroke();ctx.globalAlpha=1;
+  }
+  ctx.globalAlpha=1;
   if(b.ready){
     const lk=P.lock>0&&P.lockKind!=='ok';
     const pc=lk?'rgba(127,146,159,.75)':C.cyan;
@@ -781,15 +800,19 @@ function drawHUD(){
   }
 }
 function render(){
+  const gl=glFrameStart();
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,gcv.width,gcv.height);
   ZK=VW/W;
   /* v2.87 카메라 이동은 없앤다 — 확대(가로 꽉 채우기)는 그대로 두고, 전장이 화면 세로 가운데에 오도록 고정.
      전장 높이(760×0.62)×확대가 화면보다 아주 조금 커서, 위아래 끝이 몇 픽셀만 잘린다 (플레이 영역은 다 보임) */
   CAMY = ZK<=1.0001 ? 0 : (H - WORLD.h*SQUASH*ZK)/2 - OY*ZK;
+  const sk=shake>0&&OPT.shake, sx=sk?(Math.random()-.5)*shake*OPT.shake:0, sy=sk?(Math.random()-.5)*shake*OPT.shake:0;
+  if(gl){ ctx=GL.cxG; glWorld(sx,sy); }
   ctx.setTransform(DPR*ZK,0,0,DPR*ZK,0,CAMY*DPR);   // v2.85 전장: 가로 꽉 채우기 + 세로 카메라
   ctx.save();
-  if(shake>0&&OPT.shake)ctx.translate((Math.random()-.5)*shake*OPT.shake,(Math.random()-.5)*shake*OPT.shake);   // v2.52 강도 단계
+  if(sk)ctx.translate(sx,sy);   // v2.52 강도 단계
   drawGrid();drawObstacles();drawWallPreview();drawZone();drawMortars();drawEdgeZone();drawRelayLinks();drawHealLinks();drawLungeWarning();drawSniperLines();drawBossMarks();drawBulletDebug();
+  if(gl){ ctx.restore(); ctx=ctxTop; ctx.setTransform(DPR*ZK,0,0,DPR*ZK,0,CAMY*DPR); ctx.save(); if(sk) ctx.translate(sx,sy); }
   ens.slice().sort((a,b)=>a.y-b.y).forEach(e=>{
     if(e.grade==='illusion'){ ctx.save(); ctx.globalAlpha=.45+.2*Math.sin(performance.now()/90); drawEnemyBody(e); ctx.restore(); } else drawEnemyBody(e);
     drawShield(e); drawHpBar(e);
@@ -804,10 +827,13 @@ function render(){
   ctx.beginPath();ctx.moveTo(p[0],p[1]);
   ctx.lineTo(p[0]+Math.cos(P.face)*66,p[1]+Math.sin(P.face)*66*SQUASH);ctx.stroke();
   bullets.forEach(drawBullet);
-  parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
-    ctx.fillRect(pp[0]-2,pp[1]-2,4,4);});ctx.globalAlpha=1;
+  if(gl) parts.forEach(q=>{const pp=proj(q.x,q.y); glDisk(pp[0],pp[1],2,2,C[q.col]||q.col,Math.min(1,q.t*3),GL.tx.sq);});
+  else parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
+    ctx.fillRect(pp[0]-2,pp[1]-2,4,4);});
+  ctx.globalAlpha=1;
   ctx.restore();
   drawDmgNums(); drawHeat(); drawCrosshair();
   ctx.setTransform(DPR,0,0,DPR,0,0);   // v2.85 HUD · 조이스틱은 화면 기준 (양 끝까지)
   drawSticks(); drawHUD();
+  glFrameEnd();
 }
