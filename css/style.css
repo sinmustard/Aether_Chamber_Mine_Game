@@ -602,3 +602,9 @@ button.circuit-dock:is(:hover,:focus-visible)::after{
 .cartridge-portrait .module-mark{
   position:absolute;inset:0;width:100%;height:100%;margin:0;object-fit:contain
 }
+
+.module-details{
+  padding:8px;margin:4px auto 8px;border:1px solid #405469;border-radius:6px;background:#0e1a28;color:var(--fg)
+}
+.module-details .circuit-actions{margin-top:8px}
+.module-details .circuit-actions span{align-self:center;color:var(--dim)}

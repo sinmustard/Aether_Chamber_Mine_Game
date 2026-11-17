@@ -12,6 +12,17 @@ function onHurt(){
   if(c){ if(!(P.counterT>0)){ P.ctrMv=40*c; P.ctrRg=0.4*c; CFG.moveSpd+=P.ctrMv; CFG.rangeM+=P.ctrRg; say('역습','warn'); } P.counterT=2; }
   const f=boonLv('fury'); if(f&&CFG.skillR) P.rChg=Math.min(CFG.rNeed,P.rChg+5*f);
 }
+function advanceCartridgeSupplies(cleared,afterBoss){
+  if(cleared>0&&cleared%4===0){
+    if(boonLv('roll_supply')&&!run.rerolls) run.rerolls=1;
+    run.rerolls=(run.rerolls||0)+cartridgeSynergyLv('보급');
+  }
+  if(cleared>0&&cleared%6===0) run.rerolls=(run.rerolls||0)+boonLv('refresh_cache');
+  if(afterBoss){
+    run.rerolls=(run.rerolls||0)+boonLv('boss_cache')+Number(cartridgeMastery('보급'));
+    if(cartridgeMastery('재화')) run.salvageMasteryBosses=(run.salvageMasteryBosses||0)+1;
+  }
+}
 function update(dt){
   if(paused)return;
   if(BOT.on) botTick(dt);
@@ -125,16 +136,14 @@ function update(dt){
         announce('사이클 '+run.cycle,'warn'); run.phaseT=2.2; }
       else run.phaseT=1.2;
       run.phase='break';
-      if(run.rush || run.tut || run.practice){
+      if(run.rush){
+        advanceCartridgeSupplies(run.rush.i,true);
+        openReward(true);
+      } else if(run.tut||run.practice){
         if(wasBoss || run.wave%2===0 || run.dunReward) openReward(wasBoss);
       } else {
         const cleared=(run.cycle-1)*(BOSS_WAVE+1)+run.wave;
-        if(cleared%4===0){
-          if(boonLv('roll_supply')&&!run.rerolls) run.rerolls=1;
-          run.rerolls=(run.rerolls||0)+cartridgeSynergyLv('보급');
-        }
-        if(wasBoss&&cartridgeMastery('보급')) run.rerolls=(run.rerolls||0)+1;
-        if(wasBoss&&cartridgeMastery('재화')) run.salvageMasteryBosses=(run.salvageMasteryBosses||0)+1;
+        advanceCartridgeSupplies(cleared,wasBoss);
         if(cleared%2===0) openReward(wasBoss,false,cleared);
         run.dunReward=0;
       }

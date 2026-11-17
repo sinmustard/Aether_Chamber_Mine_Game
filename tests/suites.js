@@ -1,6 +1,16 @@
 // 게임을 실제 브라우저로 돌려 보는 테스트 묶음. 서버는 전부 가짜(lib.js fakeSupabase)
 const { TOKEN, wait, openGame, click, visible, screens, toHub, launchRun, finishRun, submits } = require('./lib');
 
+const installTestCartridge = () => {
+  if (!run?.rwSelected) return;
+  for (const [board, cartridge] of run.cartridges.entries()) {
+    for (let slot = 0; slot < cartridge.length; slot++) {
+      if (placeCartridgeReward(board, slot, false)) return;
+    }
+  }
+  closeReward();
+};
+
 const playKeys = async (page, n) => {   // 이동 · 조준 · 패링 · 스킬을 대충 섞어 누른다
   const box = await page.locator('#gamecv').boundingBox(), ks = ['w', 'd', 's', 'a'];
   for (let i = 0; i < n; i++) {
@@ -8,7 +18,10 @@ const playKeys = async (page, n) => {   // 이동 · 조준 · 패링 · 스킬�
     await page.mouse.move(box.x + box.width * (0.2 + 0.6 * Math.random()), box.y + box.height * (0.2 + 0.6 * Math.random()));
     await page.keyboard.press('e'); if (i % 6 === 3) for (const k of ['f', 'q', 'r', 'Enter']) await page.keyboard.press(k);
     await wait(200); await page.keyboard.up(ks[i % 4]);
-    if (await visible(page, '#reward')) await page.locator('#rwRow > *').first().click({ timeout: 1000 }).catch(() => {});
+    if (await visible(page, '#reward')) {
+      await page.locator('#rwRow > *').first().click({ timeout: 1000 }).catch(() => {});
+      await page.evaluate(installTestCartridge);
+    }
   }
 };
 const noErrors = (t, g, where) => t.ok(g.errors.length === 0, where + ' 오류 없음', g.errors.join(' | '));
@@ -559,14 +572,14 @@ module.exports = {
     t.ok(pab.bonus, '먹은 내 탄 1발 → 흡수체를 잡을 때 점수 +40', '+' + pab.gain);
     // 위험한 선택 「증원」(예전 위험 계약): 웨이브 비우기 → 카드 → 수락 → 다음 웨이브 ×1.5 → 버티면 보상 하나 더
     for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));   // 다음 전투가 시작될 때까지 (이미 비운 웨이브면 '비운 순간'이 없다)
-      if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+      if (st.rw) { await wait(600); await p.keyboard.press('1'); await p.evaluate(installTestCartridge); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
     await p.evaluate(() => { run.wave = Math.max(run.wave, 3); run._evW = 0; run.forceEvent = 'horde'; for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; run.phase = 'fight'; });   // 다음 프레임에 '비운 순간'이 꼭 생기게
     for (let i = 0; i < 30 && !(await p.evaluate(() => $('#reward').classList.contains('on'))); i++) await wait(100);
     const offer = await p.evaluate(() => $('#rwHd').innerText + ' | wave ' + run.cycle + '-' + run.wave + ' ' + run.phase + ' force ' + run.forceEvent + ' evW ' + run._evW + ' ens ' + ens.length); await wait(600); await p.keyboard.press('1'); await wait(150);
     const next = await p.evaluate(() => run.riskNext);
     t.ok(/증원/.test(offer) && next === 1, '웨이브 클리어 직후 위험한 선택 「증원」 카드 → 수락 (폰에서도 카드로)', offer);
     for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
-      if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+      if (st.rw) { await wait(600); await p.keyboard.press('1'); await p.evaluate(installTestCartridge); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
     const risk = await p.evaluate(() => ({ on: run.riskOn, sr0: run.startRewards || 0 }));
     await p.evaluate(() => { for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; });
     for (let i = 0; i < 30 && await p.evaluate(() => run.phase) !== 'clear'; i++) await wait(100);
@@ -574,7 +587,7 @@ module.exports = {
     // 탄 폭풍 (강제)
     await p.evaluate(() => { run.forceStorm = 1; });
     for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
-      if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+      if (st.rw) { await wait(600); await p.keyboard.press('1'); await p.evaluate(installTestCartridge); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
     await wait(1500);
     const storm = await p.evaluate(() => ({ s: run.storm, ens: ens.length, b: bullets.filter(b => b.from === '탄 폭풍').length, q: queue.length }));
     t.ok(storm.s === 1 && storm.ens === 0 && storm.b > 0 && storm.q > 0, '탄 폭풍 웨이브: 적 없이 탄만', JSON.stringify(storm));
@@ -596,11 +609,11 @@ module.exports = {
     const order = [];
     for (let k = 0; k < 15; k++) {
       for (let i = 0; i < 80; i++) { const st = await p.evaluate(() => ({ ph: run.phase, rw: $('#reward').classList.contains('on') }));
-        if (st.rw) { await wait(600); await p.keyboard.press('1'); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
+        if (st.rw) { await wait(600); await p.keyboard.press('1'); await p.evaluate(installTestCartridge); await wait(300); continue; } if (st.ph === 'fight') break; await wait(200); }
       order.push(await p.evaluate(() => { CFG.god = 1; const b = ens.find(e => e.grade === 'boss'); const v = b && b.variant; if (b) killEnemy(b); for (let k = 0; k < 6 && ens.length; k++) ens.slice().forEach(e => killEnemy(e)); queue.length = 0; return v; }));
       for (let i = 0; i < 30 && await p.evaluate(() => screen === 'game' && run.phase === 'fight'); i++) await wait(100);   // 처치 직후엔 아직 fight — 단계가 넘어갈 때까지
     }
-    for (let i = 0; i < 60 && await p.evaluate(() => screen) === 'game'; i++) { if (await p.evaluate(() => $('#reward').classList.contains('on'))) { await wait(500); await p.keyboard.press('1'); } await wait(250); }
+    for (let i = 0; i < 60 && await p.evaluate(() => screen) === 'game'; i++) { if (await p.evaluate(() => $('#reward').classList.contains('on'))) { await wait(500); await p.keyboard.press('1'); await p.evaluate(installTestCartridge); } await wait(250); }
     const rush = await p.evaluate(() => ({ screen, txt: ($('#exMore') || {}).innerText || '', cheat: run && run.cheat }));
     t.eq(order.join(), Array(3).fill('core,warden,phantom,collapse,prime').join(), '보스 러시 3라운드: 기본형 → 수호형 → 환영형 → 붕괴형 → 정예형 × 3');
     t.ok(rush.screen === 'result' && /보스 러시 — 완주/.test(rush.txt), '네 변형을 다 잡으면 완주 시간과 함께 결과 화면', rush.txt.replace(/\n/g, ' / '));
@@ -840,25 +853,29 @@ module.exports = {
 
   async '보스 러시 시작 특전 · 드론 (v3.114)'(t, { browser, url }) {
     const g = await openGame(browser, url), p = g.page; await wait(500);
-    await p.evaluate(() => { OPT.lockMouse = 0; });   // 보상 카드가 마우스 잠금을 풀 때 일시정지가 걸리지 않게 (다른 보상 시험과 같게)
+    await p.addScriptTag({ content: 'window.installTestCartridge = ' + installTestCartridge.toString() });
+    await p.evaluate(() => {
+      OPT.lockMouse = 0;
+      window.takeRushTestReward = () => { takeReward(0); window.installTestCartridge(); };
+    });   // 보상 카드가 마우스 잠금을 풀 때 일시정지가 걸리지 않게 (다른 보상 시험과 같게)
     await p.evaluate(() => go('title')); await click(p, '#exRush'); await wait(400);
     const a = await p.evaluate(() => { const o = {}, spSum = () => SPECIALS.reduce((x, s) => x + boonLv(s.k), 0);
       o.panel1 = $('#reward').classList.contains('on') && /특수 특전/.test($('#rwHd').innerText); o.allSp = rwPicks.length === 3 && rwPicks.every(b => b.sp);
-      const s0 = spSum(); takeReward(0); o.special = spSum() === s0 + 1;
+      const s0 = spSum(); window.takeRushTestReward(); o.special = spSum() === s0 + 1;
       o.panel2 = $('#reward').classList.contains('on') && !/특수 특전/.test($('#rwHd').innerText) && rwPicks.every(b => !b.sp || b.chaos === undefined);
       o.softDefault = rushSoftActive();
-      const n0 = Object.keys(run.boons).length; takeReward(0); o.normal = Object.keys(run.boons).length >= n0 && run.phase !== 'reward';
+      const n0 = Object.keys(run.boons).length; window.takeRushTestReward(); o.normal = Object.keys(run.boons).length >= n0 && run.phase !== 'reward';
       return o; });
     t.ok(a.panel1 && a.allSp, '보스 러시 시작 → 특수 특전 3장 중 1장 고르기');
     t.ok(a.special && a.panel2 && a.normal && !a.softDefault, '도전(기본): 특전을 고르면 이어서 일반 보상 1개 · 피해 그대로', JSON.stringify(a));
     const e = await p.evaluate(() => { const o = {}; OPT.rushEasy = 1; go('hub'); run = null; go('title'); $('#exRush').click();
-      o.hd = $('#rwHd').innerText; takeReward(0); takeReward(0); o.second = $('#reward').classList.contains('on'); const ar0 = CFG.armor || 0; o.soft = rushSoftActive(); takeReward(0); o.done = run.phase !== 'reward';
+      o.hd = $('#rwHd').innerText; window.takeRushTestReward(); window.takeRushTestReward(); o.second = $('#reward').classList.contains('on'); const ar0 = CFG.armor || 0; o.soft = rushSoftActive(); window.takeRushTestReward(); o.done = run.phase !== 'reward';
       run.rush.i = RUSH_SOFT.until; for (let i = 0; i < 3; i++) { hitstop = 0; update(1 / 60); } o.softOff = !rushSoftActive() && (CFG.armor || 0) < ar0; run.rush.i = 0;
       o.row = (openModal('opt'), !!document.querySelector('[data-opt=rushEasy]')); $('#modal').classList.remove('on'); setPause(false); OPT.rushEasy = 0; go('hub'); run = null; return o; });   // 판 중에 설정을 열면 일시정지가 걸림
     t.ok(/이지/.test(e.hd) && e.second && e.soft && e.done, '이지 모드: 시작 보상 2개 · 앞쪽 두 보스 동안 탄 피해 ×0.8', JSON.stringify(e));
     t.ok(e.softOff, '이지 모드: 수호형을 잡으면 피해가 원래대로');
     t.ok(e.row, '설정에 「보스 러시 이지 모드」 스위치');
-    await p.evaluate(() => { go('title'); $('#exRush').click(); takeReward(0); takeReward(0); });
+    await p.evaluate(() => { go('title'); $('#exRush').click(); window.takeRushTestReward(); window.takeRushTestReward(); });
     const d = await p.evaluate(() => { const o = {}, step = n => { for (let i = 0; i < n; i++) { hitstop = 0; update(1 / 60); } }; CFG.god = 1;
       if (run.phase === 'build') { run.phase = 'break'; run.phaseT = 0.2; }   // 벽 설치 단계(최대 12초)는 건너뜀
       for (let i = 0; i < 400 && run.phase !== 'fight'; i++) step(1);
@@ -873,8 +890,8 @@ module.exports = {
     t.eq(d.seized, 0, '드론 탄은 적이 되뺏지 못함');
     t.ok(d.pauseStop, '일시정지 중엔 드론도 멈춤');
     t.ok(d.noDroneNormal, '드론은 보스 러시에만 (일반 판엔 없음)');
-    await p.evaluate(() => { go('hub'); run = null; go('title'); $('#exRush').click(); takeReward(0); takeReward(0); });
-    const h = await p.evaluate(() => { const o = {}; run.rush.i = 2; run.phase = 'break'; openReward(false); o.hd = $('#rwHd').innerText; takeReward(0);
+    await p.evaluate(() => { go('hub'); run = null; go('title'); $('#exRush').click(); window.takeRushTestReward(); window.takeRushTestReward(); });
+    const h = await p.evaluate(() => { const o = {}; run.rush.i = 2; run.phase = 'break'; openReward(false); o.hd = $('#rwHd').innerText; window.takeRushTestReward();
       run.rush.i = rushTotal(); run.phase = 'break'; openReward(false); o.last = !$('#reward').classList.contains('on') && run.phase !== 'reward'; return o; });
     t.ok(h.hd.includes('수호형 격파 (2 / 15)'), '보스 러시 보상 창 제목에 잡은 보스 ("웨이브 2 완료" 대신)', h.hd);
     t.ok(h.last, '마지막 보스 뒤엔 보상 없이 바로 결과');
@@ -884,9 +901,9 @@ module.exports = {
     t.ok(rd.r1.v === 'core' && rd.r2.v === 'core' && rd.r3.v === 'core' && rd.r3prime.v === 'prime', '라운드마다 기본형부터 다시, 15번째는 정예형', JSON.stringify(rd));
     t.ok(rd.r1.cyc === 2 && rd.r2.cyc === 5 && rd.r3.cyc === 8 && rd.r1.hp < rd.r2.hp && rd.r2.hp < rd.r3.hp, '라운드가 오를수록 사이클 수준(2 · 5 · 8) · 보스 체력 증가');
     t.ok(rd.r1.el === 1 && rd.r2.el === 3 && rd.r3.el === 4 && rd.r2.aff && rd.r3.aff, '라운드마다 접두사 엘리트 호위 1 · 3 · 4기');
-    const rw = await p.evaluate(() => { const o = {}; run.rushEasy = false; run.rush.i = 1; run.phase = 'break'; openReward(false); o.odd = $('#reward').classList.contains('on'); if (o.odd) takeReward(0);
-      run.rush.i = 2; run.phase = 'break'; openReward(false); o.even = $('#reward').classList.contains('on'); if (o.even) takeReward(0);
-      run.rushEasy = true; run.rush.i = 1; run.phase = 'break'; openReward(false); o.easyOdd = $('#reward').classList.contains('on'); if (o.easyOdd) takeReward(0); run.rushEasy = false; return o; });
+    const rw = await p.evaluate(() => { const o = {}; run.rushEasy = false; run.rush.i = 1; run.phase = 'break'; openReward(false); o.odd = $('#reward').classList.contains('on'); if (o.odd) window.takeRushTestReward();
+      run.rush.i = 2; run.phase = 'break'; openReward(false); o.even = $('#reward').classList.contains('on'); if (o.even) window.takeRushTestReward();
+      run.rushEasy = true; run.rush.i = 1; run.phase = 'break'; openReward(false); o.easyOdd = $('#reward').classList.contains('on'); if (o.easyOdd) window.takeRushTestReward(); run.rushEasy = false; return o; });
     t.ok(!rw.odd && rw.even && rw.easyOdd, '도전은 보스 2마리마다 보상, 이지는 매번', JSON.stringify(rw));
     noErrors(t, g, '보스 러시'); await p.close();
   },

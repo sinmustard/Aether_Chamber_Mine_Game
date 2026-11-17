@@ -82,7 +82,7 @@ function openReward(afterBoss,fromReroll,cartridgeWave){
   if(run.phase!=='reward') run.rwPrev=run.phase;   // v3.62 보상을 고른 뒤 돌아갈 단계 (출격 직후 보상은 벽 설치 단계)
   run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+(cartridgeWave||run.wave)*50+run.rwRoll);   // v3.62
   const candidates=cartridgeWave?BOONS.concat(CARTRIDGE_MODULES):BOONS;
-  const pool=candidates.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
+  const pool=candidates.filter(b=>(cartridgeWave?canOfferCartridgeModule(b):boonLv(b.k)<b.max)&&(!b.ok||b.ok()));
   unlockMouse();   // v3.62 마우스가 잠긴 채면 커서가 안 보이고 클릭이 카드 대신 캔버스(패링)로 갔다
   if(cartridgeWave){ openCartridge(afterBoss,fromReroll,cartridgeWave,pool); return; }
   rwPicks=[];
@@ -114,7 +114,7 @@ function supplyRewards(){
 }
 function openCartridge(afterBoss,fromReroll,cleared,pool){
   if(!fromReroll) run.rwCartridgeDungeon=!!run.dunReward;
-  const special=SPECIALS.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
+  const special=SPECIALS.filter(b=>canOfferCartridgeModule(b)&&(!b.ok||b.ok()));
   const chance=Math.min(0.9,(afterBoss?CFG.specialBoss:CFG.specialChance)*(run.rwCartridgeDungeon?2:1));
   const specialPick=special.length&&(!pool.length||Math.random()<chance)?rarePick(special):null;
   const bag=pool.slice(), picks=[];
@@ -124,6 +124,9 @@ function openCartridge(afterBoss,fromReroll,cleared,pool){
     picks.push(bag.splice(bag.indexOf(pick),1)[0]);
   }
   if(specialPick) picks.splice(Math.floor(Math.random()*(picks.length+1)),0,specialPick);
+  showCartridgePicks(picks,afterBoss,'누적 '+cleared+'웨이브 완료');
+}
+function showCartridgePicks(picks,afterBoss,title){
   const supplies=supplyRewards();
   supplies.push({k:'f_reroll',n:'예비 새로고침',d:'새로고침 횟수 +1',chaos:1,
     fn:()=>{run.rerolls=(run.rerolls||0)+1;}});
@@ -139,8 +142,9 @@ function openCartridge(afterBoss,fromReroll,cleared,pool){
   run.rwHeld=null;
   run.rwSelected=null;
   run.rwDock=null;
+  run.rwInspect=null;
   showReward(afterBoss);
-  $('#rwHd').textContent='누적 '+cleared+'웨이브 완료';
+  $('#rwHd').textContent=title;
   $('#rwOwn').innerHTML='';
 }
 const CARTRIDGE_SIZE=6;
@@ -216,6 +220,12 @@ function canSlotModule(cartridge,slot,module){
 function canInstallModule(module){
   return module.chaos||boonLv(module.k)<module.max;
 }
+function canOfferCartridgeModule(module){
+  if(!canInstallModule(module)) return false;
+  if(!module.moduleTags) return true;
+  const reserved=run.reserveCartridges.flat().filter(item=>item?.k===module.k).length;
+  return boonLv(module.k)+reserved<module.max;
+}
 function circuitDockMarkup(count,cartridges=null,selected=null,reserve=false){
   const label=reserve?'보류 카트리지':'카트리지';
   const docks=Array.from({length:count},(_,i)=>{
@@ -265,17 +275,25 @@ function renderCartridgeBoard(){
       const label=item?item.n+' · '+item.moduleTags.join(' / '):'';
       const attrs=' data-board="'+board+'" data-slot="'+slot+'"';
       const style=' class="cartridge-slot'+(item?.sp?' modified':'')+'"';
-      if(reserve&&item){
-        const selected=held?.board===board&&held.slot===slot;
-        return '<button type="button"'+style+attrs+' data-action="select" aria-pressed="'+selected+'"'+
-          (canInstallModule(item)?'':' disabled')+' aria-label="'+label+'" title="'+label+'">'+content+'</button>';
+      if(item){
+        const inspected=run.rwInspect?.reserve===reserve&&run.rwInspect.board===board&&run.rwInspect.slot===slot;
+        return '<button type="button"'+style+attrs+' data-action="inspect" data-reserve="'+Number(reserve)+
+          '" aria-pressed="'+inspected+'" aria-label="'+label+'" title="'+label+'">'+content+'</button>';
       }
-      if(item) return '<span'+style+' role="img" aria-label="'+label+'" title="'+label+'">'+content+'</span>';
       const ready=canSlotModule(cartridge,slot,module)&&
-        (reserve?!held:canInstallModule(module));
+        (reserve?!held&&canOfferCartridgeModule(module):canInstallModule(module));
       return '<button type="button"'+style+attrs+' data-action="'+(reserve?'hold':'install')+
         '" aria-label="'+(reserve?'보류':'장착')+' 슬롯 '+(slot+1)+'"'+(ready?'':' disabled')+'>'+content+'</button>';
     });
+    const inspect=run.rwInspect;
+    const inspected=inspect?.reserve===reserve&&inspect.board===board?cartridge[inspect.slot]:null;
+    const details=inspected?'<div class="module-details" tabindex="-1"><b>'+inspected.n+'</b><p>'+
+      inspected.moduleTags.join(' / ')+'</p><div>'+inspected.d+'</div>'+
+      (reserve?'<div class="circuit-actions">'+
+        (canInstallModule(inspected)?'<button type="button" data-action="select" data-board="'+board+'" data-slot="'+inspect.slot+'">꺼내서 장착</button>':
+          '<span>장착 한도에 도달했어요.</span>')+
+        '<button type="button" data-action="discard" data-board="'+board+'" data-slot="'+inspect.slot+'">보류에서 버리기</button></div>':'')+
+      '</div>':'';
     const modified=cartridge.filter(item=>item?.sp).length;
     const synergies=reserve?'':Object.entries(cartridgeTagCounts(cartridge)).map(([tag,count])=>{
       const stage=Math.floor(count/2);
@@ -285,7 +303,7 @@ function renderCartridgeBoard(){
     return '<section class="cartridge-panel'+(reserve?' reserve-panel':'')+'"><h4>'+(reserve?'보류 카트리지 ':'카트리지 ')+(board+1)+
       ' · 개조 '+modified+'/'+MODIFIED_LIMIT+'</h4><div class="cartridge-portrait">'+
       '<div class="cartridge-art" aria-hidden="true"></div><div class="cartridge-grid">'+slots.join('')+'</div></div>'+
-      (synergies?'<ul class="cartridge-synergies">'+synergies+'</ul>':'')+'</section>';
+      details+(synergies?'<ul class="cartridge-synergies">'+synergies+'</ul>':'')+'</section>';
   }
   const selected=dock&&(dock.reserve?run.reserveCartridges:run.cartridges)[dock.board];
   const reserves=run.reserveCartridges;
@@ -397,6 +415,7 @@ $('#rwOwn').addEventListener('click',e=>{
     const index=Number(board);
     if(!(isReserve?run.reserveCartridges:run.cartridges)[index]) return;
     run.rwDock={board:index,reserve:isReserve};
+    run.rwInspect=null;
     renderCartridgeBoard();
     $('#rwOwn').querySelector('[data-action="dock"][aria-expanded="true"]')?.focus({preventScroll:true});
     return;
@@ -404,6 +423,7 @@ $('#rwOwn').addEventListener('click',e=>{
   if(action==='back'){
     run.rwSelected=null;
     run.rwDock=null;
+    run.rwInspect=null;
     $('#rwOwn').innerHTML='';
     renderRwRow();
     return;
@@ -411,11 +431,26 @@ $('#rwOwn').addEventListener('click',e=>{
   const held=run.rwHeld;
   if(action==='skip'){ closeReward(); return; }
   if(action==='cancel'){ run.rwHeld=null; renderCartridgeBoard(); return; }
-  if(action==='select'){
+  if(action==='inspect'){
+    const isReserve=reserve==='1', index=Number(board), position=Number(slot);
+    if(!(isReserve?run.reserveCartridges:run.cartridges)[index]?.[position]) return;
+    run.rwInspect={board:index,slot:position,reserve:isReserve};
+    renderCartridgeBoard();
+    $('#rwOwn .module-details')?.focus();
+    return;
+  }
+  if(action==='discard'){
+    const inspected=run.rwInspect;
+    if(!inspected?.reserve||inspected.board!==Number(board)||inspected.slot!==Number(slot)) return;
+    if(held?.board===board&&held.slot===slot) run.rwHeld=null;
+    run.reserveCartridges[board][slot]=null;
+    run.rwInspect=null;
+  } else if(action==='select'){
     const stored=run.reserveCartridges[board]?.[slot];
     if(!stored||!canInstallModule(stored)) return;
     run.rwHeld={board,slot,module:stored};
     run.rwDock=null;
+    run.rwInspect=null;
   } else if(action==='hold'||action==='install'){
     placeCartridgeReward(board,slot,action==='hold');
     return;
@@ -429,7 +464,7 @@ function placeCartridgeReward(board,slot,reserve){
   const cartridge=(reserve?run.reserveCartridges:run.cartridges)[board];
   if(!canSlotModule(cartridge,slot,module)) return false;
   if(reserve){
-    if(held) return false;
+    if(held||!canOfferCartridgeModule(module)) return false;
     cartridge[slot]=module;
     closeReward();
     return true;

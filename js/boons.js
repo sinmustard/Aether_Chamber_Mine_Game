@@ -78,6 +78,9 @@ const CARTRIDGE_MODULES=[
  ['guard_plate','가드 증폭판','스킬','가드 지속 +0.4초',()=>CFG.guardDur+=0.4,()=>CFG.skill==='guard'],
  ['shock_coil','충격장 코일','스킬','충격파 반경 +25',()=>CFG.shockR+=25,()=>CFG.skill==='shock'],
  ['absorb_cell','흡수장 전지','스킬','흡수장 지속 +0.4초',()=>CFG.absorbDur+=0.4,()=>CFG.skill==='absorb'],
+ ['field_supplies','현장 보급품','보급','웨이브 회복량 +1%p',()=>CFG.waveHeal+=0.01,undefined,2],
+ ['refresh_cache','예비 보급 상자','보급','6웨이브 또는 보스 러시 6전마다 새로고침 +1회',undefined,undefined,2],
+ ['boss_cache','회수한 보급품','보급','보스 격파마다 새로고침 +1회',undefined,undefined,2],
  ['roll_supply','보급 트레이','보급','새로고침이 없을 때 4웨이브마다 1회 보충'],
  ['guard_supply','가드 보조 전원','보급','가드 재사용 대기시간 −1.2초',()=>CFG.guardCd=Math.max(1,CFG.guardCd-1.2),()=>CFG.skill==='guard'],
  ['heal_supply','의무 보급 회로','보급','회복 스킬 회복량 +8',()=>CFG.healAmt+=8,()=>CFG.skill==='heal'],
@@ -92,6 +95,6 @@ const CARTRIDGE_MODULES=[
  ['chaos_roll','불안정 탄심','혼돈','명중 피해가 ×0.8~×1.3으로 변동'],
  ['chaos_trade','과열 절연체','혼돈','점수 배율 ×1.18, 받는 피해 +8%',()=>{CFG.scoreMul*=1.18; run.diff*=1.08;}],
  ['chaos_step','불규칙 구동부','혼돈','이동 속도 +9%, 패링 실패 경직 +0.12초',()=>{CFG.moveSpd*=1.09; CFG.whiff+=0.12;}]
-].map(([k,n,tag,d,fn=()=>{},ok])=>({k,n,tag,d,fn,ok,max:1,moduleTags:[tag]}));
+].map(([k,n,tag,d,fn=()=>{},ok,max=1])=>({k,n,tag,d,fn,ok,max,moduleTags:[tag]}));
 const boonDef=k=>BOONS.find(x=>x.k===k)||SPECIALS.find(x=>x.k===k)||CARTRIDGE_MODULES.find(x=>x.k===k);
 const boonLv=k=>(run&&run.boons&&run.boons[k])||0;

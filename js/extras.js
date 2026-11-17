@@ -359,7 +359,7 @@ waveSpawn=function(){
     else if(g==='absorber'){ spawnEnemy('absorber'); spawnEnemy('mob'); spawnEnemy('mob'); }   // 흡수체는 먹을 탄이 있어야 연습이 된다
     else { const n=['elite','cannon','summoner','bulwark','mortar'].includes(g)?2:3; for(let i=0;i<n;i++) spawnEnemy(g); }
     announce('연습장  ·  '+(g.indexOf('boss')===0?'알레테이아 · '+VKO[g.split(':')[1]||'core']:KO[g]),'cyan'); sfx('wave'); run.phase='fight'; return; }
-  if(run&&run.rush){ const R=run.rush; run.wave=2; P.barrier=CFG.barrier||0;
+  if(run&&run.rush){ const R=run.rush; run.wave=2; run.opticalMasteryUsed=false; P.barrier=CFG.barrier||0;
     if(R.i>=rushTotal()){ endRun(); return; }
     if(R.t0==null) R.t0=run.time;
     const rd=Math.floor(R.i/RUSH_ORDER.length), RD=RUSH_ROUNDS[rd];
@@ -387,12 +387,16 @@ waveSpawn=function(){
   if(feat('absorb')&&normalRun()&&!bossWave&&(run.forceAbsorb||(run.wave>=3&&Math.random()<0.35))){ run.forceAbsorb=0; spawnEnemy('absorber'); }
 };
 const _openReward=openReward;
-openReward=function(){ if(run&&run.practice) return;
-  if(run&&run.rush&&(run.rush.i>=rushTotal()||(run.rush.i>0&&run.rush.i%rushEvery()!==0))) return;   // v3.118 마지막 보스 뒤엔 보상 없이 바로 결과
-  const r=_openReward.apply(this,arguments);
-  if(run&&run.rush&&run.rush.i>0&&run.phase==='reward')   // 보스 러시는 웨이브가 늘 2라 "웨이브 2 완료"로 나왔다
-    $('#rwHd').innerHTML='보스 러시 · '+VKO[rushVar(run.rush.i-1)]+' 격파 ('+run.rush.i+' / '+rushTotal()+') &nbsp;—&nbsp; 하나를 고르세요';
-  return r; };
+openReward=function(afterBoss,fromReroll,cartridgeWave){
+  if(run&&run.practice) return;
+  if(!run?.rush) return _openReward(afterBoss,fromReroll,cartridgeWave);
+  const defeated=run.rush.i;
+  if(defeated>=rushTotal()||(defeated>0&&defeated%rushEvery()!==0)) return;
+  _openReward(defeated>0,fromReroll,Math.max(1,defeated));
+  $('#rwHd').textContent=defeated
+    ? '보스 러시 · '+VKO[rushVar(defeated-1)]+' 격파 ('+defeated+' / '+rushTotal()+')'
+    : '보스 러시 · 선행 보급';
+};
 
 /* ---- 탄 폭풍 탄의 출처 ---- */
 const _spawnBullet2=spawnBullet;
@@ -892,8 +896,12 @@ window.exRushStart=function(){ if(!run||!run.rush) return;
   const pool=SPECIALS.filter(s=>boonLv(s.k)<(s.max||1)&&(!s.ok||s.ok())&&!s.stay&&!s.chaos), picks=[];
   while(picks.length<3&&pool.length) picks.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
   if(!picks.length) return;
-  run.rushEasy=!!OPT.rushEasy; run.startRewards=run.rushEasy?RUSH_SOFT.start:1; rwPicks=picks;
-  window.exCardPanel('보스 러시'+(run.rushEasy?' · 이지':'')+' &nbsp;—&nbsp; 특수 특전 하나를 고르세요 (다음엔 보상 '+run.startRewards+'개)');
+  run.rushEasy=!!OPT.rushEasy; run.startRewards=run.rushEasy?RUSH_SOFT.start:1;
+  if(run.phase!=='reward') run.rwPrev=run.phase;
+  unlockMouse();
+  showCartridgePicks(picks,false,'보스 러시'+(run.rushEasy?' · 이지':'')+' · 특수 특전 선택');
+  run.rwStatPick=1;
+  $('#rwReroll').disabled=true;
   if(run.rushEasy) rushSoftOn(); };
 /* 공격 드론: 플레이어 둘레를 돌며 1.2초마다 가장 가까운 적(보스 우선)에게 0.5칸짜리 내 탄. 적은 이 탄을 되뺏지 못함
    플레이어 공격 수단은 패링뿐이라는 원칙(폐기한 설계)이 있어서 보스 러시에만 */
