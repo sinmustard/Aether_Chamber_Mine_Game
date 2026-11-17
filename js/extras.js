@@ -534,7 +534,7 @@ function presetClick(s){ if(!feat('preset')||hubBusy()) return; const all=lsGet(
   if(!p) askConfirm('프리셋 '+s+' 비어 있음','지금 찍은 강화(◆ '+now.toLocaleString()+' 어치)와 장착 스킬을 프리셋 '+s+'에 저장할까요?','저장',saveIt);
   else askConfirm('프리셋 '+s,'저장된 빌드: ◆ '+p.cost.toLocaleString()+' 어치\n지금 빌드: ◆ '+now.toLocaleString()+' 어치\n\n불러오면 지금 강화는 전부(100%) 돌려받고 프리셋으로 바꿔 끼워요.','불러오기',loadIt,'지금 빌드로 덮어쓰기',saveIt); }
 { const rb=$('#respec'); if(rb){ let prev=rb; ['A','B'].forEach(s=>{ const b=document.createElement('button'); b.id='exPre'+s; b.className='exBtn'; b.textContent='프리셋 '+s;
-  b.title='강화 빌드 저장 · 불러오기'; b.style.marginLeft='6px'; b.onclick=()=>presetClick(s); prev.after(b); prev=b; }); } }
+  b.title='강화 빌드 저장 · 불러오기'; b.onclick=()=>presetClick(s); prev.after(b); prev=b; }); } }
 
 /* ---- 마지막 5초 리플레이: 8fps로 40장을 돌려 가며 저장 ---- */
 const RP={frames:[],i:0,last:0,w:480,h:0,n:40};

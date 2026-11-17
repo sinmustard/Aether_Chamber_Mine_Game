@@ -310,9 +310,11 @@ body.touch #title .ver{display:none}
 #cfYes{color:var(--red);border:1px solid var(--red)}
 #cfYes:hover{background:rgba(255,80,90,.08)}
 /* v2.52 */
-#respec{margin-right:10px;padding:4px 9px;font:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;
+#respec,#exPreA,#exPreB{margin:0 6px 0 0;padding:4px 9px;font:inherit;font-size:10.5px;font-weight:400;line-height:1.4;letter-spacing:.06em;cursor:pointer;vertical-align:middle;
   background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:6px}
+#exPreB{margin-right:12px}
 #respec:hover{color:var(--warn);border-color:var(--warn)}
+#exPreA:hover,#exPreB:hover{color:var(--cyan);border-color:var(--cyan)}
 /* v2.82 새로고침 버튼이 오른쪽 위에 떠서 작은 화면에서 3번 카드를 가렸다 → 카드 아래 가운데로 */
 #rwReroll{position:static;display:block;margin:12px auto 0;z-index:3;padding:7px 12px;font:inherit;font-size:11px;letter-spacing:.06em;
   cursor:pointer;background:rgba(8,12,17,.8);color:var(--cyan);border:1px solid var(--cyan);border-radius:7px}
