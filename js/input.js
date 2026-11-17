@@ -58,8 +58,9 @@ const locked=()=>document.pointerLockElement===gcv;
 /* v2.63 전체화면에서는 마우스를 잠그지 않는다 — 어차피 화면 밖으로 못 나가고,
    잠그면 크롬이 주는 움직임 값이 화면 배율(125% 등)과 어긋나 조준이 실제 마우스와 달라지고 가끔 튀었다 */
 const isFs=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+const uiOpen=()=>!!((run&&run.phase==='reward')||$('#reward').classList.contains('on')||$('#modal').classList.contains('on')||$('#confirm').classList.contains('on'));
 function lockMouse(){
-  if(!OPT.lockMouse||screen!=='game'||paused||touchMode||isFs())return;
+  if(!OPT.lockMouse||screen!=='game'||paused||touchMode||isFs()||uiOpen())return;
   if(!locked()&&gcv.requestPointerLock){
     try{ const pr=gcv.requestPointerLock({unadjustedMovement:true});   // 가속 없는 원시 입력 — 튀는 현상 감소
       if(pr&&pr.catch) pr.catch(()=>{ try{ gcv.requestPointerLock(); }catch(e){} });
@@ -80,7 +81,7 @@ gcv.addEventListener('mousemove',e=>{
   mouseS.x=(e.clientX-r.left)*(VW/r.width); mouseS.y=(e.clientY-r.top)*(H/r.height); mouseS.ok=1;   // v2.86
 });
 gcv.addEventListener('mousedown',e=>{e.preventDefault(); if(screen!=='game')return; lockMouse(); doParry();});
-document.addEventListener('pointerlockchange',()=>{ document.body.classList.toggle('locked',locked()); });
+document.addEventListener('pointerlockchange',()=>{ if(locked()&&uiOpen()){ unlockMouse(); return; } document.body.classList.toggle('locked',locked()); });
 /* ---- v2.3 터치 조작 ---- */
 function tPos(t){
   const r=gcv.getBoundingClientRect();
@@ -161,7 +162,8 @@ function bindQ(id){
   el.addEventListener('mousedown',down); el.addEventListener('mouseup',up);
 }
 bindQ('padWall');
-gcv.addEventListener('wheel',e=>{ if(screen!=='game'||paused||CFG.qSkill!=='wall') return; e.preventDefault(); cycleWallType(e.deltaY>0?1:-1); },{passive:false});
+gcv.addEventListener('wheel',e=>{ if(uiOpen()){ const bx=$('#reward.on .box'); if(bx){ e.preventDefault(); bx.scrollTop+=e.deltaY; } return; }
+  if(screen!=='game'||paused||CFG.qSkill!=='wall') return; e.preventDefault(); cycleWallType(e.deltaY>0?1:-1); },{passive:false});
 padBind('padR',doR);
 padBind('rgF',doSkill); bindQ('rgQ'); padBind('rgR',doR);   // v2.79 패링 조이스틱 옆 스킬 버튼
 /* v2.79 스킬 버튼을 패링 조이스틱 자리 둘레(왼쪽 · 왼쪽 위 · 위)에 놓는다 */
