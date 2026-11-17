@@ -335,7 +335,7 @@ function showReward(afterBoss){
   sfx('wave');
 }
 function renderRwRow(){
-  $('#reward').classList.remove('circuit-open');
+  $('#reward').classList.remove('circuit-open','choice');
   $('#rwRow').hidden=false;
   $('#rwRow').classList.toggle('cartridge-offer',rwPicks.some(b=>b.cartridge||b.instant));
   $('#rwRow').innerHTML=rwPicks.map((b,i)=>

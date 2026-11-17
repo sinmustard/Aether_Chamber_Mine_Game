@@ -608,3 +608,17 @@ button.circuit-dock:is(:hover,:focus-visible)::after{
 }
 .module-details .circuit-actions{margin-top:8px}
 .module-details .circuit-actions span{align-self:center;color:var(--dim)}
+#reward.choice .box{width:min(460px,100%);padding:26px 22px 20px}
+#reward.choice .hd{font-size:15px;letter-spacing:.2em;padding-bottom:18px}
+#reward.choice .hd b{color:var(--red)}
+#reward .chSub{margin-top:10px;font-size:11px;letter-spacing:.02em;line-height:1.6;color:var(--dim)}
+#reward.choice .row{display:flex;flex-direction:row;justify-content:space-around;gap:16px;padding:14px 4px;
+  border-top:1px dashed var(--line);border-bottom:1px dashed var(--line)}
+#reward.choice .bc{flex:0 1 auto;flex-direction:row;align-items:baseline;gap:10px;padding:6px 14px;
+  border:0;border-radius:6px;background:none}
+#reward.choice .bc::before,#reward.choice .bc .k,#reward.choice .bc .d,#reward.choice .bc .st{display:none}
+#reward.choice .bc .num{border:0;padding:0;font-size:13px;letter-spacing:0}
+#reward.choice .bc .n{font-size:18px;letter-spacing:.08em;color:var(--fg);font-weight:600}
+#reward.choice .bc:hover{background:rgba(47,227,208,.08)}
+#reward.choice .bc:hover .n,#reward.choice .bc:hover .num{color:var(--cyan)}
+#reward.choice #rwReroll,#reward.choice .own{display:none}

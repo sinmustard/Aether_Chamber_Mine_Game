@@ -620,10 +620,11 @@ function spawnBullet(q){
 }
 function dungeonOffer(){
   if(!window.exCardPanel){ run.dungeon=DUNGEON.waves; return; }
-  rwPicks=[{k:'dun_in',n:'던전 입장',d:'다음 '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+'<br>카트리지 보상에서 개조 모듈 등장 확률 2배',tag:'던전',chaos:1,
+  rwPicks=[{k:'dun_in',n:'들어간다',d:'다음 '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+'<br>카트리지 보상에서 개조 모듈 등장 확률 2배',tag:'던전',chaos:1,
       fn:()=>{ run.dungeon=DUNGEON.waves; announce('던전 입장 — '+DUNGEON.waves+'웨이브','red'); }},
-    {k:'dun_out',n:'지나가기',d:'던전에 들어가지 않고 평소처럼 다음 웨이브로',tag:'던전',chaos:1,fn:()=>{ say('던전을 지나침','dim'); }}];
-  window.exCardPanel('<b style="color:var(--red)">던전이 열렸다</b> &nbsp;—&nbsp; 들어갈까요?');
+    {k:'dun_out',n:'지나친다',d:'던전에 들어가지 않고 평소처럼 다음 웨이브로',tag:'던전',chaos:1,fn:()=>{ say('던전을 지나침','dim'); }}];
+  window.exCardPanel('<b style="color:var(--red)">던전이 열렸다</b><div class="chSub">들어가면 다음 '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+' · 카트리지 보상에서 개조 모듈 등장 확률 2배</div>');
+  $('#reward').classList.add('choice');
 }
 const DECOY_PULL=130;
 const pierced=(b,e)=>!!(b.pcs&&b.pcsR===b.returns&&b.pcs.includes(e));
