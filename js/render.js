@@ -826,6 +826,7 @@ function render(){
   ctx.strokeStyle='rgba(223,233,242,.16)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(p[0],p[1]);
   ctx.lineTo(p[0]+Math.cos(P.face)*66,p[1]+Math.sin(P.face)*66*SQUASH);ctx.stroke();
+  GL.ph=1;
   bullets.forEach(drawBullet);
   if(gl) parts.forEach(q=>{const pp=proj(q.x,q.y); glDisk(pp[0],pp[1],2,2,C[q.col]||q.col,Math.min(1,q.t*3),GL.tx.sq);});
   else parts.forEach(q=>{const pp=proj(q.x,q.y);ctx.globalAlpha=Math.min(1,q.t*3);ctx.fillStyle=C[q.col]||q.col;
