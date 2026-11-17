@@ -218,7 +218,9 @@ function doParry(force){
     if(lunger.hp<=HIT_UNIT*0.25) killEnemy(lunger);   // v2.71
     P.rChg=Math.min(CFG.rNeed,P.rChg+1);   // v2.18 패링 +1 — 돌진 패링도 똑같이 충전된다
     /* v1.7 D-2 / 무결 보너스와 동일하게 처리한다 — 돌진 패링만 회복 경직이 남는 건 형평에 안 맞는다 */
-    P.lock=boonLv('flow')?0:0.12; P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
+    if(cartridgeMastery('집중')) run.focusMasteryParries=(run.focusMasteryParries||0)+1;
+    const focusReset=cartridgeMastery('집중')&&run.focusMasteryParries%3===0;
+    P.lock=boonLv('flow')||focusReset?0:0.12; P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
     return;
   }
   /* v1.3.2 다중 패링: 사거리·시야 안의 적 탄환을 가까운 순으로 최대 CFG.multi발 */
@@ -304,7 +306,7 @@ function doParry(force){
     if(echoes.length){ bullets.push(...echoes); echoes.forEach(c=>burst(c.x,c.y,'cyan',6,120)); }
     run.bestRet=Math.max(run.bestRet,maxRet);
     /* v2.35 대포병 장갑탄은 손이 더 가는 만큼 충전을 3 준다 (장갑 깎기 1 + 빼앗기 3) */
-    P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1));
+    P.rChg=Math.min(CFG.rNeed,P.rChg+(ts.some(t=>t.shell)?3:1)+(cartridgeMastery('스킬')?1:0)+boonLv('parry_cell'));
     if(run.tut) run.tut.parried=(run.tut.parried||0)+1;   // v2.60
     else stat('parries');   // v2.68
     say(ts.length>1?'패링 성공 ×'+ts.length:'패링 성공','cyan');
@@ -312,7 +314,7 @@ function doParry(force){
     /* v2.61 패링 히트스톱 제거 — 멈춘 동안 경직 시간이 안 줄어 다음 패링이 씹혔다 */
     /* v1.7 D-2: 여러 발을 한 번에 빼앗으면 그만큼 회복이 길어진다 */
     if(boonLv('s_focus')) P.focusT=3;   // v2.37 패링 집중
-    P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1))*(P.blazeT>0?0.5:1);
+    P.lock=boonLv('flow')?0:(0.10+0.09*(ts.length-1))*(P.blazeT>0?0.5:1)*(boonLv('quick_parry')?0.85:1);
     P.lockMax=Math.max(0.01,P.lock); P.lockKind='ok';
   } else { P.lock=CFG.whiff*((boonLv('s_focus')&&P.focusT>0)?0.25:1); P.lockMax=Math.max(0.01,P.lock); P.lockKind='miss';
            if(CFG.whiff>0){ say('빗나감','red'); shake=4; sfx('miss'); } }
@@ -391,9 +393,9 @@ function doQ(){
     if(paused||P.wallCd>0||P.hp<=0)return;
     let x=clamp(P.x+Math.cos(P.face)*120,40,WORLD.w-40), y=clamp(P.y+Math.sin(P.face)*120,40,WORLD.h-40);
     [x,y]=pushOutOfWalls(x,y,R_PLAYER+6);
-    P.decoy={x,y}; P.decoyT=P.decoyMax=CFG.decoyDur; P.wallCd=P.qCdMax=CFG.decoyCd;
+    P.decoy={x,y}; P.decoyT=P.decoyMax=CFG.decoyDur+0.75*cartridgeSynergyLv('미끼'); P.wallCd=P.qCdMax=CFG.decoyCd;
     P.decoyBomb=false; P.decoyBag=[];
-    if(boonLv('decoyabs')){ P.decoyT=P.decoyMax=10;
+    if(boonLv('decoyabs')){ P.decoyT=P.decoyMax=10+boonLv('decoy_timer')+0.75*cartridgeSynergyLv('미끼');
       if(boonLv('s_decoybomb')){ P.decoyBomb=true; P.decoyHp=P.decoyHpMax=Math.max(1,Math.round(P.hp+(boonLv('s_decoyhp')?6*decoyHitDmg({}):0))); P.wallCd=P.qCdMax=CFG.decoyCd*1.5; }
       else P.decoyHp=P.decoyHpMax=6+(boonLv('s_decoyhp')?6:0); }
     else P.decoyHp=null;

@@ -76,12 +76,15 @@ function gainRelic(id){ const r=RELICS.find(x=>x.k===id); if(!r||!run) return; (
 function relicCard(r){ return {k:'relic',rid:r.k,n:r.n,d:r.d+'<br><span style="color:var(--warn)">태그 — '+r.tags.join(' · ')+'</span>',tag:'유물',chaos:1,fn:()=>gainRelic(r.k)}; }
 function relicChance(afterBoss){ if(!run||run.tut||run.practice) return 0; if(run.dunReward) return 1; return Math.min(0.9,(afterBoss?0.45:0.2)*(run.syn&&run.syn.luck?2:1)); }
 let rwOpenAt=0;   // v3.67 보상 창이 열린 시각 (R 키 새로고침 0.5초 막기)
-function openReward(afterBoss,fromReroll){
+function openReward(afterBoss,fromReroll,cartridgeWave){
+  run.rwCartridgeWave=cartridgeWave||0;
   if(!fromReroll) rwOpenAt=performance.now();
   if(run.phase!=='reward') run.rwPrev=run.phase;   // v3.62 보상을 고른 뒤 돌아갈 단계 (출격 직후 보상은 벽 설치 단계)
-  run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+run.wave*50+run.rwRoll);   // v3.62
-  const pool=BOONS.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
+  run.rwRoll=fromReroll?(run.rwRoll||0)+1:0; reseedDaily(100+(cartridgeWave||run.wave)*50+run.rwRoll);   // v3.62
+  const candidates=cartridgeWave?BOONS.concat(CARTRIDGE_MODULES):BOONS;
+  const pool=candidates.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
   unlockMouse();   // v3.62 마우스가 잠긴 채면 커서가 안 보이고 클릭이 카드 대신 캔버스(패링)로 갔다
+  if(cartridgeWave){ openCartridge(afterBoss,fromReroll,cartridgeWave,pool); return; }
   rwPicks=[];
   const bag=pool.slice();
   while(rwPicks.length<3 && bag.length)
@@ -102,9 +105,202 @@ function openReward(afterBoss,fromReroll){
   }
   if(run.mode==='chaosx'&&fromReroll&&Math.random()<0.45){ const a8=chaosAmp8(); if(rwPicks.length<3) rwPicks.push(a8); else rwPicks[Math.floor(Math.random()*rwPicks.length)]=a8; }
   { const rp=relicPool(); if(rp.length&&Math.random()<relicChance(afterBoss)){ const rc=relicCard(rp[Math.floor(Math.random()*rp.length)]); if(rwPicks.length<3) rwPicks.push(rc); else rwPicks[Math.floor(Math.random()*rwPicks.length)]=rc; } }
-  const fill=[{k:'f_heal',n:'응급 정비',d:'체력 30% 회복',tag:'보급',chaos:1,fn:()=>{ P.hp=Math.min(CFG.hpMax,P.hp+Math.round(CFG.hpMax*0.3)); }},
+  for(const f of supplyRewards()){ if(rwPicks.length>=3) break; rwPicks.push(f); }
+  showReward(afterBoss);
+}
+function supplyRewards(){
+  return [{k:'f_heal',n:'응급 정비',d:'체력 30% 회복',tag:'보급',chaos:1,fn:()=>{ P.hp=Math.min(CFG.hpMax,P.hp+Math.round(CFG.hpMax*0.3)); }},
     {k:'f_score',n:'보너스 점수',d:'점수 +'+(300*run.cycle).toLocaleString(),tag:'보급',chaos:1,fn:()=>{ run.score+=300*run.cycle; }}];
-  for(const f of fill){ if(rwPicks.length>=3) break; rwPicks.push(f); }
+}
+function openCartridge(afterBoss,fromReroll,cleared,pool){
+  if(!fromReroll) run.rwCartridgeDungeon=!!run.dunReward;
+  const special=SPECIALS.filter(b=>boonLv(b.k)<b.max&&(!b.ok||b.ok()));
+  const chance=Math.min(0.9,(afterBoss?CFG.specialBoss:CFG.specialChance)*(run.rwCartridgeDungeon?2:1));
+  const specialPick=special.length&&(!pool.length||Math.random()<chance)?rarePick(special):null;
+  const bag=pool.slice(), picks=[];
+  const regularCount=specialPick?2:3;
+  while(bag.length&&picks.length<regularCount){
+    const pick=rarePick(bag);
+    picks.push(bag.splice(bag.indexOf(pick),1)[0]);
+  }
+  if(specialPick) picks.splice(Math.floor(Math.random()*(picks.length+1)),0,specialPick);
+  const supplies=supplyRewards();
+  supplies.push({k:'f_reroll',n:'예비 새로고침',d:'새로고침 횟수 +1',chaos:1,
+    fn:()=>{run.rerolls=(run.rerolls||0)+1;}});
+  rwPicks=picks.concat(supplies).slice(0,3).map(pick=>{
+    const tags=pick.moduleTags;
+    if(!tags) return {...pick,tag:'',instant:true};
+    const kind=pick.sp?'개조 모듈':'모듈';
+    const description=pick.extra
+      ? '<b>'+tags[0]+'</b> · '+pick.d+'<br><b>'+tags[1]+'</b> · '+pick.extra.d
+      : pick.d;
+    return {...pick,d:description,tag:kind+' · '+tags.join(' / '),cartridge:kind};
+  });
+  run.rwHeld=null;
+  run.rwSelected=null;
+  run.rwDock=null;
+  showReward(afterBoss);
+  $('#rwHd').textContent='누적 '+cleared+'웨이브 완료';
+  $('#rwOwn').innerHTML='';
+}
+const CARTRIDGE_SIZE=6;
+const MODIFIED_LIMIT=2;
+const CARTRIDGE_SYNERGIES={
+  '광학':['패링 시야 +6°',()=>CFG.fov=Math.min(180,CFG.fov+6)],
+  '증폭':['2왕복 이상 탄환 피해 +8%p',()=>CFG.rallyDmg+=0.08],
+  '집중':['패링 실패 경직 −0.08초',()=>CFG.whiff=Math.max(0,CFG.whiff-0.08)],
+  '탄도':['방패 관통 확률 +10%p',()=>CFG.shieldPierce=Math.min(0.75,CFG.shieldPierce+0.1)],
+  '기동':['이동 속도 +12',()=>CFG.moveSpd+=12],
+  '생명':['웨이브 회복량 +2%p',()=>CFG.waveHeal+=0.02],
+  '재화':['HUB 재화 획득량 +5%',()=>CFG.gainMul*=1.05],
+  '폭발':['명중 폭발 피해 +0.15칸'],
+  '스킬':['스킬 재사용 대기시간 −4%',()=>{
+    SKILL_CD_KEYS.forEach(k=>CFG[k]*=0.96);
+    CFG.cdrMul*=0.96;
+  }],
+  '반격':['패링 사거리 +0.15m',()=>CFG.rangeM+=0.15],
+  '보급':['누적 4웨이브마다 새로고침 +1회'],
+  '프리즘':['프리즘 내구도 +1'],
+  '미끼':['미끼 지속 +0.75초'],
+  '혼돈':['탄환 명중 시 치명타 확률 +5%p (피해 ×1.8)']
+};
+const CARTRIDGE_MASTERY={
+  '광학':'매 웨이브 첫 탄환 명중은 확정 치명타',
+  '증폭':'3왕복 이상 탄환 피해 ×1.25',
+  '집중':'세 번째 패링 성공마다 회복 경직 제거',
+  '탄도':'2왕복 이상 탄환이 방패를 확정 관통',
+  '기동':'피격 무적 중 이동 속도 ×1.25',
+  '생명':'최대 체력 25% 이하로 내려가는 생존 피격 시 체력 15% 회복 (사이클당 1회)',
+  '재화':'보스 격파마다 HUB 재화 +60',
+  '폭발':'보스에게 탄환 명중 시 폭발 반경 +80',
+  '스킬':'탄환 패링 성공 시 R 추가 충전 +1',
+  '반격':'피격 후 첫 탄환 명중 피해 ×1.3',
+  '보급':'보스 격파 시 새로고침 +1회',
+  '프리즘':'프리즘이 분열탄 1발 추가 생성',
+  '미끼':'일반 미끼도 주변 적 탄환을 끌어당김',
+  '혼돈':'다섯 번째 탄환 명중마다 확정 치명타'
+};
+const cartridgeMastery=tag=>!!run?.cartridgeMasteries?.[tag];
+const cartridgeSynergyLv=tag=>run?.cartridgeSynergies?.[tag]||0;
+function cartridgeTagCounts(cartridge){
+  const counts={};
+  for(const module of cartridge){
+    for(const tag of module?.moduleTags||[]) counts[tag]=(counts[tag]||0)+1;
+  }
+  return counts;
+}
+function installCartridgeModule(cartridge,slot,module){
+  const counts=cartridgeTagCounts(cartridge);
+  cartridge[slot]=module;
+  grantReward(module);
+  module.extra?.fn();
+  for(const tag of module.moduleTags){
+    const count=(counts[tag]||0)+1;
+    if(count%2!==0) continue;
+    const levels=run.cartridgeSynergies||(run.cartridgeSynergies={});
+    levels[tag]=(levels[tag]||0)+1;
+    CARTRIDGE_SYNERGIES[tag][1]?.();
+    if(count===6){
+      (run.cartridgeMasteries||(run.cartridgeMasteries={}))[tag]=true;
+      say(tag+' 6개 시너지 발동','cyan');
+    }
+  }
+}
+function createCartridges(count){
+  return Array.from({length:count},()=>Array(CARTRIDGE_SIZE).fill(null));
+}
+function canSlotModule(cartridge,slot,module){
+  return !!module?.cartridge&&cartridge?.[slot]===null&&
+    (!module.sp||cartridge.filter(item=>item?.sp).length<MODIFIED_LIMIT);
+}
+function canInstallModule(module){
+  return module.chaos||boonLv(module.k)<module.max;
+}
+function circuitDockMarkup(count,cartridges=null,selected=null,reserve=false){
+  const label=reserve?'보류 카트리지':'카트리지';
+  const docks=Array.from({length:count},(_,i)=>{
+    if(!cartridges) return '<span class="circuit-dock" aria-hidden="true"></span>';
+    const used=cartridges[i].filter(Boolean).length;
+    return '<button type="button" class="circuit-dock" data-action="dock" data-board="'+i+
+      '" data-reserve="'+Number(reserve)+'" aria-expanded="'+(selected?.board===i&&selected.reserve===reserve)+
+      '" aria-label="'+label+' '+(i+1)+' · 모듈 '+used+' / '+CARTRIDGE_SIZE+'">'+
+      (reserve?'<span>'+(i+1)+'</span><small>'+used+' / '+CARTRIDGE_SIZE+'</small>':'')+'</button>';
+  }).join('');
+  const accessibility=cartridges?' role="group"':' role="img"';
+  return '<div class="circuit-preview'+(reserve?' circuit-reserve-docks':'')+'" data-docks="'+count+'"'+accessibility+
+    ' aria-label="'+label+' 슬롯 '+count+'개">'+
+    (reserve?'':'<div class="circuit-art" aria-hidden="true"></div>'+
+      (count>2?'<div class="circuit-dock-bank circuit-dock-art" aria-hidden="true">'+
+        '<span></span>'.repeat(count)+'</div>':''))+
+    '<div class="circuit-dock-bank">'+docks+'</div></div>';
+}
+const MODULE_MARKS={
+  "광학": "optical",
+  "증폭": "amplifier",
+  "집중": "focus",
+  "탄도": "ballistic",
+  "기동": "mobility",
+  "생명": "vitality",
+  "재화": "currency",
+  "폭발": "blast",
+  "스킬": "skill",
+  "반격": "counter",
+  "보급": "supply",
+  "프리즘": "prism",
+  "미끼": "decoy",
+  "혼돈": "chaos"
+};
+function moduleMark(item){
+  if(!item.moduleTags) return '';
+  const mark=item.sp?item.k:MODULE_MARKS[item.moduleTags[0]];
+  return '<img class="module-mark" src="assets/module-marks/'+mark+'.svg" alt="" width="40" height="40">';
+}
+function renderCartridgeBoard(){
+  const held=run.rwHeld;
+  const module=held?.module||run.rwSelected;
+  const dock=run.rwDock;
+  function renderCartridge(cartridge,board,reserve){
+    const slots=cartridge.map((item,slot)=>{
+      const content=item?moduleMark(item):'+';
+      const label=item?item.n+' · '+item.moduleTags.join(' / '):'';
+      const attrs=' data-board="'+board+'" data-slot="'+slot+'"';
+      const style=' class="cartridge-slot'+(item?.sp?' modified':'')+'"';
+      if(reserve&&item){
+        const selected=held?.board===board&&held.slot===slot;
+        return '<button type="button"'+style+attrs+' data-action="select" aria-pressed="'+selected+'"'+
+          (canInstallModule(item)?'':' disabled')+' aria-label="'+label+'" title="'+label+'">'+content+'</button>';
+      }
+      if(item) return '<span'+style+' role="img" aria-label="'+label+'" title="'+label+'">'+content+'</span>';
+      const ready=canSlotModule(cartridge,slot,module)&&
+        (reserve?!held:canInstallModule(module));
+      return '<button type="button"'+style+attrs+' data-action="'+(reserve?'hold':'install')+
+        '" aria-label="'+(reserve?'보류':'장착')+' 슬롯 '+(slot+1)+'"'+(ready?'':' disabled')+'>'+content+'</button>';
+    });
+    const modified=cartridge.filter(item=>item?.sp).length;
+    const synergies=reserve?'':Object.entries(cartridgeTagCounts(cartridge)).map(([tag,count])=>{
+      const stage=Math.floor(count/2);
+      const mastery=stage===3?'<br><b>6개 효과 · '+CARTRIDGE_MASTERY[tag]+'</b>':'';
+      return '<li>'+tag+' '+count+'개 · '+(stage?'단계 '+stage+' · '+CARTRIDGE_SYNERGIES[tag][0]+' ×'+stage:'2개부터 발동')+mastery+'</li>';
+    }).join('');
+    return '<section class="cartridge-panel'+(reserve?' reserve-panel':'')+'"><h4>'+(reserve?'보류 카트리지 ':'카트리지 ')+(board+1)+
+      ' · 개조 '+modified+'/'+MODIFIED_LIMIT+'</h4><div class="cartridge-portrait">'+
+      '<div class="cartridge-art" aria-hidden="true"></div><div class="cartridge-grid">'+slots.join('')+'</div></div>'+
+      (synergies?'<ul class="cartridge-synergies">'+synergies+'</ul>':'')+'</section>';
+  }
+  const selected=dock&&(dock.reserve?run.reserveCartridges:run.cartridges)[dock.board];
+  const reserves=run.reserveCartridges;
+  $('#reward').classList.add('circuit-open');
+  $('#rwOwn').innerHTML='<p class="circuit-pending">'+module.n+
+    ' · '+(selected?'빈 모듈 슬롯을 선택하세요.':'카트리지를 선택하세요.')+'</p>'+
+    '<div class="circuit-workspace'+(selected?' has-cartridge':'')+'"><div class="circuit-main">'+
+    circuitDockMarkup(run.cartridges.length,run.cartridges,dock)+
+    (reserves.length?'<h4>보류 카트리지</h4>'+circuitDockMarkup(reserves.length,reserves,dock,true):'')+'</div>'+
+    (selected?renderCartridge(selected,dock.board,dock.reserve):'')+'</div>'+
+    '<div class="circuit-actions"><button type="button" data-action="'+(held?'cancel':'back')+'">'+
+    (held?'선택 취소':'보상으로 돌아가기')+'</button>'+
+    (held?'':'<button type="button" data-action="skip">보상 건너뛰기</button>')+'</div>';
+}
+function showReward(afterBoss){
   run.rwBoss=afterBoss;
   const rr=$('#rwReroll'); rr.textContent='새로고침 R · 남은 '+(run.rerolls||0); rr.disabled=!(run.rerolls>0);
   run.phase='reward';
@@ -121,31 +317,57 @@ function openReward(afterBoss,fromReroll){
   sfx('wave');
 }
 function renderRwRow(){
+  $('#reward').classList.remove('circuit-open');
+  $('#rwRow').hidden=false;
+  $('#rwRow').classList.toggle('cartridge-offer',rwPicks.some(b=>b.cartridge||b.instant));
   $('#rwRow').innerHTML=rwPicks.map((b,i)=>
     '<div class="bc'+(b.sp?' sp':'')+'" data-i="'+i+'">'+
     '<div class="num">'+(i+1)+'</div>'+
-    '<div class="k">'+b.tag+'</div>'+
+    (b.tag?'<div class="k">'+b.tag+'</div>':'')+
+    (b.cartridge?moduleMark(b):'')+
     '<div class="n">'+(b.nh||b.n)+'</div>'+
     '<div class="d">'+b.d+'</div>'+
-    '<div class="st">'+(boonLv(b.look||b.k)?'보유 '+boonLv(b.look||b.k)+' / '+b.max:'신규')+'</div>'+
+    '<div class="st">'+(b.cartridge?'선택 후 장착':b.instant?'즉시 사용':boonLv(b.look||b.k)?'보유 '+boonLv(b.look||b.k)+' / '+b.max:'신규')+'</div>'+
     '</div>').join('');
 }
 /* v2.52 보상 새로고침 — 생존/보급의 '새로고침' 강화와 보상 '새로고침 +1'로 횟수를 얻는다 */
 function rerollReward(){
   if(!run||run.phase!=='reward'||!(run.rerolls>0)||run.rwStatPick) return;
-  run.rerolls--; sfx('ui'); openReward(run.rwBoss,true);
+  run.rerolls--; sfx('ui'); openReward(run.rwBoss,true,run.rwCartridgeWave);
 }
 $('#rwReroll').onclick=rerollReward;
 function takeReward(i){
+  if(!run||run.phase!=='reward'||run.rwSelected) return;
   const b=rwPicks[i]; if(!b) return;
+  if(b.cartridge){
+    run.rwSelected=b;
+    $('#rwRow').hidden=true;
+    renderCartridgeBoard();
+    $('#reward .box').scrollTop=0;
+    $('#rwOwn').querySelector('[data-action="dock"]')?.focus({preventScroll:true});
+    return;
+  }
+  applyReward(b);
+}
+function grantReward(b){
   if(!b.chaos) run.boons[b.k]=(run.boons[b.k]||0)+1;
   if(b.sp) stat('specials');   // v2.68
-  if(b.stay){ b.fn(); return; }
-  run.rwStatPick=0;
   b.fn();
+}
+function applyReward(b){
+  if(!b.stay) run.rwStatPick=0;
+  grantReward(b);
+  if(b.stay) return;
+  finishReward(b);
+}
+function finishReward(b){
+  say(b.n,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',14,150);
+  closeReward();
+}
+function closeReward(){
+  run.rwSelected=null;
   $('#reward').classList.remove('on');
   endReward();
-  say(b.n,'cyan'); sfx('heal'); burst(P.x,P.y,'cyan',14,150);
   if(run.startRewards>0){ run.startRewards--; openReward(false); }   // v2.17 선행 보급 2단계
   else lockMouse();
 }
@@ -164,4 +386,59 @@ function nearestEnemy(){
   let best=null,bd=1e9;
   ens.forEach(e=>{const d=dist(e.x,e.y,P.x,P.y); if(d<bd){bd=d;best=e;}});
   return best;
+}
+
+$('#rwOwn').addEventListener('click',e=>{
+  const button=e.target.closest('[data-action]');
+  if(!button||run?.phase!=='reward'||!run.rwSelected) return;
+  const {action,board,slot,reserve}=button.dataset;
+  if(action==='dock'){
+    const isReserve=reserve==='1';
+    const index=Number(board);
+    if(!(isReserve?run.reserveCartridges:run.cartridges)[index]) return;
+    run.rwDock={board:index,reserve:isReserve};
+    renderCartridgeBoard();
+    $('#rwOwn').querySelector('[data-action="dock"][aria-expanded="true"]')?.focus({preventScroll:true});
+    return;
+  }
+  if(action==='back'){
+    run.rwSelected=null;
+    run.rwDock=null;
+    $('#rwOwn').innerHTML='';
+    renderRwRow();
+    return;
+  }
+  const held=run.rwHeld;
+  if(action==='skip'){ closeReward(); return; }
+  if(action==='cancel'){ run.rwHeld=null; renderCartridgeBoard(); return; }
+  if(action==='select'){
+    const stored=run.reserveCartridges[board]?.[slot];
+    if(!stored||!canInstallModule(stored)) return;
+    run.rwHeld={board,slot,module:stored};
+    run.rwDock=null;
+  } else if(action==='hold'||action==='install'){
+    placeCartridgeReward(board,slot,action==='hold');
+    return;
+  }
+  renderCartridgeBoard();
+});
+function placeCartridgeReward(board,slot,reserve){
+  if(run?.phase!=='reward'||!run.rwSelected) return false;
+  const held=run.rwHeld;
+  const module=held?.module||run.rwSelected;
+  const cartridge=(reserve?run.reserveCartridges:run.cartridges)[board];
+  if(!canSlotModule(cartridge,slot,module)) return false;
+  if(reserve){
+    if(held) return false;
+    cartridge[slot]=module;
+    closeReward();
+    return true;
+  }
+  if(!canInstallModule(module)) return false;
+  installCartridgeModule(cartridge,slot,module);
+  if(!held){ finishReward(module); return true; }
+  run.reserveCartridges[held.board][held.slot]=null;
+  run.rwHeld=null;
+  renderCartridgeBoard();
+  return true;
 }

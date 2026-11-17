@@ -57,7 +57,7 @@ function newRun(){
   P={x:200,y:380,hp:CFG.hpMax,face:0,hurt:0,lock:0,lockMax:1,lockKind:'miss',inv:0,pbuf:0,heat:0,ovl:0,skillCd:0,skillCdMax:1,guard:0,phase:0,wallCd:0,qCdMax:1,
      dashT:0,dashDir:0,rCd:0,rCdMax:1,rChg:0,echoT:0};
   ens=[];bullets=[];queue=[];msgs=[];shake=0;parts=[];hitstop=0;
-  run={boons:{},walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
+  run={boons:{},cartridges:createCartridges(2+lv('cartridgeSlots')),reserveCartridges:createCartridges(lv('reserveCartridges')),walls:[],score:0,hits:0,kills:0,bossKills:0,bestRet:0,maxSpd:0,time:0,
        cycle:1,wave:0,phase:'break',phaseT:1.4,diff:1};
   rerollMap();   // v3.2
   run.startRewards=CFG.startRewards;   // v2.17 선행 보급
@@ -104,6 +104,7 @@ function rollWave(n){
   return order;
 }
 function waveSpawn(){
+  run.opticalMasteryUsed=false;
   run.wave++;
   reseedDaily(run.wave);   // v3.62
   P.barrier=CFG.barrier||0;
@@ -245,11 +246,11 @@ function killEnemy(e){
   ens.splice(idx,1);
   if(e.grade==='splitter') spawnSplinters(e);   // v2.1 분열형 — 처치되면 분열체 2기
   /* v3.1 여진 — 처치 지점 주변에 추가 피해. killEnemy로 다시 들어오는 연쇄 처치도 자연스럽게 처리된다 */
-  const as=boonLv('aftershock');
-  if(as){
-    const dmg=HIT_UNIT*0.4*as;
+  const splash=0.4*boonLv('aftershock')+0.2*boonLv('chain_blast');
+  if(splash){
+    const dmg=HIT_UNIT*splash;
     ens.slice().forEach(o=>{ if(o.inv>0) return;
-      if(dist(e.x,e.y,o.x,o.y)>=80+o.r) return;
+      if(dist(e.x,e.y,o.x,o.y)>=80+20*boonLv('wide_blast')+o.r) return;
       o.hp-=dmg*(shielded(o,{x:e.x,y:e.y})?0.5:1); o.hurt=.18;
       if(o.hp<=HIT_UNIT*0.25) killEnemy(o);   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
     });

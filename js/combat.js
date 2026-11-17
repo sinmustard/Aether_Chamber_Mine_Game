@@ -2,6 +2,12 @@
 /* ================= 업데이트 ================= */
 /* v3.50 맞았을 때 — 웨이브 특전 역습(잠깐 이동 · 사거리 증가, 다시 맞으면 시간만 갱신) · 분노(R 충전) */
 function onHurt(){
+  if(cartridgeMastery('반격')) run.counterMasteryReady=true;
+  if(cartridgeMastery('생명')&&P.hp>0&&P.hp<=CFG.hpMax*0.25&&run.vitalMasteryCycle!==run.cycle){
+    run.vitalMasteryCycle=run.cycle;
+    P.hp+=Math.max(1,Math.round(CFG.hpMax*0.15));
+    say('생명 시너지','cyan');
+  }
   const c=boonLv('counter');
   if(c){ if(!(P.counterT>0)){ P.ctrMv=40*c; P.ctrRg=0.4*c; CFG.moveSpd+=P.ctrMv; CFG.rangeM+=P.ctrRg; say('역습','warn'); } P.counterT=2; }
   const f=boonLv('fury'); if(f&&CFG.skillR) P.rChg=Math.min(CFG.rNeed,P.rChg+5*f);
@@ -32,6 +38,7 @@ function update(dt){
     let spdMul=1;
     if(ms&&(ms.dx||ms.dy)){ ax=ms.dx; ay=ms.dy; spdMul=Math.min(1,ms.len/TOUCH_MAX); }
     if(BOT.on&&BOT.mv){ ax=BOT.mv[0]; ay=BOT.mv[1]; spdMul=1; }
+    if(P.inv>0&&cartridgeMastery('기동')) spdMul*=1.25;
     P.x=clamp(P.x+ax*CFG.moveSpd*spdMul*dt,30,WORLD.w-30);
     P.y=clamp(P.y+ay*CFG.moveSpd*spdMul*dt,30,WORLD.h-30);
     P.moving=!!(ax||ay); P.vx=ax*CFG.moveSpd*spdMul; P.vy=ay*CFG.moveSpd*spdMul;   // v3.12 영상 캐릭터 '움직일 때만 재생'용
@@ -118,9 +125,19 @@ function update(dt){
         announce('사이클 '+run.cycle,'warn'); run.phaseT=2.2; }
       else run.phaseT=1.2;
       run.phase='break';
-      /* v2.0 2웨이브마다 + 보스 격파 직후에 보상 선택.
-         매 웨이브마다 주면 한 사이클에 10개가 쌓여 성장이 너무 빠르다 */
-      if(wasBoss || run.wave%2===0 || run.dunReward) openReward(wasBoss);
+      if(run.rush || run.tut || run.practice){
+        if(wasBoss || run.wave%2===0 || run.dunReward) openReward(wasBoss);
+      } else {
+        const cleared=(run.cycle-1)*(BOSS_WAVE+1)+run.wave;
+        if(cleared%4===0){
+          if(boonLv('roll_supply')&&!run.rerolls) run.rerolls=1;
+          run.rerolls=(run.rerolls||0)+cartridgeSynergyLv('보급');
+        }
+        if(wasBoss&&cartridgeMastery('보급')) run.rerolls=(run.rerolls||0)+1;
+        if(wasBoss&&cartridgeMastery('재화')) run.salvageMasteryBosses=(run.salvageMasteryBosses||0)+1;
+        if(cleared%2===0) openReward(wasBoss,false,cleared);
+        run.dunReward=0;
+      }
     }
   } else if(run.phase!=='tut' && !ens.length && !queue.length){   // v2.60 체험판은 웨이브 진행 안 함
     run.phase='clear'; run.phaseT=3; run.mortars=[]; say('웨이브 클리어','cyan');
@@ -344,7 +361,7 @@ function update(dt){
       if(b.curl&&b.age<1.05) b.dir+=b.curl*2.7*dt;
       else if(b.sway&&P.phase<=0){ if(b.sb==null) b.sb=b.dir; b.sb+=norm(toP-b.sb)*Math.min(1,dt*2.2); b.dir=b.sb+Math.sin(b.age*7)*0.85*b.sway; }
       else if(P.phase<=0 && !b.armor && !b.straight && !(b.trap&&!b.trapGo)) b.dir+=norm(want-b.dir)*Math.min(1,dt*4.5);
-      if(P.decoyHp!=null&&P.decoyT>0&&P.decoy&&!b.armor){ const dd=dist(b.x,b.y,P.decoy.x,P.decoy.y); if(dd<DECOY_PULL){ b.dir+=norm(Math.atan2(P.decoy.y-b.y,P.decoy.x-b.x)-b.dir)*Math.min(1,dt*9); b.straight=0; } }   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
+      if((P.decoyHp!=null||cartridgeMastery('미끼'))&&P.decoyT>0&&P.decoy&&!b.armor){ const dd=dist(b.x,b.y,P.decoy.x,P.decoy.y); if(dd<DECOY_PULL+25*boonLv('decoy_pull')){ b.dir+=norm(Math.atan2(P.decoy.y-b.y,P.decoy.x-b.x)-b.dir)*Math.min(1,dt*9); b.straight=0; } }   // v2.65 저격탄도 직선   // v2.34 장갑탄은 직선   // 위상 이동 중엔 유도 무력화
     } else {
       /* v2.14 유도 보정 — 되돌린 탄환이 앞쪽의 가장 가까운 적으로 휘어진다 */
       /* v2.46 유도가 강하면 탄환이 적 주위를 원을 그리며 계속 도는 문제가 있었다.
@@ -452,7 +469,7 @@ function update(dt){
         if(d<ens[j].r+R_BULLET && d<hitD && !pierced(b,ens[j])){ hitD=d; hitIdx=j; }
       }
       if(hitIdx>=0 && ens[hitIdx].inv>0) hitIdx=-1;
-      if(hitIdx>=0 && shielded(ens[hitIdx],b) && CFG.shieldPierce>0 && Math.random()<CFG.shieldPierce){ say('방패 관통','cyan'); burst(b.x,b.y,'cyan',10,160); }
+      if(hitIdx>=0 && shielded(ens[hitIdx],b) && ((cartridgeMastery('탄도')&&b.returns>=2)||(CFG.shieldPierce>0&&Math.random()<CFG.shieldPierce))){ say('방패 관통','cyan'); burst(b.x,b.y,'cyan',10,160); }
       else if(hitIdx>=0 && shielded(ens[hitIdx],b)){
         /* v1.8 방패병 정면 — 피해 없이 튕겨낸다. 소유권은 그대로라 다른 적을 노릴 수 있다 */
         const e=ens[hitIdx];
@@ -477,7 +494,17 @@ function update(dt){
         /* v2.2 집념은 맞는 순간의 왕복 수로 판정한다 (보상을 나중에 얻어도 날아가던 탄환에 적용)
            v3.1 레벨당 배율 +1 (1중첩 ×2, 2중첩 ×3) */
         const gl=boonLv('grit');
-        const dmgv=HIT_UNIT*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1)*(b.pdm||1)*(b.mirMul||1);
+        const critChance=0.15*boonLv('chaos_crit')+0.05*cartridgeSynergyLv('혼돈')+(run.cartridgeCritBonus||0);
+        const opticalCrit=cartridgeMastery('광학')&&!run.opticalMasteryUsed;
+        if(opticalCrit) run.opticalMasteryUsed=true;
+        if(cartridgeMastery('혼돈')) run.chaosMasteryHits=(run.chaosMasteryHits||0)+1;
+        const chaosCrit=cartridgeMastery('혼돈')&&run.chaosMasteryHits%5===0;
+        const crit=(opticalCrit||chaosCrit||(critChance>0&&Math.random()<critChance))?1.8:1;
+        if(opticalCrit||chaosCrit) say('확정 치명타','warn');
+        const masteryDamage=(cartridgeMastery('증폭')&&b.returns>=3?1.25:1)*(run.counterMasteryReady?1.3:1);
+        run.counterMasteryReady=false;
+        const variance=boonLv('chaos_roll')?0.8+Math.random()*0.5:1;
+        const dmgv=HIT_UNIT*crit*variance*masteryDamage*((gl&&b.returns>=3)?(1+gl):1)*(b.shell?2:1)*(e.grade==='boss'&&boonLv('s_boss')?1.5:1)*(b.returns>=2?1+(CFG.rallyDmg||0):1)*(b.pdm||1)*(b.mirMul||1);
         e.hp-=dmgv;
         const willKill=e.hp<=HIT_UNIT*0.25;   // v2.71 난이도 배율 탓에 생기는 애매한 체력 한 조각은 처치로 처리
         if(OPT.dmgNum) dmgNums.push({x:e.x,y:e.y-e.r,v:Math.round(dmgv),t:performance.now(),kill:willKill,big:dmgv>HIT_UNIT});   // v2.68
@@ -487,11 +514,12 @@ function update(dt){
         run.score+=pts; say('+'+pts+(b.returns>1?'  ×'+b.returns:''),'warn');
         if(willKill) killEnemy(e);
         /* v2.0 파편 — 명중 지점 주변에 추가 피해 */
-        const sh=boonLv('shard');
-        if(sh){
-          const base=HIT_UNIT*SHARD_UNIT*sh;
+        const splash=SHARD_UNIT*boonLv('shard')+0.2*boonLv('impact_blast')+0.15*cartridgeSynergyLv('폭발');
+        if(splash){
+          const base=HIT_UNIT*splash;
+          const radius=90+20*boonLv('wide_blast')+(cartridgeMastery('폭발')&&e.grade==='boss'?80:0);
           ens.slice().forEach(o=>{ if(o===e||o.inv>0) return;
-            if(dist(b.x,b.y,o.x,o.y)>=90+o.r) return;
+            if(dist(b.x,b.y,o.x,o.y)>=radius+o.r) return;
             /* v2.2 방패가 폭발 지점을 향하면 절반만 들어간다 */
             o.hp-=base*(shielded(o,{x:b.x,y:b.y})?0.5:1);
             o.hurt=.18;
@@ -583,7 +611,7 @@ function spawnBullet(q){
 }
 function dungeonOffer(){
   if(!window.exCardPanel){ run.dungeon=DUNGEON.waves; return; }
-  rwPicks=[{k:'dun_in',n:'던전 입장',d:'다음 '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+'<br>대신 웨이브마다 보상 · 유물 확정 · 특수 특전 확률 2배',tag:'던전',chaos:1,
+  rwPicks=[{k:'dun_in',n:'던전 입장',d:'다음 '+DUNGEON.waves+'웨이브 동안 적 피해 ×'+DUNGEON.dmg+'<br>카트리지 보상에서 개조 모듈 등장 확률 2배',tag:'던전',chaos:1,
       fn:()=>{ run.dungeon=DUNGEON.waves; announce('던전 입장 — '+DUNGEON.waves+'웨이브','red'); }},
     {k:'dun_out',n:'지나가기',d:'던전에 들어가지 않고 평소처럼 다음 웨이브로',tag:'던전',chaos:1,fn:()=>{ say('던전을 지나침','dim'); }}];
   window.exCardPanel('<b style="color:var(--red)">던전이 열렸다</b> &nbsp;—&nbsp; 들어갈까요?');
@@ -600,14 +628,15 @@ function decoyBlast(){
     t.feint=0; t.orbitAmt=0; t.orbitDir=0; t.armor=0; t.trap=0; t.trapGo=1; t.blink=0; t.curl=0; t.sway=0; t.zig=0; t.straight=0;
     t.spd=Math.min(Math.max(t.base||0,CFG.spd||240)*CFG.accel,cap()); t.homeT=CFG.homeTime; t.htg=pool.length?pool[k%Math.min(pool.length,3)]:null; t.tried=[]; t.trail=[];
     t.pierceLeft=boonLv('pierce'); t.glow=1; t.hcd=0.15; t.ready=false; t.coy=0; t.age=0;
+    if(run.cartridgeDecoyDamage) t.pdm=run.cartridgeDecoyDamage;
     bullets.push(t); });
   announce(n?'미끼 폭발 — 탄 '+n+'발':'미끼 폭발','cyan');
   P.decoyT=0; P.decoy=null; P.decoyHp=null; P.decoyBag=[];
 }
 function prismSplit(b,w){
-  const n=(w.prism===3?2:4)+(boonLv('s_prismsplit')?2:0), step=w.prism===3?(n===2?0.48:0.3):(n===4?0.34:0.28), base=b.dir;
+  const n=(w.prism===3?2:4)+(boonLv('s_prismsplit')?2:0)+(cartridgeMastery('프리즘')?1:0), step=(w.prism===3?(n===2?0.48:0.3):(n===4?0.34:0.28))*(boonLv('prism_align')?0.8:1), base=b.dir;
   const spreads=Array.from({length:n},(_,k)=>(k-(n-1)/2)*step);
-  b.prismed=1; b.pdm=(b.pdm||1)/spreads.length; b.dir=base+spreads[0]; b.htg=null; b.trail.length=0;
+  b.prismed=1; b.pdm=(b.pdm||1)*(1+0.12*boonLv('prism_power'))/spreads.length; b.dir=base+spreads[0]; b.htg=null; b.trail.length=0;
   for(let k=1;k<spreads.length&&bullets.length<160;k++)
     bullets.push(Object.assign({},b,{dir:base+spreads[k],trail:[],tried:(b.tried||[]).slice(),htg:null}));
   burst(b.x,b.y,'#9be7ff',w.prism===3?8:14,150); sfx('ui'); bMark(b.x,b.y,'프리즘 ×'+spreads.length,'#9be7ff');
@@ -618,7 +647,7 @@ function prismSplit(b,w){
     burst(cx,cy,'#9be7ff',26,240); burst(cx,cy,'#c27cff',12,180); say('프리즘 깨짐','cyan'); sfx('breach'); shake=Math.max(shake,6);
   }
 }
-function prismMax(w){ return Math.max(1,(w.prism===3?8:5)+boonLv('prismdur')+boonLv('s_prismdur')*3+(run.prismAdj||0)); }
+function prismMax(w){ return Math.max(1,(w.prism===3?8:5)+boonLv('prismdur')+boonLv('s_prismdur')*3+boonLv('prism_shell')*2+cartridgeSynergyLv('프리즘')+(run.prismAdj||0)); }
 function bossVolley(e,specs){
   const room=CFG.maxB+8-(bullets.length+queue.length); if(room<=0) return;
   specs.slice(0,room).forEach(sp=>queue.push({t:sp.t,spec:sp,ex:e.x,ey:e.y,boss:true,hack:(e.hackT>0),src:e}));

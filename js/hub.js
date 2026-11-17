@@ -16,7 +16,8 @@ const skSlot=u=>u.skill===1?'f':u.skill;
 function renderCards(){
   const idx=UPG.map((u,i)=>[u,i]);
   const groups=[['강화', idx.filter(([u])=>!u.skill&&!u.grp)],
-                ['생존 / 보급', idx.filter(([u])=>u.grp==='life')]];
+                ['생존 / 보급', idx.filter(([u])=>u.grp==='life')],
+                ['회로기판', idx.filter(([u])=>u.grp==='circuit')]];
   let html=groups.map(([title,list])=>
     list.length? '<div class="grp">'+title+'</div>'+list.map(([u,i])=>cardHTML(u,i)).join('') : ''
   ).join('');
@@ -38,6 +39,7 @@ function renderDetail(){
   const u=UPG[sel],maxed=u.lv>=u.max,cost=maxed?0:u.cost[u.lv],rMet=reqMet(u);
   $('#detail').innerHTML=
     '<h4>'+u.n+' <span style="color:var(--dim);font-size:11px">Lv '+u.lv+' / '+u.max+'</span></h4>'+
+    (u.k==='cartridgeSlots'?circuitDockMarkup(2+u.lv):'')+
     '<div class="eff">'+(u.d||u.s)+'<br><br>현재 <b>'+u.steps[u.lv]+'</b>'+
     (maxed?'':'<br><span class="arrow">↓ 다음</span><br><b>'+u.steps[u.lv+1]+'</b>')+
     (rMet?'':'<br><br><span style="color:var(--red)">🔒 선행 조건: '+reqLabel(u)+'</span>')+'</div>'+

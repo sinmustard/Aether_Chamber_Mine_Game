@@ -237,7 +237,7 @@ function startRun(mode){
   if(mode==='hard'||mode==='hotd'){ run.diff*=1.5; CFG.spd*=1.15; CFG.fire*=0.85; CFG.scoreMul*=1.3; CFG.gainMul=(CFG.gainMul||1)*1.5; }
   if(mode==='hotd') run.diff*=1.5;
   if(normalEase()){ CFG.fire*=NORMAL_EASE.fire; CFG.spd*=NORMAL_EASE.spd; CFG.fov+=NORMAL_EASE.fov; CFG.rangeM+=NORMAL_EASE.range; CFG.whiff*=NORMAL_EASE.whiff; CFG.iframe*=NORMAL_EASE.iframe; }
-  if(mode==='daily'){ CFG.gainMul=(CFG.gainMul||1)*0.5; run.startRewards=0; run.revives=0; run.randBoosts=[]; }
+  if(mode==='daily'){ CFG.gainMul=(CFG.gainMul||1)*0.5; run.startRewards=0; run.revives=0; run.randBoosts=[]; run.cartridges=createCartridges(2); run.reserveCartridges=[]; }
   else applyRandBoosts();
   go('game');
   if(mode!=='normal'||run.chaos) setTimeout(()=>{ if(run) announce(mode==='hard'?'하드 모드'+(run.chaos?' · 카오스':''):mode==='hotd'?'핫드 · 진짜 하드'+(run.chaos?' · 카오스':''):mode==='chaosx'?'혼돈이야~':mode==='daily'?'데일리 챌린지 · '+run.day:'카오스','warn'); },300);
@@ -274,7 +274,10 @@ function endRun(){
   /* v1.7 재화: 점수÷3 + 처치×5 + 도달 웨이브×6 + 보스 격파×150 (점수 비중 상향) */
   const gScore=Math.round(run.score/3), gKill=run.kills*5,
         gWave=((run.cycle-1)*(BOSS_WAVE+1)+run.wave)*6, gBoss=run.bossKills*150;
-  let gain=Math.round((gScore+gKill+gWave+gBoss)*(CFG.gainMul||1));   // v2.17 재화 획득 강화
+  const salvage=gScore*0.08*boonLv('score_salvage')+gKill*0.20*boonLv('kill_salvage')+
+    gWave*0.25*boonLv('wave_salvage')+gBoss*0.20*boonLv('boss_salvage')+
+    Math.floor(run.hits/5)*boonLv('hit_salvage');
+  let gain=Math.round((gScore+gKill+gWave+gBoss+salvage)*(CFG.gainMul||1))+60*(run.salvageMasteryBosses||0);   // v2.17 재화 획득 강화
   if(!isFinite(gain)||gain<0) gain=0;                                    // v2.46 계산이 깨져도 0 이하로 안 떨어지게
   const roul=run.mode==='chaosx'?{base:gain,i:Math.floor(Math.random()*ROUL.length)}:null;
   if(roul){ roul.m=ROUL[roul.i]; gain=Math.max(0,Math.round(gain*roul.m)); }

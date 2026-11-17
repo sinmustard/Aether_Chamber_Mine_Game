@@ -137,6 +137,18 @@ function botTick(dt){
   if(!BOT.cur) botNewRun();
   const c=BOT.cur;
   if(run.phase==='reward'){
+    if(run.rwSelected){
+      for(const reserve of [false,true]){
+        const cartridges=reserve?run.reserveCartridges:run.cartridges;
+        for(let board=0;board<cartridges.length;board++){
+          for(let slot=0;slot<cartridges[board].length;slot++){
+            if(placeCartridgeReward(board,slot,reserve)) return;
+          }
+        }
+      }
+      closeReward();
+      return;
+    }
     const now=performance.now();
     if(!BOT.rwAt){ BOT.rwAt=now; BOT.rwPick=null; }
     if(BOT.rwPick==null&&now-BOT.rwAt>700){ let bi=0, bs=-1; rwPicks.forEach((b,i)=>{ const s=(BOT_PICK[b.look||b.k]||(b.chaos?5:4))+Math.random()*0.5; if(s>bs){ bs=s; bi=i; } }); BOT.rwPick=bi;
